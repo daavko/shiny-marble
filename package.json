@@ -1,0 +1,31 @@
+{
+    "name": "shiny-marble",
+    "version": "1.0.0",
+    "description": "",
+    "type": "module",
+    "private": true,
+    "sideEffects": false,
+    "scripts": {
+        "lint": "eslint --max-warnings 0 ./src",
+        "format": "prettier --write .",
+        "check-format": "prettier --check .",
+        "typecheck": "tsc --noEmit",
+        "build": "node build.js src/shiny-marble.user.ts",
+        "watch": "node build.js src/shiny-marble.user.ts --watch"
+    },
+    "dependencies": {
+        "@mdi/js": "^7.4.47"
+    },
+    "devDependencies": {
+        "@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",
+        "@eslint/js": "^9.39.2",
+        "esbuild": "^0.27.1",
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^16.5.0",
+        "prettier": "^3.7.4",
+        "prettier-plugin-organize-imports": "^4.3.0",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.50.0"
+    }
+}

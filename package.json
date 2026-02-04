@@ -17,7 +17,8 @@
         "watch": "node build.js src/shiny-marble.user.ts --watch"
     },
     "dependencies": {
-        "@mdi/js": "^7.4.47"
+        "@mdi/js": "^7.4.47",
+        "maplibre-gl": "^5.17.0"
     },
     "devDependencies": {
         "@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",

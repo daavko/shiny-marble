@@ -1,11 +1,16 @@
 import { randomHexString } from '../util/string';
+import { addStyle } from './styles';
 
 export abstract class Component {
+    static readonly style = '';
     requiresRerender = false;
     abstract render(): Element | Element[];
 }
 
-export type ComponentType<T extends Component, CtorArgs extends unknown[]> = new (...args: CtorArgs) => T;
+export interface ComponentType<T extends Component, CtorArgs extends unknown[]> {
+    readonly style: string;
+    new (...args: CtorArgs): T;
+}
 
 export type ComponentHandle = symbol;
 
@@ -137,6 +142,7 @@ export function mountComponent<T extends Component, CtorArgs extends unknown[]>(
         },
     };
     mountedComponents.set(handle, mounted);
+    addStyle(componentType.style);
     renderComponent(mounted);
     startRenderLoop();
     observeDocumentMutations();

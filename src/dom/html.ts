@@ -12,12 +12,66 @@ export interface ElementOptions {
     attributes?: AttributesRecord;
 }
 
-type SVGElementChild = SVGElement | string;
+export interface HTMLElementOptions extends ElementOptions {
+    events?: HTMLElementEventListenerMap;
+}
+
+export interface SVGElementOptions extends ElementOptions {
+    events?: SVGElementEventListenerMap;
+}
+
+interface AnyElementOptions extends ElementOptions {
+    events?: AnyEventListenerMap;
+}
+
+type HTMLEventListenerFn<K extends keyof HTMLElementEventMap> = (evt: HTMLElementEventMap[K]) => void;
+type HTMLEventListenerWithOptions<K extends keyof HTMLElementEventMap> = [
+    HTMLEventListenerFn<K>,
+    AddEventListenerOptions,
+];
+
+type HTMLElementEventListenerMap = {
+    [K in keyof HTMLElementEventMap]?:
+        | HTMLEventListenerFn<K>
+        | HTMLEventListenerWithOptions<K>
+        | (HTMLEventListenerFn<K> | HTMLEventListenerWithOptions<K>)[];
+};
+
+type SVGEventListenerFn<K extends keyof SVGElementEventMap> = (evt: SVGElementEventMap[K]) => void;
+type SVGEventListenerWithOptions<K extends keyof SVGElementEventMap> = [SVGEventListenerFn<K>, AddEventListenerOptions];
+
+type SVGElementEventListenerMap = {
+    [K in keyof SVGElementEventMap]?:
+        | SVGEventListenerFn<K>
+        | SVGEventListenerWithOptions<K>
+        | (SVGEventListenerFn<K> | SVGEventListenerWithOptions<K>)[];
+};
+
+type AnyEventListenerFn = (evt: Event) => void;
+type AnyEventListenerWithOptions = [AnyEventListenerFn, AddEventListenerOptions];
+
+function isEventListenerWithOptions(
+    listener: AnyEventListenerWithOptions | (AnyEventListenerFn | AnyEventListenerWithOptions)[],
+): listener is AnyEventListenerWithOptions {
+    return (
+        listener.length === 2 &&
+        typeof listener[0] === 'function' &&
+        typeof listener[1] === 'object' &&
+        !Array.isArray(listener[1])
+    );
+}
+
+type AnyEventListenerMap = Record<
+    string,
+    AnyEventListenerFn | AnyEventListenerWithOptions | (AnyEventListenerFn | AnyEventListenerWithOptions)[]
+>;
+
 type HTMLElementChild = HTMLElement | SVGElementChild;
+type SVGElementChild = SVGElement | string;
 
 export function el<T extends keyof HTMLElementTagNameMap>(
     name: T,
-    options: ElementOptions,
+    options: HTMLElementOptions,
     children?: HTMLElementChild[],
 ): HTMLElementTagNameMap[T];
 export function el<T extends keyof HTMLElementTagNameMap>(
@@ -26,27 +80,21 @@ export function el<T extends keyof HTMLElementTagNameMap>(
 ): HTMLElementTagNameMap[T];
 export function el<T extends keyof HTMLElementTagNameMap>(
     name: T,
-    optionsOrChildren?: ElementOptions | HTMLElementChild[],
+    optionsOrChildren?: HTMLElementOptions | HTMLElementChild[],
     maybeChildren?: HTMLElementChild[],
 ): HTMLElementTagNameMap[T] {
     const options = Array.isArray(optionsOrChildren) ? undefined : optionsOrChildren;
     const children = Array.isArray(optionsOrChildren) ? optionsOrChildren : maybeChildren;
 
     const element = document.createElement(name);
-    if (options?.class != null) {
-        if (Array.isArray(options.class)) {
-            element.className = options.class.join(' ');
-        } else {
-            element.className = options.class;
-        }
-    }
-    setCommonPropsAndChildren(element, options, children);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
+    setCommonPropsAndChildren(element, options as AnyElementOptions, children);
     return element;
 }
 
 export function svgEl<T extends keyof SVGElementTagNameMap>(
     name: T,
-    options: ElementOptions,
+    options: SVGElementOptions,
     children?: SVGElementChild[],
 ): SVGElementTagNameMap[T];
 export function svgEl<T extends keyof SVGElementTagNameMap>(
@@ -55,31 +103,32 @@ export function svgEl<T extends keyof SVGElementTagNameMap>(
 ): SVGElementTagNameMap[T];
 export function svgEl<T extends keyof SVGElementTagNameMap>(
     name: T,
-    optionsOrChildren?: ElementOptions | SVGElementChild[],
+    optionsOrChildren?: SVGElementOptions | SVGElementChild[],
     maybeChildren?: SVGElementChild[],
 ): SVGElementTagNameMap[T] {
     const options = Array.isArray(optionsOrChildren) ? undefined : optionsOrChildren;
     const children = Array.isArray(optionsOrChildren) ? optionsOrChildren : maybeChildren;
 
     const element = document.createElementNS('http://www.w3.org/2000/svg', name);
-    if (options?.class != null) {
-        if (Array.isArray(options.class)) {
-            element.setAttribute('class', options.class.join(' '));
-        } else {
-            element.setAttribute('class', options.class);
-        }
-    }
-    setCommonPropsAndChildren(element, options, children);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
+    setCommonPropsAndChildren(element, options as AnyElementOptions, children);
     return element;
 }
 
 function setCommonPropsAndChildren(
     element: HTMLElement | SVGElement,
-    options?: ElementOptions,
+    options?: AnyElementOptions,
     children?: HTMLElementChild[],
 ): void {
     if (options?.id != null) {
         element.id = options.id;
+    }
+    if (options?.class != null) {
+        if (Array.isArray(options.class)) {
+            element.classList.add(...options.class);
+        } else {
+            element.classList.add(options.class);
+        }
     }
     if (options?.style != null) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe, Object.entries isn't typed correctly
@@ -102,6 +151,23 @@ function setCommonPropsAndChildren(
                 element.setAttribute(key, value);
             } else if (typeof value === 'number') {
                 element.setAttribute(key, value.toString());
+            }
+        }
+    }
+    if (options?.events != null) {
+        for (const [eventName, listenerOrListeners] of Object.entries(options.events)) {
+            if (typeof listenerOrListeners === 'function') {
+                element.addEventListener(eventName, listenerOrListeners);
+            } else if (isEventListenerWithOptions(listenerOrListeners)) {
+                element.addEventListener(eventName, listenerOrListeners[0], listenerOrListeners[1]);
+            } else {
+                for (const listener of listenerOrListeners) {
+                    if (typeof listener === 'function') {
+                        element.addEventListener(eventName, listener);
+                    } else if (isEventListenerWithOptions(listener)) {
+                        element.addEventListener(eventName, listener[0], listener[1]);
+                    }
+                }
             }
         }
     }

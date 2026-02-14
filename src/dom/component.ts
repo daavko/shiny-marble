@@ -1,9 +1,23 @@
 import { randomHexString } from '../util/string';
 import { addStyle } from './styles';
+import { Subject } from 'rxjs';
 
 export abstract class Component {
-    static readonly style = '';
+    static readonly style: string = '';
     requiresRerender = false;
+    private readonly destroySubject = new Subject<void>();
+    // eslint-disable-next-line @typescript-eslint/member-ordering -- ignore here
+    protected readonly destroy$ = this.destroySubject.asObservable();
+    beforeMount(): void {
+        // no-op
+    }
+    beforeUnmount(): void {
+        // no-op
+    }
+    protected requestRerender(): void {
+        this.requiresRerender = true;
+        triggerRenderRequest();
+    }
     abstract render(): Element | Element[];
 }
 
@@ -24,9 +38,9 @@ const mountedComponents = new Map<ComponentHandle, MountedComponent>();
 
 const elementIdAttributeName = `sm-${randomHexString(8)}`;
 
-let renderLoopId: number | null = null;
+let rerenderRequestId: number | null = null;
 
-function doRender(): void {
+function rerenderComponentTree(): void {
     mountedComponents.forEach((mounted) => {
         if (mounted.instance.requiresRerender) {
             renderComponent(mounted);
@@ -35,23 +49,14 @@ function doRender(): void {
     });
 }
 
-function startRenderLoop(): void {
-    if (renderLoopId != null) {
+function triggerRenderRequest(): void {
+    if (rerenderRequestId != null) {
         return;
     }
-    renderLoopId = requestAnimationFrame(() => {
-        doRender();
-        renderLoopId = null;
-        startRenderLoop();
+    rerenderRequestId = requestAnimationFrame(() => {
+        rerenderComponentTree();
+        rerenderRequestId = null;
     });
-}
-
-function stopRenderLoop(): void {
-    if (renderLoopId == null) {
-        return;
-    }
-    cancelAnimationFrame(renderLoopId);
-    renderLoopId = null;
 }
 
 function renderComponent(mounted: MountedComponent): void {
@@ -143,8 +148,8 @@ export function mountComponent<T extends Component, CtorArgs extends unknown[]>(
     };
     mountedComponents.set(handle, mounted);
     addStyle(componentType.style);
+    component.beforeMount();
     renderComponent(mounted);
-    startRenderLoop();
     observeDocumentMutations();
     return handle;
 }
@@ -156,10 +161,10 @@ export function unmountComponent(handle: ComponentHandle): void {
         return;
     }
 
+    mounted.instance.beforeUnmount();
     mounted.finalizer();
     mountedComponents.delete(handle);
     if (mountedComponents.size === 0) {
-        stopRenderLoop();
         unobserveDocumentMutations();
     }
 }

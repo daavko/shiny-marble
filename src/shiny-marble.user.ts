@@ -1,5 +1,5 @@
-import { mountComponent } from './dom/component';
-import { AppIcon } from './components/app-icon'; // addMapInstanceHook()
+import { renderAlertsContainer } from './ui/alerts-container';
+import { renderAppIcon } from './ui/app-icon';
 
 // addMapInstanceHook()
 //     .then(async () => waitForMapInstance())
@@ -10,4 +10,5 @@ import { AppIcon } from './components/app-icon'; // addMapInstanceHook()
 //         console.error('error waiting for map instance', error);
 //     });
 
-mountComponent(document.body, AppIcon);
+renderAppIcon();
+renderAlertsContainer();

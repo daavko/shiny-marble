@@ -1,6 +1,6 @@
+import { el } from '../dom/html';
 import { addStyle } from '../dom/styles';
 import alertsContainerStyle from './alerts-container.css';
-import { el } from '../dom/html';
 
 export type AlertType = 'info' | 'error';
 

@@ -1,7 +1,4 @@
-button.sm-platform__sheet-close-btn {
-    position: absolute;
-    top: 4px;
-    right: 4px;
+button.sm-platform__icon-btn {
     padding: 8px;
     border: none;
     border-radius: 50%;
@@ -25,5 +22,33 @@ button.sm-platform__block-btn {
 
     &:hover {
         background-color: #f2f2f2;
+    }
+}
+
+.sm-shine-icon {
+    color: #b219ee;
+}
+
+.sm-dialog {
+    position: relative;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: white;
+
+    .sm-dialog__header {
+        padding: 12px;
+        border-bottom: 1px solid #787878;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        h1 {
+            font-size: 1.5rem;
+        }
+    }
+
+    .sm-dialog__content {
+        padding: 12px;
+        overflow-y: auto;
     }
 }

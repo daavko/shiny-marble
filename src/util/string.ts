@@ -6,3 +6,7 @@ export function randomHexString(length: number): string {
         .join('')
         .slice(0, length);
 }
+
+export function createRandomElementId(): string {
+    return `dpus-${crypto.randomUUID()}`;
+}

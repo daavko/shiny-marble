@@ -15,7 +15,7 @@ export function renderAppIcon(): void {
                     click: () => toggleAppView(),
                 },
             },
-            [renderMdiIcon(mdiStarFourPointsCircleOutline, { class: 'sm-app-icon__icon' })],
+            [renderMdiIcon(mdiStarFourPointsCircleOutline, { class: ['sm-shine-icon', 'sm-app-icon__icon'] })],
         ),
     );
 }

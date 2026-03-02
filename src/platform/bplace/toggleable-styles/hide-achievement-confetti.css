@@ -1,0 +1,3 @@
+body > canvas[style*='z-index'][style*='9999']:not([class]) {
+    display: none;
+}

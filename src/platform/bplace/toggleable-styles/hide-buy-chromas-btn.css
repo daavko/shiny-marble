@@ -1,0 +1,3 @@
+#root > .w-screen.h-screen > .animate-slide-in-up > div:has(> img[alt='Chromas']) {
+    display: none;
+}

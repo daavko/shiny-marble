@@ -6,12 +6,36 @@
     .sm-app-view__inner {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
         padding: 12px;
         scrollbar-width: thin;
         width: 400px;
         max-height: 600px;
         overflow-y: auto;
+    }
+
+    .sm-app-view__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        border-bottom: 1px solid #787878;
+    }
+
+    .sm-app-view__title {
+        font-size: 1.5rem;
+
+        .sm-app-view__title-icon {
+            display: inline-block;
+            margin-right: 4px;
+            vertical-align: -8px;
+        }
+    }
+
+    .sm-app-view__header-buttons {
+        display: flex;
+        gap: 8px;
+        justify-content: end;
     }
 
     .sm-app-view__section-heading {

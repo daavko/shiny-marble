@@ -1,4 +1,4 @@
-import { mdiClose } from '@mdi/js';
+import { mdiClose, mdiCog, mdiStarFourPointsCircleOutline } from '@mdi/js';
 import { el } from '../dom/html';
 import { Platform } from '../platform/platform';
 import { renderMdiIcon } from './mdi-icon';
@@ -22,7 +22,11 @@ export function renderAppView(): void {
                         'button',
                         {
                             class: 'sm-platform__block-btn',
-                            events: { click: () => {} },
+                            events: {
+                                click: () => {
+                                    // todo: open template creation dialog
+                                },
+                            },
                         },
                         ['Create'],
                     ),
@@ -30,7 +34,11 @@ export function renderAppView(): void {
                         'button',
                         {
                             class: 'sm-platform__block-btn',
-                            events: { click: () => {} },
+                            events: {
+                                click: () => {
+                                    // todo: open template import dialog
+                                },
+                            },
                         },
                         ['Import'],
                     ),
@@ -39,16 +47,38 @@ export function renderAppView(): void {
         ]),
     ]);
     const container = el('div', { class: 'sm-app-view' }, [
-        el(
-            'button',
-            {
-                class: 'sm-platform__sheet-close-btn',
-                events: {
-                    click: () => toggleAppView(),
-                },
-            },
-            [renderMdiIcon(mdiClose)],
-        ),
+        el('header', { class: 'sm-app-view__header' }, [
+            el('h1', { class: 'sm-app-view__title' }, [
+                renderMdiIcon(mdiStarFourPointsCircleOutline, {
+                    class: ['sm-mdi-icon--large', 'sm-shine-icon', 'sm-app-view__title-icon'],
+                }),
+                'Shiny Marble',
+            ]),
+            el('div', { class: 'sm-app-view__header-buttons' }, [
+                el(
+                    'button',
+                    {
+                        class: ['sm-platform__icon-btn'],
+                        events: {
+                            click: () => {
+                                // todo: open settings
+                            },
+                        },
+                    },
+                    [renderMdiIcon(mdiCog)],
+                ),
+                el(
+                    'button',
+                    {
+                        class: ['sm-platform__icon-btn'],
+                        events: {
+                            click: () => toggleAppView(),
+                        },
+                    },
+                    [renderMdiIcon(mdiClose)],
+                ),
+            ]),
+        ]),
         view,
     ]);
 

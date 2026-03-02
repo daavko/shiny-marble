@@ -4,6 +4,7 @@ import { addStyles } from '../dom/styles';
 import { alertsContainerStyle } from '../ui/alerts-container';
 import { appIconStyle } from '../ui/app-icon';
 import { appViewStyle } from '../ui/app-view';
+import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { mdiIconStyle } from '../ui/mdi-icon';
 import { BPLACE_PLATFORM } from './bplace/platform';
 import platformStyle from './platform.css';
@@ -35,7 +36,7 @@ export const Platform = {
 
     initialize(): void {
         addStyles(...ACTIVE_PLATFORM.styles);
-        addStyles(platformStyle, alertsContainerStyle, appIconStyle, mdiIconStyle, appViewStyle);
+        addStyles(platformStyle, alertsContainerStyle, appIconStyle, mdiIconStyle, appViewStyle, settingsDialogStyle);
     },
 
     async addMapInstanceHook(): Promise<void> {

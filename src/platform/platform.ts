@@ -1,17 +1,18 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
 import type { HTMLElementChild } from '../dom/html';
-import { initializeAppIconStyles } from '../ui/app-icon';
-import { initializeAppViewStyles } from '../ui/app-view';
-import { initializeMdiIconStyles } from '../ui/mdi-icon';
+import { addStyles } from '../dom/styles';
+import { alertsContainerStyle } from '../ui/alerts-container';
+import { appIconStyle } from '../ui/app-icon';
+import { appViewStyle } from '../ui/app-view';
+import { mdiIconStyle } from '../ui/mdi-icon';
 import { BPLACE_PLATFORM } from './bplace/platform';
+import platformStyle from './platform.css';
 import type { CanvasPlatform, PixelColor } from './types';
 import { WPLACE_PLATFORM } from './wplace/platform';
 
 let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;
 const { resolve: resolveMapInstance, promise: mapInstancePromise } = Promise.withResolvers<MapLibreInstance>();
-
-let availableColors: PixelColor[] | null = null;
 
 const ACTIVE_PLATFORM = resolvePlatform();
 
@@ -33,10 +34,8 @@ export const Platform = {
     },
 
     initialize(): void {
-        ACTIVE_PLATFORM.insertPlatformStyles();
-        initializeAppIconStyles();
-        initializeMdiIconStyles();
-        initializeAppViewStyles();
+        addStyles(...ACTIVE_PLATFORM.styles);
+        addStyles(platformStyle, alertsContainerStyle, appIconStyle, mdiIconStyle, appViewStyle);
     },
 
     async addMapInstanceHook(): Promise<void> {

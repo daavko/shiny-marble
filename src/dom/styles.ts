@@ -1,5 +1,11 @@
 const INSERTED_STYLES = new Map<symbol, CSSStyleSheet>();
 
+export function addStyles(...cssArray: readonly string[]): void {
+    for (const css of cssArray) {
+        addStyle(css);
+    }
+}
+
 export function addStyle(css: string): void {
     const symbol = Symbol.for(css);
     if (INSERTED_STYLES.has(symbol)) {

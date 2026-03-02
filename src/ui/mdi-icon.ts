@@ -1,10 +1,6 @@
 import { svgEl, type SVGElementOptions } from '../dom/html';
-import { addStyle } from '../dom/styles';
-import mdiIconStyle from './mdi-icon.css';
 
-export function initializeMdiIconStyles(): void {
-    addStyle(mdiIconStyle);
-}
+export { default as mdiIconStyle } from './mdi-icon.css';
 
 export function renderMdiIcon(iconPath: string, containerOptions: SVGElementOptions = {}): SVGElement {
     let containerOptionsClassList: string[] = [];

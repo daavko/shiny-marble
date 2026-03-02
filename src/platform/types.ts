@@ -8,9 +8,9 @@ export interface PixelColor {
 }
 
 export interface CanvasPlatform {
+    readonly styles: readonly string[];
     readonly colors: readonly PixelColor[];
 
-    insertPlatformStyles(): void;
     addMapInstanceHook(resolveMapInstance: (mapInstance: MapLibreInstance) => void): Promise<void>;
     getCurrentColor(colors: readonly PixelColor[]): PixelColor | null;
     renderPlatformSpecificAppViewContent(): HTMLElementChild | HTMLElementChild[] | null;

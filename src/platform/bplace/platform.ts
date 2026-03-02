@@ -1,12 +1,12 @@
 import { Map as MapLibreInstance } from 'maplibre-gl';
 import { el, type HTMLElementChild } from '../../dom/html';
-import { addStyle } from '../../dom/styles';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
 import type { CanvasPlatform, PixelColor } from '../types';
+import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
 import { BPLACE_COLORS } from './colors';
-import bplacePlatformStyle from './style.css';
+import bplacePlatformStyle from './platform.css';
 
 interface RefObject {
     current: unknown;
@@ -30,10 +30,8 @@ function cleanupPatchedRefs(patchedRefs: Set<WeakRef<RefObject>>): void {
 }
 
 export const BPLACE_PLATFORM: CanvasPlatform = {
+    styles: [bplacePlatformStyle, bplaceColorStatsDialogStyle],
     colors: BPLACE_COLORS,
-    insertPlatformStyles() {
-        addStyle(bplacePlatformStyle);
-    },
     async addMapInstanceHook(resolveMapInstance): Promise<void> {
         const moduleHrefs = gatherModuleHrefs('/assets/');
         for (const href of moduleHrefs) {
@@ -237,8 +235,12 @@ export const BPLACE_PLATFORM: CanvasPlatform = {
                 el(
                     'button',
                     {
-                        class: ['sm-app-view__block-button', 'sm-app-view__bplace-show-colors'],
-                        events: { click: () => {} },
+                        class: ['sm-platform__block-btn', 'sm-app-view__bplace-show-colors'],
+                        events: {
+                            click: () => {
+                                void showColorStatsDialog();
+                            },
+                        },
                     },
                     ['Show my color stats'],
                 ),

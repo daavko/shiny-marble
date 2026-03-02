@@ -1,17 +1,14 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
-import { addStyle } from '../../dom/styles';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
 import type { CanvasPlatform, PixelColor } from '../types';
 import { WPLACE_COLORS } from './colors';
-import wplacePlatformStyle from './style.css';
+import wplacePlatformStyle from './platform.css';
 
 export const WPLACE_PLATFORM: CanvasPlatform = {
+    styles: [wplacePlatformStyle],
     colors: WPLACE_COLORS,
-    insertPlatformStyles() {
-        addStyle(wplacePlatformStyle);
-    },
     async addMapInstanceHook(resolveMapInstance): Promise<void> {
         const moduleHrefs = gatherModuleHrefs('./_app/immutable');
         for (const href of moduleHrefs) {

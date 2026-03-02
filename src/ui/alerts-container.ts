@@ -1,8 +1,8 @@
 import { mdiClose } from '@mdi/js';
 import { el } from '../dom/html';
-import { addStyle } from '../dom/styles';
-import alertsContainerStyle from './alerts-container.css';
 import { renderMdiIcon } from './mdi-icon';
+
+export { default as alertsContainerStyle } from './alerts-container.css';
 
 const DEFAULT_INFO_MESSAGE_DURATION = 3000;
 const DEFAULT_ERROR_MESSAGE_DURATION = 5000;
@@ -10,7 +10,6 @@ const DEFAULT_ERROR_MESSAGE_DURATION = 5000;
 const ALERTS_CONTAINER = el('div', { class: 'sm-alerts-container' });
 
 export function renderAlertsContainer(): void {
-    addStyle(alertsContainerStyle);
     document.body.appendChild(ALERTS_CONTAINER);
 }
 

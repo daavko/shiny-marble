@@ -77,3 +77,14 @@ const geographicFeatureSearchResult = v.pipe(
 );
 export type GeographicFeatureSearchResult = v.InferOutput<typeof geographicFeatureSearchResult>;
 export const geographicFeatureSearchResponse = v.array(geographicFeatureSearchResult);
+
+const colorUsageRecord = v.pipe(
+    v.object({
+        name: v.string(),
+        usage_count: v.number(),
+        hex_value: v.string(),
+    }),
+    v.transform(({ name, usage_count, hex_value }) => ({ name, usageCount: usage_count, hexValue: hex_value })),
+);
+export type ColorUsageRecord = v.InferOutput<typeof colorUsageRecord>;
+export const colorUsageStatsResponse = v.array(colorUsageRecord);

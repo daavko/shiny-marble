@@ -1,13 +1,9 @@
 import { mdiStarFourPointsCircleOutline } from '@mdi/js';
 import { el } from '../dom/html';
-import { addStyle } from '../dom/styles';
-import appIconStyle from './app-icon.css';
 import { toggleAppView } from './app-view';
 import { renderMdiIcon } from './mdi-icon';
 
-export function initializeAppIconStyles(): void {
-    addStyle(appIconStyle);
-}
+export { default as appIconStyle } from './app-icon.css';
 
 export function renderAppIcon(): void {
     document.body.appendChild(

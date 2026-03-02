@@ -1,15 +1,11 @@
 import { mdiClose } from '@mdi/js';
 import { el } from '../dom/html';
-import { addStyle } from '../dom/styles';
 import { Platform } from '../platform/platform';
-import appViewStyle from './app-view.css';
 import { renderMdiIcon } from './mdi-icon';
 
-let renderedAppView: Element | null = null;
+export { default as appViewStyle } from './app-view.css';
 
-export function initializeAppViewStyles(): void {
-    addStyle(appViewStyle);
-}
+let renderedAppView: Element | null = null;
 
 export function renderAppView(): void {
     if (renderedAppView) {
@@ -25,7 +21,7 @@ export function renderAppView(): void {
                     el(
                         'button',
                         {
-                            class: ['sm-app-view__block-button'],
+                            class: 'sm-platform__block-btn',
                             events: { click: () => {} },
                         },
                         ['Create'],
@@ -33,7 +29,7 @@ export function renderAppView(): void {
                     el(
                         'button',
                         {
-                            class: ['sm-app-view__block-button'],
+                            class: 'sm-platform__block-btn',
                             events: { click: () => {} },
                         },
                         ['Import'],
@@ -46,7 +42,7 @@ export function renderAppView(): void {
         el(
             'button',
             {
-                class: 'sm-app-view__close',
+                class: 'sm-platform__sheet-close-btn',
                 events: {
                     click: () => toggleAppView(),
                 },

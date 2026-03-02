@@ -3,6 +3,8 @@ import {
     type CityFeature,
     cityFeaturesResponse,
     type CitySearchResult,
+    type ColorUsageRecord,
+    colorUsageStatsResponse,
     type CountryFeature,
     countryFeaturesResponse,
     type GeographicFeature,
@@ -172,4 +174,38 @@ export async function fetchCountryByCode(code: string): Promise<CountryFeature |
     );
 
     return response.at(0);
+}
+
+// async function fetchUserColorStats() {
+//         const requestUrl = new URL(`${REST_API_BASE}/user_color_usage`);
+//         requestUrl.searchParams.set('select', '...colors(name,palette_order,shade),usage_count');
+//         requestUrl.searchParams.set('order', 'usage_count.desc,colors(palette_order).asc,colors(shade).asc');
+//
+//         const authToken = getAuthToken();
+//         if (!authToken) {
+//             throw new Error('Missing auth token.');
+//         }
+//
+//         const response = await fetch(requestUrl.toString(), {
+//             headers: {
+//                 Authorization: `Bearer ${authToken}`,
+//                 apikey: API_KEY,
+//             },
+//         });
+//         if (!response.ok) {
+//             throw new Error(`Failed to fetch color stats: ${response.statusText}`);
+//         }
+//
+//         return await response.json();
+//     }
+
+export async function fetchUserColorStats(): Promise<ColorUsageRecord[]> {
+    return doSupabaseRestRequest(
+        'user_color_usage',
+        new URLSearchParams({
+            select: '...colors(name,palette_order,shade,hex_value),usage_count',
+            order: 'usage_count.desc,colors(palette_order).asc,colors(shade).asc',
+        }),
+        colorUsageStatsResponse,
+    );
 }

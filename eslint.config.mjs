@@ -23,6 +23,7 @@ export default defineConfig([
     {
         files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
         rules: {
+            '@eslint-community/eslint-comments/no-unused-disable': 'error',
             '@eslint-community/eslint-comments/no-use': [
                 'error',
                 { allow: ['eslint-disable-line', 'eslint-disable-next-line'] },
@@ -34,17 +35,40 @@ export default defineConfig([
             '@typescript-eslint/explicit-member-accessibility': ['warn', { accessibility: 'no-public' }],
             '@typescript-eslint/explicit-module-boundary-types': 'error',
             '@typescript-eslint/member-ordering': 'warn',
+            '@typescript-eslint/no-confusing-void-expression': [
+                'error',
+                {
+                    ignoreArrowShorthand: true,
+                },
+            ],
             '@typescript-eslint/no-import-type-side-effects': 'error',
             '@typescript-eslint/no-invalid-void-type': 'off', // this rule is partially broken so not very useful, see https://github.com/typescript-eslint/typescript-eslint/issues/8113
             '@typescript-eslint/no-shadow': 'warn',
             '@typescript-eslint/no-unnecessary-parameter-property-assignment': 'error',
             '@typescript-eslint/no-unsafe-type-assertion': 'warn',
             '@typescript-eslint/prefer-enum-initializers': 'error',
+            '@typescript-eslint/prefer-promise-reject-errors': [
+                'warn',
+                {
+                    allowThrowingUnknown: true,
+                },
+            ],
             '@typescript-eslint/prefer-readonly': 'warn',
-            '@typescript-eslint/promise-function-async': 'error',
+            '@typescript-eslint/promise-function-async': [
+                'error',
+                {
+                    checkArrowFunctions: false,
+                },
+            ],
             '@typescript-eslint/require-array-sort-compare': 'error',
             '@typescript-eslint/restrict-template-expressions': ['error', { allowBoolean: true, allowNumber: true }],
             '@typescript-eslint/strict-boolean-expressions': ['error', { allowNumber: false, allowString: false }],
+            '@typescript-eslint/unbound-method': [
+                'error',
+                {
+                    ignoreStatic: true,
+                },
+            ],
         },
     },
     {

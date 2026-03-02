@@ -1,7 +1,11 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
-import { BPLACE_PLATFORM } from './bplace/hooks';
+import type { HTMLElementChild } from '../dom/html';
+import { initializeAppIconStyles } from '../ui/app-icon';
+import { initializeAppViewStyles } from '../ui/app-view';
+import { initializeMdiIconStyles } from '../ui/mdi-icon';
+import { BPLACE_PLATFORM } from './bplace/platform';
 import type { CanvasPlatform, PixelColor } from './types';
-import { WPLACE_PLATFORM } from './wplace/hooks';
+import { WPLACE_PLATFORM } from './wplace/platform';
 
 let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;
@@ -24,8 +28,15 @@ function resolvePlatform(): CanvasPlatform {
 }
 
 export const Platform = {
+    get colors(): readonly PixelColor[] {
+        return ACTIVE_PLATFORM.colors;
+    },
+
     initialize(): void {
         ACTIVE_PLATFORM.insertPlatformStyles();
+        initializeAppIconStyles();
+        initializeMdiIconStyles();
+        initializeAppViewStyles();
     },
 
     async addMapInstanceHook(): Promise<void> {
@@ -52,13 +63,12 @@ export const Platform = {
         return mapInstance;
     },
 
-    async getAvailableColors(): Promise<PixelColor[]> {
-        availableColors ??= await ACTIVE_PLATFORM.getAvailableColors();
-        return availableColors;
+    getCurrentColor(): PixelColor | null {
+        const colors = ACTIVE_PLATFORM.colors;
+        return ACTIVE_PLATFORM.getCurrentColor(colors);
     },
 
-    async getCurrentColor(): Promise<PixelColor | null> {
-        const colors = await this.getAvailableColors();
-        return ACTIVE_PLATFORM.getCurrentColor(colors);
+    renderPlatformSpecificAppViewContent(): HTMLElementChild | HTMLElementChild[] | null {
+        return ACTIVE_PLATFORM.renderPlatformSpecificAppViewContent();
     },
 };

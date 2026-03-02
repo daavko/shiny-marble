@@ -15,3 +15,15 @@ export function rgbBackgroundStyleToRgbaRaw(backgroundStyle: string): number | n
     const b = parseInt(rgbMatch[3], 10);
     return rgbToRgbaRaw(r, g, b);
 }
+
+function padHex(value: number): string {
+    return value.toString(16).padStart(2, '0');
+}
+
+export function rgbaRawToHexWithAlpha(rgba: number): string {
+    const r = rgba & 0xff;
+    const g = (rgba >> 8) & 0xff;
+    const b = (rgba >> 16) & 0xff;
+    const a = (rgba >> 24) & 0xff;
+    return `#${padHex(r)}${padHex(g)}${padHex(b)}${padHex(a)}`;
+}

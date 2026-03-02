@@ -1,4 +1,5 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
+import type { HTMLElementChild } from '../dom/html';
 
 export interface PixelColor {
     name: string;
@@ -7,8 +8,10 @@ export interface PixelColor {
 }
 
 export interface CanvasPlatform {
+    readonly colors: readonly PixelColor[];
+
     insertPlatformStyles(): void;
     addMapInstanceHook(resolveMapInstance: (mapInstance: MapLibreInstance) => void): Promise<void>;
-    getAvailableColors(): Promise<PixelColor[]>;
-    getCurrentColor(colors: PixelColor[]): PixelColor | null;
+    getCurrentColor(colors: readonly PixelColor[]): PixelColor | null;
+    renderPlatformSpecificAppViewContent(): HTMLElementChild | HTMLElementChild[] | null;
 }

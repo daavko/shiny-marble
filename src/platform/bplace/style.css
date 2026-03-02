@@ -1,5 +1,30 @@
+.sm-alerts-container {
+    position: fixed;
+    top: 16px;
+}
+
 .sm-app-icon {
     position: fixed;
-    top: 10px;
-    left: 10px;
+    top: 72px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    z-index: 10;
+
+    &::before {
+        background-position: -15px -20px;
+        background-size: calc(100% + 20px) calc(100% + 20px);
+    }
+}
+
+.sm-app-view {
+    position: fixed;
+    top: 72px;
+    right: 72px;
+    z-index: 10;
+
+    .sm-app-view__bplace-show-colors {
+        width: 75%;
+        margin-left: 12.5%;
+    }
 }

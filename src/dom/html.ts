@@ -66,8 +66,8 @@ type AnyEventListenerMap = Record<
     AnyEventListenerFn | AnyEventListenerWithOptions | (AnyEventListenerFn | AnyEventListenerWithOptions)[]
 >;
 
-type HTMLElementChild = HTMLElement | SVGElementChild;
-type SVGElementChild = SVGElement | string;
+export type HTMLElementChild = HTMLElement | SVGElementChild;
+export type SVGElementChild = SVGElement | string;
 
 export function el<T extends keyof HTMLElementTagNameMap>(
     name: T,

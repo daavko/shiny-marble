@@ -6,14 +6,19 @@ import { appIconStyle } from '../ui/app-icon';
 import { appViewStyle } from '../ui/app-view';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { mdiIconStyle } from '../ui/mdi-icon';
-import { BPLACE_PLATFORM } from './bplace/platform';
+import { BplacePlatform } from './bplace/platform';
 import platformStyle from './platform.css';
+import { BooleanSetting, Settings } from './settings';
 import type { CanvasPlatform, PixelColor } from './types';
-import { WPLACE_PLATFORM } from './wplace/platform';
+import { WplacePlatform } from './wplace/platform';
 
 let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;
 const { resolve: resolveMapInstance, promise: mapInstancePromise } = Promise.withResolvers<MapLibreInstance>();
+
+const platformSettings = Settings.create('platform', {
+    debug: new BooleanSetting(false),
+});
 
 const ACTIVE_PLATFORM = resolvePlatform();
 
@@ -21,9 +26,9 @@ function resolvePlatform(): CanvasPlatform {
     const currentOrigin = window.location.origin;
     switch (currentOrigin) {
         case 'https://bplace.art':
-            return BPLACE_PLATFORM;
+            return BplacePlatform;
         case 'https://wplace.live':
-            return WPLACE_PLATFORM;
+            return WplacePlatform;
         default:
             throw new Error(`Unsupported platform with origin ${currentOrigin}`);
     }
@@ -34,9 +39,13 @@ export const Platform = {
         return ACTIVE_PLATFORM.colors;
     },
 
+    get settings(): typeof platformSettings {
+        return platformSettings;
+    },
+
     initialize(): void {
-        addStyles(...ACTIVE_PLATFORM.styles);
         addStyles(platformStyle, alertsContainerStyle, appIconStyle, mdiIconStyle, appViewStyle, settingsDialogStyle);
+        ACTIVE_PLATFORM.initialize();
     },
 
     async addMapInstanceHook(): Promise<void> {

@@ -1,7 +1,7 @@
-import { GLOBAL_SETTINGS } from './settings';
+import { Platform } from './platform';
 
 export function debugEnabled(): boolean {
-    return GLOBAL_SETTINGS.debug.get();
+    return Platform.settings.debug.get();
 }
 
 export function debug(message: string, ...data: unknown[]): void {

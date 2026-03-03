@@ -7,24 +7,28 @@ export { default as bplaceColorStatsDialogStyle } from './color-stats-dialog.css
 
 export async function showColorStatsDialog(): Promise<void> {
     const statsList = el('div', { class: 'sm-dialog__content' }, ['Loading...']);
-    const dialog = el('dialog', { class: ['sm-dialog', 'sm-color-stats-dialog'], attributes: { closedBy: 'any' } }, [
-        el('header', { class: 'sm-dialog__header' }, [
-            el('h1', ['Your Color Stats']),
-            el(
-                'button',
-                {
-                    class: 'sm-platform__icon-btn',
-                    events: { click: () => dialog.close() },
-                },
-                [renderMdiIcon(mdiClose)],
-            ),
-        ]),
-        statsList,
-    ]);
-
-    dialog.addEventListener('close', () => {
-        dialog.remove();
-    });
+    const dialog = el(
+        'dialog',
+        {
+            class: ['sm-dialog', 'sm-color-stats-dialog'],
+            attributes: { closedBy: 'any' },
+            events: { close: () => dialog.remove() },
+        },
+        [
+            el('header', { class: 'sm-dialog__header' }, [
+                el('h1', ['Your Color Stats']),
+                el(
+                    'button',
+                    {
+                        class: 'sm-platform__icon-btn',
+                        events: { click: () => dialog.close() },
+                    },
+                    [renderMdiIcon(mdiClose)],
+                ),
+            ]),
+            statsList,
+        ],
+    );
 
     document.body.appendChild(dialog);
     dialog.showModal();

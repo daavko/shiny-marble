@@ -1,12 +1,17 @@
 import { Map as MapLibreInstance } from 'maplibre-gl';
-import { el, type HTMLElementChild } from '../../dom/html';
+import { el } from '../../dom/html';
+import { addStyle, addStyles, removeStyle } from '../../dom/styles';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
-import type { CanvasPlatform, PixelColor } from '../types';
+import { BooleanSetting, Settings } from '../settings';
+import type { CanvasPlatform } from '../types';
 import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
 import { BPLACE_COLORS } from './colors';
 import bplacePlatformStyle from './platform.css';
+import hideAchievementConfettiStyle from './toggleable-styles/hide-achievement-confetti.css';
+import hideBuyChromasButtonStyle from './toggleable-styles/hide-buy-chromas-btn.css';
+import hideGuildNotificationBadgeStyle from './toggleable-styles/hide-guild-notification-badge.css';
 
 interface RefObject {
     current: unknown;
@@ -29,10 +34,43 @@ function cleanupPatchedRefs(patchedRefs: Set<WeakRef<RefObject>>): void {
     patchedRefs.clear();
 }
 
-export const BPLACE_PLATFORM: CanvasPlatform = {
-    styles: [bplacePlatformStyle, bplaceColorStatsDialogStyle],
+function toggleStylesheet(style: string, enabled: boolean): void {
+    if (enabled) {
+        addStyle(style);
+    } else {
+        removeStyle(style);
+    }
+}
+
+const bplaceSettings = Settings.create('bplace-platform', {
+    enableDailyLocationHighlight: new BooleanSetting(true),
+    hideAchievementConfetti: new BooleanSetting(false, [
+        (_, newValue): void => toggleStylesheet(hideAchievementConfettiStyle, newValue),
+    ]),
+    hideBuyChromasButton: new BooleanSetting(false, [
+        (_, newValue): void => toggleStylesheet(hideBuyChromasButtonStyle, newValue),
+    ]),
+    hideGuildNotificationBadge: new BooleanSetting(false, [
+        (_, newValue): void => toggleStylesheet(hideGuildNotificationBadgeStyle, newValue),
+    ]),
+});
+
+interface BplacePlatform extends CanvasPlatform {
+    readonly settings: typeof bplaceSettings;
+}
+
+export const BplacePlatform: BplacePlatform = {
     colors: BPLACE_COLORS,
-    async addMapInstanceHook(resolveMapInstance): Promise<void> {
+    get settings() {
+        return bplaceSettings;
+    },
+    initialize() {
+        addStyles(bplacePlatformStyle, bplaceColorStatsDialogStyle);
+        toggleStylesheet(hideAchievementConfettiStyle, bplaceSettings.hideAchievementConfetti.get());
+        toggleStylesheet(hideBuyChromasButtonStyle, bplaceSettings.hideBuyChromasButton.get());
+        toggleStylesheet(hideGuildNotificationBadgeStyle, bplaceSettings.hideGuildNotificationBadge.get());
+    },
+    async addMapInstanceHook(resolveMapInstance) {
         const moduleHrefs = gatherModuleHrefs('/assets/');
         for (const href of moduleHrefs) {
             const module: unknown = await import(href);
@@ -176,7 +214,7 @@ export const BPLACE_PLATFORM: CanvasPlatform = {
 
         throw new Error('Failed to find React module with useRef');
     },
-    getCurrentColor(colors): PixelColor | null {
+    getCurrentColor(colors) {
         // fixed inset-x-0 z-50 flex flex-col-reverse items-center gap-2 animate-slide-in-up pointer-events-none
         const bottomPane = document.querySelector('#root > .w-screen.h-screen > div.fixed.inset-x-0');
         const colorButtonsContainer = bottomPane?.querySelector('.flex.w-full > .flex.flex-wrap.justify-center');
@@ -209,7 +247,7 @@ export const BPLACE_PLATFORM: CanvasPlatform = {
             return colors.find((color) => color.rgba === rgba) ?? null;
         }
     },
-    renderPlatformSpecificAppViewContent(): HTMLElementChild[] {
+    renderPlatformSpecificAppViewContent() {
         return [
             el('section', [el('h2', { class: 'sm-app-view__section-heading' }, ['Location highlight']), 'soon(tm)']),
             el('hr'),
@@ -246,5 +284,8 @@ export const BPLACE_PLATFORM: CanvasPlatform = {
                 ),
             ]),
         ];
+    },
+    renderPlatformSpecificSettingsContent() {
+        return null;
     },
 };

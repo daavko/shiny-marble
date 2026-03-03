@@ -1,15 +1,18 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
+import { addStyle } from '../../dom/styles';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
-import type { CanvasPlatform, PixelColor } from '../types';
+import type { CanvasPlatform } from '../types';
 import { WPLACE_COLORS } from './colors';
 import wplacePlatformStyle from './platform.css';
 
-export const WPLACE_PLATFORM: CanvasPlatform = {
-    styles: [wplacePlatformStyle],
+export const WplacePlatform: CanvasPlatform = {
     colors: WPLACE_COLORS,
-    async addMapInstanceHook(resolveMapInstance): Promise<void> {
+    initialize(): void {
+        addStyle(wplacePlatformStyle);
+    },
+    async addMapInstanceHook(resolveMapInstance) {
         const moduleHrefs = gatherModuleHrefs('./_app/immutable');
         for (const href of moduleHrefs) {
             const module: unknown = await import(href);
@@ -50,7 +53,7 @@ export const WPLACE_PLATFORM: CanvasPlatform = {
             }
         }
     },
-    getCurrentColor(colors): PixelColor | null {
+    getCurrentColor(colors) {
         const bottomPane = document.querySelector('div.absolute.bottom-0.left-0');
         const selectedColorElement = bottomPane?.querySelector(
             'div.grid > div.tooltip[data-tip] > button[aria-label].border-primary.ring-primary',
@@ -73,6 +76,9 @@ export const WPLACE_PLATFORM: CanvasPlatform = {
         }
     },
     renderPlatformSpecificAppViewContent() {
+        return null;
+    },
+    renderPlatformSpecificSettingsContent() {
         return null;
     },
 };

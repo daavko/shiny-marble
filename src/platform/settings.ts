@@ -218,7 +218,3 @@ export class Settings<const TSettings extends Record<string, Setting<unknown, un
         return serializedSettings;
     }
 }
-
-export const GLOBAL_SETTINGS = Settings.create('globalSettings', {
-    debug: new BooleanSetting(false),
-});

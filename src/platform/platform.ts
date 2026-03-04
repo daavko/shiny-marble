@@ -6,6 +6,7 @@ import { appIconStyle } from '../ui/app-icon';
 import { appViewStyle } from '../ui/app-view';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { mdiIconStyle } from '../ui/mdi-icon';
+import type { MapPoint, Point } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
 import platformStyle from './platform.css';
 import { BooleanSetting, Settings } from './settings';
@@ -80,4 +81,10 @@ export const Platform = {
     renderPlatformSpecificAppViewContent(): HTMLElementChild | HTMLElementChild[] | null {
         return ACTIVE_PLATFORM.renderPlatformSpecificAppViewContent();
     },
+
+    latLonToPixel(mapPosition: MapPoint): Point {
+        // todo
+    },
+
+    pixelToLatLon(position: Point): MapPoint {},
 };

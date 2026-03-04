@@ -59,6 +59,20 @@ interface BplacePlatform extends CanvasPlatform {
     readonly settings: typeof bplaceSettings;
 }
 
+// todo: feature that automatically makes you a beta tester by intercepting the /beta_testers call and just returning that you are indeed a beta tester
+// (() => {
+//     'use strict';
+//     const origFetch = window.fetch;
+//     window.fetch = async (req, opts) => {
+//         const reqObject = new Request(req, opts);
+//         if (reqObject.url.startsWith('https://bocmfycjqgujxkhcnfck.supabase.co/rest/v1/beta_testers')) {
+//             return new Response(JSON.stringify([{ id: '1', user_id: '1' }]));
+//         } else {
+//             return origFetch(req, opts);
+//         }
+//     };
+// })();
+
 export const BplacePlatform: BplacePlatform = {
     colors: BPLACE_COLORS,
     get settings() {

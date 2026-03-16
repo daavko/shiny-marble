@@ -1,8 +1,17 @@
 .sm-form-control {
     display: flex;
-    flex-direction: column;
 
-    input[type='checkbox'] {
+    &:has(input[type='checkbox']) {
+        align-items: center;
+        gap: 8px;
+
+        input {
+            order: -1;
+        }
+    }
+
+    &:has(input:is([type='text'], [type='number'], [type='range']), select) {
+        flex-direction: column;
     }
 
     input:is([type='text'], [type='number']),
@@ -33,9 +42,20 @@
     input[type='number'] {
     }
 
+    input[type='range'] {
+    }
+
     select {
     }
 
+    .sm-range-input__input-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     .sm-form-control__label {
+        line-height: 1.25;
+        user-select: none;
     }
 }

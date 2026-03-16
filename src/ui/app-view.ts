@@ -2,6 +2,7 @@ import { mdiClose, mdiCog, mdiStarFourPointsCircleOutline } from '@mdi/js';
 import { el } from '../dom/html';
 import { Platform } from '../platform/platform';
 import { renderMdiIcon } from './mdi-icon';
+import { showSettingsDialog } from './dialogs/settings-dialog';
 
 export { default as appViewStyle } from './app-view.css';
 
@@ -59,11 +60,7 @@ export function renderAppView(): void {
                     'button',
                     {
                         class: ['sm-platform__icon-btn'],
-                        events: {
-                            click: () => {
-                                // todo: open settings
-                            },
-                        },
+                        events: { click: () => showSettingsDialog() },
                     },
                     [renderMdiIcon(mdiCog)],
                 ),
@@ -71,9 +68,7 @@ export function renderAppView(): void {
                     'button',
                     {
                         class: ['sm-platform__icon-btn'],
-                        events: {
-                            click: () => toggleAppView(),
-                        },
+                        events: { click: () => toggleAppView() },
                     },
                     [renderMdiIcon(mdiClose)],
                 ),

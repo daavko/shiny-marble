@@ -1,9 +1,4 @@
 .sm-color-stats-dialog {
-    width: min(90vw, 400px);
-    height: min(80vh, 600px);
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-
     .sm-color-stats-dialog__table {
         table-layout: fixed;
         width: 100%;

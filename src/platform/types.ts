@@ -14,5 +14,5 @@ export interface CanvasPlatform {
     addMapInstanceHook(resolveMapInstance: (mapInstance: MapLibreInstance) => void): Promise<void>;
     getCurrentColor(colors: readonly PixelColor[]): PixelColor | null;
     renderPlatformSpecificAppViewContent(): HTMLElementChild | HTMLElementChild[] | null;
-    renderPlatformSpecificSettingsContent(): HTMLElementChild | HTMLElementChild[] | null;
+    renderPlatformSpecificSettingsContent(destoryPromise: Promise<void>): HTMLElementChild | HTMLElementChild[] | null;
 }

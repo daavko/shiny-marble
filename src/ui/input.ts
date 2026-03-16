@@ -1,12 +1,14 @@
 import { el } from '../dom/html';
 import { createRandomElementId } from '../util/string';
 
-function createFormControl(label: string, inputElement: HTMLElement): HTMLElement {
+export { default as inputStyle } from './input.css';
+
+function createFormControl(label: string, inputElement: HTMLElement, content?: HTMLElement): HTMLElement {
     const id = createRandomElementId();
     inputElement.id = id;
     return el('label', { class: 'sm-form-control', attributes: { for: id } }, [
         el('span', { class: 'sm-form-control__label' }, [label]),
-        inputElement,
+        content ?? inputElement,
     ]);
 }
 
@@ -30,9 +32,27 @@ export function createNumberInput(
 ): [HTMLElement, HTMLInputElement] {
     const { min, max } = range;
     const input = el('input', {
-        attributes: { type: 'number', min, max },
+        attributes: { type: 'number', min, max, step: 'any' },
     });
     return [createFormControl(label, input), input];
+}
+
+export function createRangeInput(
+    label: string,
+    range: { min: number; max: number; step: number },
+): [HTMLElement, HTMLInputElement] {
+    const { min, max, step } = range;
+    const input = el('input', {
+        attributes: { type: 'range', min, max, step: step },
+    });
+    const valueDisplay = el('span', [input.value]);
+    input.addEventListener('input', () => {
+        valueDisplay.textContent = input.value;
+    });
+    return [
+        createFormControl(label, input, el('div', { class: 'sm-range-input__input-container' }, [input, valueDisplay])),
+        input,
+    ];
 }
 
 export function createSelectInput(

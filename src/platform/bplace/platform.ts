@@ -1,10 +1,11 @@
 import { Map as MapLibreInstance } from 'maplibre-gl';
 import { el } from '../../dom/html';
 import { addStyle, addStyles, removeStyle } from '../../dom/styles';
+import { createBooleanSetting, createNumberRangeSetting } from '../../ui/settings-ui';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
-import { BooleanSetting, Settings } from '../settings';
+import { BooleanSetting, NumberSetting, Settings } from '../settings';
 import type { CanvasPlatform } from '../types';
 import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
 import { BPLACE_COLORS } from './colors';
@@ -44,6 +45,7 @@ function toggleStylesheet(style: string, enabled: boolean): void {
 
 const bplaceSettings = Settings.create('bplace-platform', {
     enableDailyLocationHighlight: new BooleanSetting(true),
+    dailyLocationHighlightOpacity: new NumberSetting(0.25),
     hideAchievementConfetti: new BooleanSetting(false, [
         (_, newValue): void => toggleStylesheet(hideAchievementConfettiStyle, newValue),
     ]),
@@ -266,24 +268,6 @@ export const BplacePlatform: BplacePlatform = {
             el('section', [el('h2', { class: 'sm-app-view__section-heading' }, ['Location highlight']), 'soon(tm)']),
             el('hr'),
             el('section', [
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
-                el('h2', ['TEST']),
                 el(
                     'button',
                     {
@@ -299,7 +283,36 @@ export const BplacePlatform: BplacePlatform = {
             ]),
         ];
     },
-    renderPlatformSpecificSettingsContent() {
-        return null;
+    renderPlatformSpecificSettingsContent(destroyPromise) {
+        return [
+            el('section', { class: 'sm-settings__section' }, [
+                el('h2', ['Bplace-specific settings']),
+                createBooleanSetting(
+                    bplaceSettings.enableDailyLocationHighlight,
+                    'Enable daily location highlight',
+                    destroyPromise,
+                ),
+                createNumberRangeSetting(
+                    bplaceSettings.dailyLocationHighlightOpacity,
+                    'Daily location highlight opacity',
+                    destroyPromise,
+                    { min: 0, max: 1, step: 0.05 },
+                ),
+            ]),
+            el('section', { class: 'sm-settings__section' }, [
+                el('h2', ['Bplace toggleable styles']),
+                createBooleanSetting(
+                    bplaceSettings.hideAchievementConfetti,
+                    'Hide achievement confetti',
+                    destroyPromise,
+                ),
+                createBooleanSetting(bplaceSettings.hideBuyChromasButton, 'Hide "buy chromas" button', destroyPromise),
+                createBooleanSetting(
+                    bplaceSettings.hideGuildNotificationBadge,
+                    'Hide guild notification badge',
+                    destroyPromise,
+                ),
+            ]),
+        ];
     },
 };

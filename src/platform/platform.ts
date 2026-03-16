@@ -12,6 +12,7 @@ import platformStyle from './platform.css';
 import { BooleanSetting, Settings } from './settings';
 import type { CanvasPlatform, PixelColor } from './types';
 import { WplacePlatform } from './wplace/platform';
+import { inputStyle } from '../ui/input';
 
 let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;
@@ -45,7 +46,15 @@ export const Platform = {
     },
 
     initialize(): void {
-        addStyles(platformStyle, alertsContainerStyle, appIconStyle, mdiIconStyle, appViewStyle, settingsDialogStyle);
+        addStyles(
+            platformStyle,
+            alertsContainerStyle,
+            appIconStyle,
+            mdiIconStyle,
+            appViewStyle,
+            settingsDialogStyle,
+            inputStyle,
+        );
         ACTIVE_PLATFORM.initialize();
     },
 
@@ -80,6 +89,10 @@ export const Platform = {
 
     renderPlatformSpecificAppViewContent(): HTMLElementChild | HTMLElementChild[] | null {
         return ACTIVE_PLATFORM.renderPlatformSpecificAppViewContent();
+    },
+
+    renderPlatformSpecificSettingsContent(destroyPromise: Promise<void>): HTMLElementChild | HTMLElementChild[] | null {
+        return ACTIVE_PLATFORM.renderPlatformSpecificSettingsContent(destroyPromise);
     },
 
     latLonToPixel(mapPosition: MapPoint): Point {

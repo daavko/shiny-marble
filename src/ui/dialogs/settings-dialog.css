@@ -1,0 +1,15 @@
+.sm-settings-dialog {
+    .sm-settings__section {
+        &:not(:last-child) {
+            margin-bottom: 20px;
+        }
+
+        > h2 {
+            font-size: 1.35rem;
+        }
+
+        .sm-form-control {
+            margin-top: 8px;
+        }
+    }
+}

@@ -1,8 +1,11 @@
 import { Platform } from './platform/platform';
 import { renderAlertsContainer, showErrorAlert } from './ui/alerts-container';
 import { renderAppIcon } from './ui/app-icon';
+import { debug } from './platform/debug';
 
 async function init(): Promise<void> {
+    debug('Initializing Shiny Marble');
+
     Platform.initialize();
     renderAlertsContainer();
 
@@ -55,6 +58,8 @@ async function init(): Promise<void> {
     await mapLoadPromise;
 
     renderAppIcon();
+
+    debug('Shiny Marble initialized successfully');
 }
 
 void init();

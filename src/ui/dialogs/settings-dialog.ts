@@ -1,55 +1,29 @@
-import { mdiClose } from '@mdi/js';
 import { el } from '../../dom/html';
+import { createDialog } from '../../platform/dialog';
 import { Platform } from '../../platform/platform';
-import { renderMdiIcon } from '../mdi-icon';
+import { createBooleanSetting } from '../settings-ui';
 
 export { default as settingsDialogStyle } from './settings-dialog.css';
 
 export function showSettingsDialog(): void {
-    const { promise: closePromise, resolve: closeResolve } = Promise.withResolvers<void>();
+    const { dialog, dialogBody, closePromise } = createDialog('Settings', { customClass: 'sm-settings-dialog' }, []);
 
-    const dialogContent = el('div', { class: 'sm-dialog__content' });
     const platformSpecificSettings = Platform.renderPlatformSpecificSettingsContent(closePromise);
 
     if (platformSpecificSettings != null) {
         if (Array.isArray(platformSpecificSettings)) {
-            dialogContent.append(...platformSpecificSettings);
+            dialogBody.append(...platformSpecificSettings);
         } else {
-            dialogContent.append(platformSpecificSettings);
+            dialogBody.append(platformSpecificSettings);
         }
     }
 
-    dialogContent.append(
-        el('section', { class: 'sm-settings__section' }, [el('h2', ['Template settings']), el('p', ['TODO'])]),
-        el('section', { class: 'sm-settings__section' }, [el('h2', ['Debug settings']), el('p', ['TODO'])]),
-    );
-
-    const dialog = el(
-        'dialog',
-        {
-            class: ['sm-dialog', 'sm-settings-dialog'],
-            attributes: { closedBy: 'any' },
-            events: {
-                close: () => {
-                    closeResolve();
-                    dialog.remove();
-                },
-            },
-        },
-        [
-            el('header', { class: 'sm-dialog__header' }, [
-                el('h1', ['Settings']),
-                el(
-                    'button',
-                    {
-                        class: 'sm-platform__icon-btn',
-                        events: { click: () => dialog.close() },
-                    },
-                    [renderMdiIcon(mdiClose)],
-                ),
-            ]),
-            dialogContent,
-        ],
+    dialogBody.append(
+        // el('section', { class: 'sm-settings__section' }, [el('h2', ['Template settings']), el('p', ['TODO'])]),
+        el('section', { class: 'sm-settings__section' }, [
+            el('h2', ['Debug settings']),
+            createBooleanSetting(Platform.settings.debug, 'Enable debug logging', closePromise),
+        ]),
     );
 
     document.body.appendChild(dialog);

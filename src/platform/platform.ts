@@ -13,6 +13,8 @@ import { BooleanSetting, Settings } from './settings';
 import type { CanvasPlatform, PixelColor } from './types';
 import { WplacePlatform } from './wplace/platform';
 import { inputStyle } from '../ui/input';
+import { debug } from './debug';
+import { newTemplateDialogStyle } from '../ui/dialogs/new-template-dialog';
 
 let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;
@@ -54,6 +56,7 @@ export const Platform = {
             appViewStyle,
             settingsDialogStyle,
             inputStyle,
+            newTemplateDialogStyle,
         );
         ACTIVE_PLATFORM.initialize();
     },
@@ -64,8 +67,11 @@ export const Platform = {
         }
 
         hookAdded = true;
+
+        debug('Adding map instance hook');
         await ACTIVE_PLATFORM.addMapInstanceHook((instance) => {
             mapInstance = instance;
+            debug('Map instance captured', instance);
             resolveMapInstance(instance);
         });
     },

@@ -1,34 +1,13 @@
-import { mdiClose } from '@mdi/js';
 import { el } from '../../dom/html';
-import { renderMdiIcon } from '../../ui/mdi-icon';
+import { createDialog } from '../dialog';
 import { fetchUserColorStats } from './supabase';
 
 export { default as bplaceColorStatsDialogStyle } from './color-stats-dialog.css';
 
 export async function showColorStatsDialog(): Promise<void> {
-    const statsList = el('div', { class: 'sm-dialog__content' }, ['Loading...']);
-    const dialog = el(
-        'dialog',
-        {
-            class: ['sm-dialog', 'sm-color-stats-dialog'],
-            attributes: { closedBy: 'any' },
-            events: { close: () => dialog.remove() },
-        },
-        [
-            el('header', { class: 'sm-dialog__header' }, [
-                el('h1', ['Your Color Stats']),
-                el(
-                    'button',
-                    {
-                        class: 'sm-platform__icon-btn',
-                        events: { click: () => dialog.close() },
-                    },
-                    [renderMdiIcon(mdiClose)],
-                ),
-            ]),
-            statsList,
-        ],
-    );
+    const { dialog, dialogBody } = createDialog('Your Color Stats', { customClass: 'sm-color-stats-dialog' }, [
+        'Loading...',
+    ]);
 
     document.body.appendChild(dialog);
     dialog.showModal();
@@ -36,10 +15,10 @@ export async function showColorStatsDialog(): Promise<void> {
     try {
         const stats = await fetchUserColorStats();
 
-        statsList.textContent = '';
+        dialogBody.textContent = '';
 
         if (stats.length === 0) {
-            statsList.textContent = 'No color usage data found.';
+            dialogBody.textContent = 'No color usage data found.';
             return;
         }
 
@@ -56,7 +35,7 @@ export async function showColorStatsDialog(): Promise<void> {
             );
         }
         const largestUsageCountCharacters = Math.max(...stats.map((s) => s.usageCount)).toString().length;
-        statsList.append(
+        dialogBody.append(
             el(
                 'table',
                 {
@@ -68,9 +47,9 @@ export async function showColorStatsDialog(): Promise<void> {
         );
     } catch (e) {
         if (e instanceof Error) {
-            statsList.textContent = `Error loading stats: ${e.message}`;
+            dialogBody.textContent = `Error loading stats: ${e.message}`;
         } else {
-            statsList.textContent = 'An unknown error occurred while loading stats.';
+            dialogBody.textContent = 'An unknown error occurred while loading stats.';
         }
         console.error('Error loading color stats:', e);
     }

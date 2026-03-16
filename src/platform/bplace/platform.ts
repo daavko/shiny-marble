@@ -5,6 +5,7 @@ import { createBooleanSetting, createNumberRangeSetting } from '../../ui/setting
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
+import { debug } from '../debug';
 import { BooleanSetting, NumberSetting, Settings } from '../settings';
 import type { CanvasPlatform } from '../types';
 import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
@@ -152,6 +153,7 @@ export const BplacePlatform: BplacePlatform = {
                                             preserveDrawingBuffer: true,
                                         },
                                     });
+                                    debug('Map instance detected, replacing with own instance', mapInstance, newMap);
                                     newMap.touchZoomRotate.disableRotation();
                                     newMap.keyboard.disableRotation();
                                     mapInstance.remove();
@@ -223,6 +225,7 @@ export const BplacePlatform: BplacePlatform = {
                         });
                         return refObject;
                     };
+                    debug('Patched useRef in React module', href, exportedValue);
                     return;
                 }
             }

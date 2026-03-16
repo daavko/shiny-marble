@@ -123,9 +123,9 @@ function setCommonPropsAndChildren(
     if (options?.id != null) {
         element.id = options.id;
     }
-    if (options?.class != null) {
+    if (options?.class != null && options.class !== '') {
         if (Array.isArray(options.class)) {
-            element.classList.add(...options.class);
+            element.classList.add(...options.class.filter((cls) => cls !== ''));
         } else {
             element.classList.add(options.class);
         }

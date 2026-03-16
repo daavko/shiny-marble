@@ -6,6 +6,7 @@ import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/
 import type { CanvasPlatform } from '../types';
 import { WPLACE_COLORS } from './colors';
 import wplacePlatformStyle from './platform.css';
+import { debug } from '../debug';
 
 export const WplacePlatform: CanvasPlatform = {
     colors: WPLACE_COLORS,
@@ -48,6 +49,7 @@ export const WplacePlatform: CanvasPlatform = {
 
                         return originalCapture.apply(this, args);
                     };
+                    debug('Patched internal Svelte state manager', href, exportedValue);
                     return;
                 }
             }

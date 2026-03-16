@@ -1,8 +1,9 @@
 import { mdiClose, mdiCog, mdiStarFourPointsCircleOutline } from '@mdi/js';
 import { el } from '../dom/html';
 import { Platform } from '../platform/platform';
-import { renderMdiIcon } from './mdi-icon';
+import { showNewTemplateDialog } from './dialogs/new-template-dialog';
 import { showSettingsDialog } from './dialogs/settings-dialog';
+import { renderMdiIcon } from './mdi-icon';
 
 export { default as appViewStyle } from './app-view.css';
 
@@ -24,9 +25,7 @@ export function renderAppView(): void {
                         {
                             class: 'sm-platform__block-btn',
                             events: {
-                                click: () => {
-                                    // todo: open template creation dialog
-                                },
+                                click: () => showNewTemplateDialog(),
                             },
                         },
                         ['Create'],

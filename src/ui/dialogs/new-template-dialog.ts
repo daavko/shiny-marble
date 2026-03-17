@@ -1,5 +1,7 @@
 import { el } from '../../dom/html';
 import { createDialog } from '../../platform/dialog';
+import { Platform } from '../../platform/platform';
+import { highlightNonMatchingPixels, verifyImageMatchesPalette } from '../../workers/image-tools-dispatcher';
 
 export { default as newTemplateDialogStyle } from './new-template-dialog.css';
 
@@ -13,7 +15,7 @@ export function showNewTemplateDialog(): void {
                     return;
                 }
 
-                handleFileSelected(files[0]);
+                void handleFileSelected(files[0]);
             },
         },
     });
@@ -43,7 +45,7 @@ export function showNewTemplateDialog(): void {
                     e.preventDefault();
                     dropArea.classList.remove('drag-over');
 
-                    handleFileSelected(files[0]);
+                    void handleFileSelected(files[0]);
                 },
             },
         },
@@ -64,16 +66,34 @@ export function showNewTemplateDialog(): void {
 
     dropArea.focus();
 
-    function handleFileSelected(file: File): void {
+    async function handleFileSelected(file: File): Promise<void> {
         if (!file.type.startsWith('image/')) {
             return;
         }
 
-        // todo:
-        // - validate image matches palette (show error modal if not, with highlighted spots where the pixels don't match the palette)
-        // - add image to active templates via the standard way (since there's some GL context setup and such, and we do the same for stored template anyway we can just have a single fn)
-        // - if image is larger than 4096x4096, show a warning and ask the user to confirm that they want to show it
-        //      - alternatively maybe determine this by maximum allowable texture size instead? with 4096x4096 as a reasonable minimum fallback in case the device can do larger textures
+        try {
+            const imageBitmap = await createImageBitmap(file);
+            // todo: valudate dimensions?
+            const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+            const ctx = canvas.getContext('2d');
+            if (ctx == null) {
+                // todo: maybe handle this a bit better than by throwing an immediately caught error
+                throw new Error('Could not create canvas context');
+            }
+            ctx.drawImage(imageBitmap, 0, 0);
+            imageBitmap.close();
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const { matches, image } = await verifyImageMatchesPalette(imageData, Platform.colors);
+
+            if (matches) {
+                // todo: add template to active templates
+            } else {
+                const diff = await highlightNonMatchingPixels(image, Platform.colors, 0.5, 0xffff0000);
+                // todo: show diff
+            }
+        } catch (e) {
+            // show error
+        }
 
         closeDialog();
     }

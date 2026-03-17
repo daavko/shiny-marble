@@ -68,6 +68,13 @@ export function showNewTemplateDialog(): void {
         if (!file.type.startsWith('image/')) {
             return;
         }
+
+        // todo:
+        // - validate image matches palette (show error modal if not, with highlighted spots where the pixels don't match the palette)
+        // - add image to active templates via the standard way (since there's some GL context setup and such, and we do the same for stored template anyway we can just have a single fn)
+        // - if image is larger than 4096x4096, show a warning and ask the user to confirm that they want to show it
+        //      - alternatively maybe determine this by maximum allowable texture size instead? with 4096x4096 as a reasonable minimum fallback in case the device can do larger textures
+
         closeDialog();
     }
 }

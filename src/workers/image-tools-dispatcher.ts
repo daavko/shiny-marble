@@ -17,7 +17,7 @@ export interface ImageMatchesPaletteResult {
     matches: boolean;
 }
 
-export async function verifyImageMatchesPalette(
+async function verifyImageMatchesPalette(
     image: ImageData,
     palette: readonly PixelColor[],
 ): Promise<ImageMatchesPaletteResult> {
@@ -58,7 +58,7 @@ export async function verifyImageMatchesPalette(
     return promise;
 }
 
-export async function highlightNonMatchingPixels(
+async function highlightNonMatchingPixels(
     image: ImageData,
     palette: readonly PixelColor[],
     darkenPercentage: number,
@@ -99,3 +99,75 @@ export async function highlightNonMatchingPixels(
 
     return promise;
 }
+
+async function upscalePixelArt(image: ImageData, scale: number): Promise<ImageData> {
+    const { width: srcWidth, height: srcHeight } = image;
+    const bitmap = await createImageBitmap(image);
+
+    const canvasWidth = srcWidth * scale;
+    const canvasHeight = srcHeight * scale;
+
+    const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('Failed to obtain 2D context for destination OffscreenCanvas');
+    }
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(bitmap, 0, 0, srcWidth, srcHeight, 0, 0, canvasWidth, canvasHeight);
+    bitmap.close();
+
+    return ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+}
+
+async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: number): Promise<ImageData> {
+    let { width: srcWidth, height: srcHeight } = image;
+
+    if (srcWidth === 0 || srcHeight === 0 || maxWidth <= 0 || maxHeight <= 0) {
+        return new ImageData(0, 0);
+    }
+
+    if (srcWidth < maxWidth && srcHeight < maxWidth) {
+        const scale = Math.ceil(Math.max(maxWidth / srcWidth, maxHeight / srcHeight));
+        const upscaledImage = await upscalePixelArt(image, scale);
+        srcWidth = upscaledImage.width;
+        srcHeight = upscaledImage.height;
+        image = upscaledImage;
+    }
+
+    const widthScaledToMaxHeight = Math.floor((maxHeight / srcHeight) * srcWidth);
+    const heightScaledToMaxWidth = Math.floor((maxWidth / srcWidth) * srcHeight);
+
+    let canvasWidth: number;
+    let canvasHeight: number;
+
+    if (widthScaledToMaxHeight >= maxWidth) {
+        canvasWidth = maxWidth;
+        canvasHeight = heightScaledToMaxWidth;
+    } else {
+        canvasWidth = widthScaledToMaxHeight;
+        canvasHeight = maxHeight;
+    }
+
+    const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        throw new Error('Failed to obtain 2D context for destination OffscreenCanvas');
+    }
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const bitmap = await createImageBitmap(image);
+    ctx.drawImage(bitmap, 0, 0, srcWidth, srcHeight, 0, 0, canvasWidth, canvasHeight);
+    bitmap.close();
+
+    return ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+}
+
+export const ImageTools = {
+    verifyImageMatchesPalette,
+    highlightNonMatchingPixels,
+    createThumbnail,
+};

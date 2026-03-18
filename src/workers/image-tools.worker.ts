@@ -1,7 +1,7 @@
 import type { PixelColor } from '../platform/types';
 import type { ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 
-function verifyImageMatchesPalette(pixelBuffer: ArrayBuffer, palette: PixelColor[]): boolean {
+function verifyImageMatchesPalette(pixelBuffer: ArrayBuffer, palette: readonly PixelColor[]): boolean {
     const uint32View = new Uint32Array(pixelBuffer);
     for (const pixelValue of uint32View) {
         if ((pixelValue & 0xff000000) === 0) {
@@ -19,7 +19,7 @@ function verifyImageMatchesPalette(pixelBuffer: ArrayBuffer, palette: PixelColor
 
 function highlightNonMatchingPixels(
     pixelBuffer: ArrayBuffer,
-    palette: PixelColor[],
+    palette: readonly PixelColor[],
     darkenPercentage: number,
     highlightColorRgba: number,
 ): ArrayBuffer {

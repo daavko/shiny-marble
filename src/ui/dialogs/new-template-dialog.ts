@@ -1,7 +1,7 @@
 import { el } from '../../dom/html';
 import { createDialog } from '../../platform/dialog';
 import { Platform } from '../../platform/platform';
-import { highlightNonMatchingPixels, verifyImageMatchesPalette } from '../../workers/image-tools-dispatcher';
+import { ImageTools } from '../../workers/image-tools-dispatcher';
 
 export { default as newTemplateDialogStyle } from './new-template-dialog.css';
 
@@ -83,12 +83,12 @@ export function showNewTemplateDialog(): void {
             ctx.drawImage(imageBitmap, 0, 0);
             imageBitmap.close();
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const { matches, image } = await verifyImageMatchesPalette(imageData, Platform.colors);
+            const { matches, image } = await ImageTools.verifyImageMatchesPalette(imageData, Platform.colors);
 
             if (matches) {
                 // todo: add template to active templates
             } else {
-                const diff = await highlightNonMatchingPixels(image, Platform.colors, 0.5, 0xffff0000);
+                const diff = await ImageTools.highlightNonMatchingPixels(image, Platform.colors, 0.5, 0xffff0000);
                 // todo: show diff
             }
         } catch (e) {

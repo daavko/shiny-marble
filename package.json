@@ -19,6 +19,7 @@
     "dependencies": {
         "@mdi/js": "^7.4.47",
         "@turf/turf": "^7.3.4",
+        "idb": "^8.0.3",
         "maplibre-gl": "^5.20.0",
         "rxjs": "^7.8.2",
         "valibot": "^1.2.0"

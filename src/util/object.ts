@@ -9,7 +9,6 @@ export function isObjectAndHasProperty<PropertyName extends string>(
     return isObject(value) && Reflect.has(value, property);
 }
 
-export type TypeOf = 'string' | 'number' | 'boolean' | 'symbol' | 'undefined' | 'object' | 'function' | 'bigint';
 export interface TypeOfMap {
     string: string;
     number: number;

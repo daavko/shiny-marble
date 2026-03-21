@@ -91,6 +91,9 @@ const workerPlugin = {
                 minify: options.minify,
                 write: false,
                 format: 'iife',
+                define: {
+                    WORKER_FAKE_EXPORT: '""',
+                },
             });
             return {
                 contents: result.outputFiles[0].text.trim(),

@@ -1,4 +1,4 @@
-import { el } from '../../dom/html';
+import { el } from '../../core/dom/html';
 import { createDialog } from '../dialog';
 import { fetchUserColorStats } from './supabase';
 

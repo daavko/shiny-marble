@@ -1,12 +1,12 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
-import { addStyle } from '../../dom/styles';
+import { addStyle } from '../../core/dom/styles';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
+import { debug } from '../debug';
 import type { CanvasPlatform } from '../types';
 import { WPLACE_COLORS } from './colors';
 import wplacePlatformStyle from './platform.css';
-import { debug } from '../debug';
 
 export const WplacePlatform: CanvasPlatform = {
     colors: WPLACE_COLORS,

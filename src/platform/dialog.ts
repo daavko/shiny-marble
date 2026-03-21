@@ -1,5 +1,5 @@
 import { mdiClose } from '@mdi/js';
-import { el, type HTMLElementChild } from '../dom/html';
+import { el, type HTMLElementChild } from '../core/dom/html';
 import { renderMdiIcon } from '../ui/mdi-icon';
 
 export interface DialogRef {

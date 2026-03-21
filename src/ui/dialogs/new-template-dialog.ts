@@ -1,4 +1,4 @@
-import { el } from '../../dom/html';
+import { el } from '../../core/dom/html';
 import { createDialog } from '../../platform/dialog';
 import { Platform } from '../../platform/platform';
 import { ImageTools } from '../../workers/image-tools-dispatcher';

@@ -1,5 +1,5 @@
 import { mdiClose } from '@mdi/js';
-import { el } from '../dom/html';
+import { el } from '../core/dom/html';
 import { renderMdiIcon } from './mdi-icon';
 
 export { default as alertsContainerStyle } from './alerts-container.css';

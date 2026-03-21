@@ -1,20 +1,21 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
-import type { HTMLElementChild } from '../dom/html';
-import { addStyles } from '../dom/styles';
+import type { HTMLElementChild } from '../core/dom/html';
+import { addStyles } from '../core/dom/styles';
+import { NetworkInterceptor } from '../core/network-interceptor';
 import { alertsContainerStyle } from '../ui/alerts-container';
 import { appIconStyle } from '../ui/app-icon';
 import { appViewStyle } from '../ui/app-view';
+import { newTemplateDialogStyle } from '../ui/dialogs/new-template-dialog';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
+import { inputStyle } from '../ui/input';
 import { mdiIconStyle } from '../ui/mdi-icon';
 import type { MapPoint, Point } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
+import { debug } from './debug';
 import platformStyle from './platform.css';
 import { BooleanSetting, Settings } from './settings';
 import type { CanvasPlatform, PixelColor } from './types';
 import { WplacePlatform } from './wplace/platform';
-import { inputStyle } from '../ui/input';
-import { debug } from './debug';
-import { newTemplateDialogStyle } from '../ui/dialogs/new-template-dialog';
 
 let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;
@@ -48,6 +49,7 @@ export const Platform = {
     },
 
     initialize(): void {
+        NetworkInterceptor.init();
         addStyles(
             platformStyle,
             alertsContainerStyle,

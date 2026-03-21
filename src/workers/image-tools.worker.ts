@@ -1,6 +1,8 @@
 import type { PixelColor } from '../platform/types';
 import type { ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 
+// import { DEFAULT_BROKEN_WORKER } from './util';
+
 function verifyImageMatchesPalette(pixelBuffer: ArrayBuffer, palette: readonly PixelColor[]): boolean {
     const uint32View = new Uint32Array(pixelBuffer);
     for (const pixelValue of uint32View) {
@@ -87,3 +89,5 @@ function handleTaskRequest(request: ImageToolsTaskRequest): void {
 }
 
 globalThis.addEventListener('message', (event: MessageEvent<ImageToolsTaskRequest>) => handleTaskRequest(event.data));
+
+export default WORKER_FAKE_EXPORT;

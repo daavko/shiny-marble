@@ -1,5 +1,5 @@
 import { mdiClose, mdiCog, mdiStarFourPointsCircleOutline } from '@mdi/js';
-import { el } from '../dom/html';
+import { el } from '../core/dom/html';
 import { Platform } from '../platform/platform';
 import { showNewTemplateDialog } from './dialogs/new-template-dialog';
 import { showSettingsDialog } from './dialogs/settings-dialog';

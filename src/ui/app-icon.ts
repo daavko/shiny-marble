@@ -1,5 +1,5 @@
 import { mdiStarFourPointsCircleOutline } from '@mdi/js';
-import { el } from '../dom/html';
+import { el } from '../core/dom/html';
 import { toggleAppView } from './app-view';
 import { renderMdiIcon } from './mdi-icon';
 

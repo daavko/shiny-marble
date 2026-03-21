@@ -1,5 +1,5 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
-import type { HTMLElementChild } from '../dom/html';
+import type { HTMLElementChild } from '../core/dom/html';
 
 export interface PixelColor {
     name: string;

@@ -4,11 +4,13 @@ import type {
     ImageToolsTaskResult,
     VerifyImageMatchesPaletteTaskRequest,
 } from './image-tools-types';
+import imageToolsWorkerCode from './image-tools.worker';
+import { createWorker } from './worker';
 
 let workerInstance: Worker | null = null;
 
 function getWorker(): Worker {
-    workerInstance ??= new Worker(new URL('./image-tools.worker.ts', import.meta.url));
+    workerInstance = createWorker(imageToolsWorkerCode);
     return workerInstance;
 }
 

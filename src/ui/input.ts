@@ -1,4 +1,4 @@
-import { el } from '../dom/html';
+import { el } from '../core/dom/html';
 import { createRandomElementId } from '../util/string';
 
 export { default as inputStyle } from './input.css';

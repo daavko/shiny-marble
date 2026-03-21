@@ -1,6 +1,6 @@
 import { Map as MapLibreInstance } from 'maplibre-gl';
-import { el } from '../../dom/html';
-import { addStyle, addStyles, removeStyle } from '../../dom/styles';
+import { el } from '../../core/dom/html';
+import { addStyle, addStyles, removeStyle } from '../../core/dom/styles';
 import { createBooleanSetting, createNumberRangeSetting } from '../../ui/settings-ui';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
@@ -10,6 +10,8 @@ import { BooleanSetting, NumberSetting, Settings } from '../settings';
 import type { CanvasPlatform } from '../types';
 import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
 import { BPLACE_COLORS } from './colors';
+import { enableBplaceAnalyticsBlocker, toggleBplaceAnalyticsBlocker } from './misc/analytics-block';
+import { enableBplaceFakeBeta, toggleBplaceFakeBeta } from './misc/fake-beta';
 import bplacePlatformStyle from './platform.css';
 import hideAchievementConfettiStyle from './toggleable-styles/hide-achievement-confetti.css';
 import hideBuyChromasButtonStyle from './toggleable-styles/hide-buy-chromas-btn.css';
@@ -56,25 +58,13 @@ const bplaceSettings = Settings.create('bplace-platform', {
     hideGuildNotificationBadge: new BooleanSetting(false, [
         (_, newValue): void => toggleStylesheet(hideGuildNotificationBadgeStyle, newValue),
     ]),
+    blockAnalytics: new BooleanSetting(true, [(_, newValue): void => toggleBplaceAnalyticsBlocker(newValue)]),
+    fakeBetaTester: new BooleanSetting(false, [(_, newValue): void => toggleBplaceFakeBeta(newValue)]),
 });
 
 interface BplacePlatform extends CanvasPlatform {
     readonly settings: typeof bplaceSettings;
 }
-
-// todo: feature that automatically makes you a beta tester by intercepting the /beta_testers call and just returning that you are indeed a beta tester
-// (() => {
-//     'use strict';
-//     const origFetch = window.fetch;
-//     window.fetch = async (req, opts) => {
-//         const reqObject = new Request(req, opts);
-//         if (reqObject.url.startsWith('https://bocmfycjqgujxkhcnfck.supabase.co/rest/v1/beta_testers')) {
-//             return new Response(JSON.stringify([{ id: '1', user_id: '1' }]));
-//         } else {
-//             return origFetch(req, opts);
-//         }
-//     };
-// })();
 
 export const BplacePlatform: BplacePlatform = {
     colors: BPLACE_COLORS,
@@ -86,6 +76,14 @@ export const BplacePlatform: BplacePlatform = {
         toggleStylesheet(hideAchievementConfettiStyle, bplaceSettings.hideAchievementConfetti.get());
         toggleStylesheet(hideBuyChromasButtonStyle, bplaceSettings.hideBuyChromasButton.get());
         toggleStylesheet(hideGuildNotificationBadgeStyle, bplaceSettings.hideGuildNotificationBadge.get());
+
+        if (bplaceSettings.blockAnalytics.get()) {
+            enableBplaceAnalyticsBlocker();
+        }
+
+        if (bplaceSettings.fakeBetaTester.get()) {
+            enableBplaceFakeBeta();
+        }
     },
     async addMapInstanceHook(resolveMapInstance) {
         const moduleHrefs = gatherModuleHrefs('/assets/');
@@ -275,11 +273,7 @@ export const BplacePlatform: BplacePlatform = {
                     'button',
                     {
                         class: ['sm-platform__block-btn', 'sm-app-view__bplace-show-colors'],
-                        events: {
-                            click: () => {
-                                void showColorStatsDialog();
-                            },
-                        },
+                        events: { click: () => void showColorStatsDialog() },
                     },
                     ['Show my color stats'],
                 ),
@@ -300,6 +294,12 @@ export const BplacePlatform: BplacePlatform = {
                     'Daily location highlight opacity',
                     destroyPromise,
                     { min: 0, max: 1, step: 0.05 },
+                ),
+                createBooleanSetting(bplaceSettings.blockAnalytics, 'Block analytics requests', destroyPromise),
+                createBooleanSetting(
+                    bplaceSettings.fakeBetaTester,
+                    'Fake being a beta tester (requires reload)',
+                    destroyPromise,
                 ),
             ]),
             el('section', { class: 'sm-settings__section' }, [

@@ -5,6 +5,7 @@ import { NetworkInterceptor } from '../core/network-interceptor';
 import { alertsContainerStyle } from '../ui/alerts-container';
 import { appIconStyle } from '../ui/app-icon';
 import { appViewStyle } from '../ui/app-view';
+import { imagePaletteDiffDialogStyle } from '../ui/dialogs/image-palette-diff-dialog';
 import { newTemplateDialogStyle } from '../ui/dialogs/new-template-dialog';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { inputStyle } from '../ui/input';
@@ -59,6 +60,7 @@ export const Platform = {
             settingsDialogStyle,
             inputStyle,
             newTemplateDialogStyle,
+            imagePaletteDiffDialogStyle,
         );
         ACTIVE_PLATFORM.initialize();
     },

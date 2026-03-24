@@ -7,6 +7,7 @@ interface BaseImageToolsTask<T extends string> {
 
 type VerifyImageMachesPaletteTaskName = 'verifyImageMatchesPalette';
 type HighlightNonMatchingPixelsTaskName = 'highlightNonMatchingPixels';
+type DetectCanvasFingerprintingProtectionTaskName = 'detectCanvasFingerprintingProtection';
 
 export interface VerifyImageMatchesPaletteTaskRequest extends BaseImageToolsTask<VerifyImageMachesPaletteTaskName> {
     pixelBuffer: ArrayBuffer;
@@ -20,7 +21,13 @@ export interface HighlightNonMatchingPixelsTaskRequest extends BaseImageToolsTas
     highlightColorRgba: number;
 }
 
-export type ImageToolsTaskRequest = VerifyImageMatchesPaletteTaskRequest | HighlightNonMatchingPixelsTaskRequest;
+export type DetectCanvasFingerprintingProtectionTaskRequest =
+    BaseImageToolsTask<DetectCanvasFingerprintingProtectionTaskName>;
+
+export type ImageToolsTaskRequest =
+    | VerifyImageMatchesPaletteTaskRequest
+    | HighlightNonMatchingPixelsTaskRequest
+    | DetectCanvasFingerprintingProtectionTaskRequest;
 
 interface BaseImageToolsTaskResult<T extends string> {
     task: T;
@@ -56,4 +63,21 @@ export type HighlightNonMatchingPixelsTaskResult =
     | HighlightNonMatchingPixelsTaskSuccessResult
     | HighlightNonMatchingPixelsTaskErrorResult;
 
-export type ImageToolsTaskResult = VerifyImageMatchesPaletteTaskResult | HighlightNonMatchingPixelsTaskResult;
+export interface DetectCanvasFingerprintingProtectionTaskSuccessResult extends BaseImageToolsTaskResult<DetectCanvasFingerprintingProtectionTaskName> {
+    success: true;
+    protectionDetected: boolean;
+}
+
+export interface DetectCanvasFingerprintingProtectionTaskErrorResult extends BaseImageToolsTaskResult<DetectCanvasFingerprintingProtectionTaskName> {
+    success: false;
+    error: unknown;
+}
+
+export type DetectCanvasFingerprintingProtectionTaskResult =
+    | DetectCanvasFingerprintingProtectionTaskSuccessResult
+    | DetectCanvasFingerprintingProtectionTaskErrorResult;
+
+export type ImageToolsTaskResult =
+    | VerifyImageMatchesPaletteTaskResult
+    | HighlightNonMatchingPixelsTaskResult
+    | DetectCanvasFingerprintingProtectionTaskResult;

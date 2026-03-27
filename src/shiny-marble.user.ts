@@ -2,6 +2,11 @@ import { Platform } from './platform/platform';
 import { renderAlertsContainer, showErrorAlert } from './ui/alerts-container';
 import { renderAppIcon } from './ui/app-icon';
 import { debug } from './platform/debug';
+import { ImageTools } from './workers/image-tools-dispatcher';
+
+function formatCanvasFingerprintingError(browser: string): string {
+    return `${browser} with canvas fingerprinting protections detected. Shiny Marble will not be able to function properly with these protections enabled, since canvas fingerprinting protections mess with pixel values.`;
+}
 
 async function init(): Promise<void> {
     debug('Initializing Shiny Marble');
@@ -58,6 +63,24 @@ async function init(): Promise<void> {
     await mapLoadPromise;
 
     renderAppIcon();
+
+    try {
+        if (await ImageTools.detectCanvasFingerprintingProtection()) {
+            if (Reflect.has(navigator, 'brave')) {
+                showErrorAlert(formatCanvasFingerprintingError('Brave Browser'), undefined, 30000);
+            } else if (/Firefox\/\d+\.\d+$/i.exec(navigator.userAgent)) {
+                showErrorAlert(formatCanvasFingerprintingError('Firefox'), undefined, 30000);
+            } else {
+                showErrorAlert(formatCanvasFingerprintingError('Unknown browser'), undefined, 30000);
+            }
+        }
+    } catch (e: unknown) {
+        showErrorAlert(
+            'An error occurred while checking for canvas fingerprinting protections. Shiny Marble may not function properly if you have canvas fingerprinting protections enabled.',
+            e,
+            10000,
+        );
+    }
 
     debug('Shiny Marble initialized successfully');
 }

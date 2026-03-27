@@ -168,8 +168,37 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
     return ctx.getImageData(0, 0, canvasWidth, canvasHeight);
 }
 
+async function detectCanvasFingerprintingProtection(): Promise<boolean> {
+    const { promise, resolve, reject } = Promise.withResolvers<boolean>();
+    const worker = getWorker();
+
+    const taskId = crypto.randomUUID();
+
+    const listener = (event: MessageEvent<ImageToolsTaskResult>): void => {
+        if (event.data.taskId !== taskId || event.data.task !== 'detectCanvasFingerprintingProtection') {
+            return;
+        }
+
+        if (event.data.success) {
+            resolve(event.data.protectionDetected);
+        } else {
+            reject(event.data.error);
+        }
+        worker.removeEventListener('message', listener);
+    };
+    worker.addEventListener('message', listener);
+
+    worker.postMessage({
+        taskId,
+        task: 'detectCanvasFingerprintingProtection',
+    });
+
+    return promise;
+}
+
 export const ImageTools = {
     verifyImageMatchesPalette,
     highlightNonMatchingPixels,
     createThumbnail,
+    detectCanvasFingerprintingProtection,
 };

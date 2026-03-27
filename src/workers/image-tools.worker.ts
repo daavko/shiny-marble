@@ -1,8 +1,6 @@
 import type { PixelColor } from '../platform/types';
 import type { ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 
-// import { DEFAULT_BROKEN_WORKER } from './util';
-
 function verifyImageMatchesPalette(pixelBuffer: ArrayBuffer, palette: readonly PixelColor[]): boolean {
     const uint32View = new Uint32Array(pixelBuffer);
     for (const pixelValue of uint32View) {
@@ -50,6 +48,35 @@ function highlightNonMatchingPixels(
     return resultBuffer;
 }
 
+const FINGERPRINT_CANVAS_SIZE = 1000;
+
+function detectCanvasFingerprintingProtection(): boolean {
+    const canvas = new OffscreenCanvas(FINGERPRINT_CANVAS_SIZE, FINGERPRINT_CANVAS_SIZE);
+    const ctx = canvas.getContext('2d');
+    if (ctx == null) {
+        throw new Error('Failed to obtain 2D context for OffscreenCanvas');
+    }
+
+    const writtenImage = new ImageData(FINGERPRINT_CANVAS_SIZE, FINGERPRINT_CANVAS_SIZE);
+    const writtenImageInt32View = new Uint32Array(writtenImage.data.buffer);
+    for (let i = 0; i < writtenImageInt32View.length; i++) {
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        writtenImageInt32View[i] = (255 << 24) | (b << 16) | (g << 8) | r;
+    }
+    ctx.putImageData(writtenImage, 0, 0);
+    const readImage = ctx.getImageData(0, 0, FINGERPRINT_CANVAS_SIZE, FINGERPRINT_CANVAS_SIZE);
+
+    for (let i = 0; i < readImage.data.length; i++) {
+        if (readImage.data[i] !== writtenImage.data[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function postTaskResult(data: ImageToolsTaskResult, transfer?: Transferable[]): void {
     globalThis.postMessage(data, { transfer });
 }
@@ -84,6 +111,20 @@ function handleTaskRequest(request: ImageToolsTaskRequest): void {
             postTaskResult({ task: 'highlightNonMatchingPixels', taskId, success: true, pixelBuffer: resultBuffer }, [
                 resultBuffer,
             ]);
+            break;
+        }
+        case 'detectCanvasFingerprintingProtection': {
+            const { taskId } = request;
+            let protectionDetected: boolean;
+            try {
+                protectionDetected = detectCanvasFingerprintingProtection();
+            } catch (error) {
+                postTaskResult({ task: 'detectCanvasFingerprintingProtection', taskId, success: false, error });
+                return;
+            }
+
+            postTaskResult({ task: 'detectCanvasFingerprintingProtection', taskId, success: true, protectionDetected });
+            break;
         }
     }
 }

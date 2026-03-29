@@ -2,6 +2,7 @@ import { debug } from './core/debug';
 import { Platform } from './platform/platform';
 import { renderAlertsContainer, showErrorAlert } from './ui/alerts-container';
 import { renderAppIcon } from './ui/app-icon';
+import { waitWithTimeout } from './util/promise';
 import { ImageTools } from './workers/image-tools-dispatcher';
 
 function formatCanvasFingerprintingError(browser: string): string {
@@ -17,7 +18,18 @@ async function init(): Promise<void> {
     const { promise: mapLoadPromise, resolve: resolveMapLoaded } = Promise.withResolvers<void>();
     try {
         await Platform.addMapInstanceHook();
-        const map = await Platform.waitForMapInstance();
+
+        const maybeMap = await waitWithTimeout(Platform.waitForMapInstance(), 10000);
+
+        if (!maybeMap) {
+            showErrorAlert(
+                "Could not find map within 10 seconds. Shiny Marble will continue to wait for the map to load. If it doesn't load within a reasonable time, try reloading. If that doesn't help, please report this error.",
+                undefined,
+                10000,
+            );
+        }
+
+        const map = maybeMap ?? (await Platform.waitForMapInstance());
         Reflect.set(globalThis, '__shinyMarbleMapInstance', map);
 
         // const cityCenter = [-67.35400168661789, 9.90099895844917];

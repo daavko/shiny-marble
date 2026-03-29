@@ -1,8 +1,6 @@
 import type { Setting } from '../platform/settings';
 import { createCheckbox, createNumberInput, createRangeInput, createSelectInput, createTextInput } from './input';
 
-export type SettingCleanupCallback = () => void;
-
 export function createBooleanSetting(
     setting: Setting<unknown, boolean>,
     label: string,

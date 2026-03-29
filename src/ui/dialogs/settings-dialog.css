@@ -8,7 +8,8 @@
             font-size: 1.35rem;
         }
 
-        .sm-form-control {
+        .sm-form-control,
+        .sm-platform__block-btn {
             margin-top: 8px;
         }
     }

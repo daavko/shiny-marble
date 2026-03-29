@@ -1,7 +1,8 @@
+import { downloadDebugLog } from '../../core/debug';
 import { el } from '../../core/dom/html';
 import { createDialog } from '../../platform/dialog';
-import { Platform } from '../../platform/platform';
-import { createBooleanSetting } from '../settings-ui';
+import { Platform, PlatformSettings } from '../../platform/platform';
+import { createBooleanSetting, createNumberSetting } from '../settings-ui';
 
 export { default as settingsDialogStyle } from './settings-dialog.css';
 
@@ -22,7 +23,18 @@ export function showSettingsDialog(): void {
         // el('section', { class: 'sm-settings__section' }, [el('h2', ['Template settings']), el('p', ['TODO'])]),
         el('section', { class: 'sm-settings__section' }, [
             el('h2', ['Debug settings']),
-            createBooleanSetting(Platform.settings.debug, 'Enable debug logging', closePromise),
+            createBooleanSetting(PlatformSettings.debug, 'Enable debug logging', closePromise),
+            createNumberSetting(PlatformSettings.debugLogSize, 'Debug log size', closePromise, {
+                min: 0,
+            }),
+            el(
+                'button',
+                {
+                    class: 'sm-platform__block-btn',
+                    events: { click: () => downloadDebugLog() },
+                },
+                ['Download debug log'],
+            ),
         ]),
     );
 

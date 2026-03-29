@@ -1,5 +1,5 @@
 .sm-app-view {
-    background: white;
+    background: var(--sm-background-color);
     border-radius: 8px;
     overflow: hidden;
 
@@ -12,6 +12,12 @@
         width: 400px;
         max-height: 600px;
         overflow-y: auto;
+
+        > hr {
+            border: none;
+            border-top: 1px solid var(--sm-soft-border-color);
+            margin: 0;
+        }
     }
 
     .sm-app-view__header {
@@ -19,23 +25,23 @@
         align-items: center;
         justify-content: space-between;
         padding: 12px;
-        border-bottom: 1px solid #787878;
-    }
+        border-bottom: 1px solid var(--sm-hard-border-color);
 
-    .sm-app-view__title {
-        font-size: 1.5rem;
+        .sm-app-view__title {
+            font-size: 1.5rem;
 
-        .sm-app-view__title-icon {
-            display: inline-block;
-            margin-right: 4px;
-            vertical-align: -8px;
+            .sm-app-view__title-icon {
+                display: inline-block;
+                margin-right: 4px;
+                vertical-align: -8px;
+            }
         }
-    }
 
-    .sm-app-view__header-buttons {
-        display: flex;
-        gap: 8px;
-        justify-content: end;
+        .sm-app-view__header-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: end;
+        }
     }
 
     .sm-app-view__section-heading {
@@ -43,10 +49,9 @@
         margin: 0 0 8px;
     }
 
-    > hr {
-        border: none;
-        border-top: 1px solid #888888;
-        margin: 0;
+    .sm-app-view__footer {
+        font-size: 0.75rem;
+        color: var(--sm-secondary-text-color);
     }
 }
 

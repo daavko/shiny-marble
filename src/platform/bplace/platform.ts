@@ -1,17 +1,17 @@
 import { Map as MapLibreInstance } from 'maplibre-gl';
+import { debug } from '../../core/debug';
 import { el } from '../../core/dom/html';
 import { addStyle, addStyles, removeStyle } from '../../core/dom/styles';
 import { createBooleanSetting, createNumberRangeSetting } from '../../ui/settings-ui';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
-import { debug } from '../debug';
 import { BooleanSetting, NumberSetting, Settings } from '../settings';
 import type { CanvasPlatform } from '../types';
 import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
 import { BPLACE_COLORS } from './colors';
-import { enableBplaceAnalyticsBlocker, toggleBplaceAnalyticsBlocker } from './misc/analytics-block';
-import { enableBplaceFakeBeta, toggleBplaceFakeBeta } from './misc/fake-beta';
+import { toggleBplaceAnalyticsBlocker } from './misc/analytics-block';
+import { toggleBplaceFakeBeta } from './misc/fake-beta';
 import bplacePlatformStyle from './platform.css';
 import hideAchievementConfettiStyle from './toggleable-styles/hide-achievement-confetti.css';
 import hideBuyChromasButtonStyle from './toggleable-styles/hide-buy-chromas-btn.css';
@@ -77,13 +77,8 @@ export const BplacePlatform: BplacePlatform = {
         toggleStylesheet(hideBuyChromasButtonStyle, bplaceSettings.hideBuyChromasButton.get());
         toggleStylesheet(hideGuildNotificationBadgeStyle, bplaceSettings.hideGuildNotificationBadge.get());
 
-        if (bplaceSettings.blockAnalytics.get()) {
-            enableBplaceAnalyticsBlocker();
-        }
-
-        if (bplaceSettings.fakeBetaTester.get()) {
-            enableBplaceFakeBeta();
-        }
+        toggleBplaceAnalyticsBlocker(bplaceSettings.blockAnalytics.get());
+        toggleBplaceFakeBeta(bplaceSettings.fakeBetaTester.get());
     },
     async addMapInstanceHook(resolveMapInstance) {
         const moduleHrefs = gatherModuleHrefs('/assets/');

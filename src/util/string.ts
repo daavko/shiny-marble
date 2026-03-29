@@ -8,5 +8,5 @@ export function randomHexString(length: number): string {
 }
 
 export function createRandomElementId(): string {
-    return `dpus-${crypto.randomUUID()}`;
+    return `sm-${crypto.randomUUID()}`;
 }

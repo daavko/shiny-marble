@@ -1,0 +1,13 @@
+.sm-image-palette-diff-dialog {
+    max-width: 600px;
+
+    .sm-image-palette-diff-dialog__canvas {
+        max-width: 100%;
+        margin: 24px auto 24px;
+    }
+
+    .sm-image-palette-diff-dialog__buttons {
+        display: flex;
+        gap: 8px;
+    }
+}

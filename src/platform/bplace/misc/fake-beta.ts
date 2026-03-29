@@ -2,7 +2,7 @@ import { NetworkInterceptor } from '../../../core/network-interceptor';
 
 let fakeBetaInterceptorSymbol: symbol | null = null;
 
-export function enableBplaceFakeBeta(): void {
+function enableBplaceFakeBeta(): void {
     if (fakeBetaInterceptorSymbol) {
         return;
     }

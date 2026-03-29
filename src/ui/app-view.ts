@@ -24,9 +24,7 @@ export function renderAppView(): void {
                         'button',
                         {
                             class: 'sm-platform__block-btn',
-                            events: {
-                                click: () => showNewTemplateDialog(),
-                            },
+                            events: { click: () => showNewTemplateDialog() },
                         },
                         ['Create'],
                     ),
@@ -58,7 +56,7 @@ export function renderAppView(): void {
                 el(
                     'button',
                     {
-                        class: ['sm-platform__icon-btn'],
+                        class: 'sm-platform__icon-btn',
                         events: { click: () => showSettingsDialog() },
                     },
                     [renderMdiIcon(mdiCog)],
@@ -66,7 +64,7 @@ export function renderAppView(): void {
                 el(
                     'button',
                     {
-                        class: ['sm-platform__icon-btn'],
+                        class: 'sm-platform__icon-btn',
                         events: { click: () => toggleAppView() },
                     },
                     [renderMdiIcon(mdiClose)],
@@ -85,6 +83,13 @@ export function renderAppView(): void {
             view.append(platformSpecificContent);
         }
     }
+
+    view.append(
+        el('hr'),
+        el('footer', { class: 'sm-app-view__footer' }, [
+            el('p', [`Shiny Marble v${GM_info.script.version} - made by ${GM_info.script.author}`]),
+        ]),
+    );
 
     document.body.appendChild(container);
     renderedAppView = container;

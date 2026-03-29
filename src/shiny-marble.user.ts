@@ -1,7 +1,7 @@
+import { debug } from './core/debug';
 import { Platform } from './platform/platform';
 import { renderAlertsContainer, showErrorAlert } from './ui/alerts-container';
 import { renderAppIcon } from './ui/app-icon';
-import { debug } from './platform/debug';
 import { ImageTools } from './workers/image-tools-dispatcher';
 
 function formatCanvasFingerprintingError(browser: string): string {
@@ -11,7 +11,7 @@ function formatCanvasFingerprintingError(browser: string): string {
 async function init(): Promise<void> {
     debug('Initializing Shiny Marble');
 
-    Platform.initialize();
+    Platform.initPlatform();
     renderAlertsContainer();
 
     const { promise: mapLoadPromise, resolve: resolveMapLoaded } = Promise.withResolvers<void>();
@@ -81,8 +81,6 @@ async function init(): Promise<void> {
             10000,
         );
     }
-
-    debug('Shiny Marble initialized successfully');
 }
 
 void init();

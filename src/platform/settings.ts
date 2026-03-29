@@ -1,7 +1,7 @@
 import type { GenericSchema } from 'valibot';
 import * as v from 'valibot';
+import { debugDetailed } from '../core/debug';
 import { showErrorAlert } from '../ui/alerts-container';
-import { debug } from './debug';
 
 export type SettingUpdateCallback<TValue> = (oldValue: TValue, newValue: TValue) => void;
 
@@ -67,7 +67,7 @@ export abstract class SettingBase<TValue, TSerializedValue = TValue> implements 
         if (parsed.success) {
             return parsed.output;
         } else {
-            debug('Failed to parse setting value', parsed.issues);
+            debugDetailed('Failed to parse setting value', parsed.issues);
             return this.defaultValue;
         }
     }
@@ -133,7 +133,7 @@ export class Settings<const TSettings extends Record<string, Setting<unknown, un
 
             const parsedNewSettings = v.safeParse(Settings.schema, event.newValue);
             if (!parsedNewSettings.success) {
-                debug('Failed to parse settings from storage event', parsedNewSettings.issues);
+                debugDetailed('Failed to parse settings from storage event', parsedNewSettings.issues);
                 return;
             }
 

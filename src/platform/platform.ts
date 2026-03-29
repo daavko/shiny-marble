@@ -1,4 +1,5 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
+import { debug, resizeDebugLog } from '../core/debug';
 import type { HTMLElementChild } from '../core/dom/html';
 import { addStyles } from '../core/dom/styles';
 import { NetworkInterceptor } from '../core/network-interceptor';
@@ -12,9 +13,8 @@ import { inputStyle } from '../ui/input';
 import { mdiIconStyle } from '../ui/mdi-icon';
 import type { MapPoint, Point } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
-import { debug } from './debug';
 import platformStyle from './platform.css';
-import { BooleanSetting, Settings } from './settings';
+import { BooleanSetting, NumberSetting, Settings } from './settings';
 import type { CanvasPlatform, PixelColor } from './types';
 import { WplacePlatform } from './wplace/platform';
 
@@ -22,13 +22,7 @@ let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;
 const { resolve: resolveMapInstance, promise: mapInstancePromise } = Promise.withResolvers<MapLibreInstance>();
 
-const platformSettings = Settings.create('platform', {
-    debug: new BooleanSetting(false),
-});
-
-const ACTIVE_PLATFORM = resolvePlatform();
-
-function resolvePlatform(): CanvasPlatform {
+const activePlatform = ((): CanvasPlatform => {
     const currentOrigin = window.location.origin;
     switch (currentOrigin) {
         case 'https://bplace.art':
@@ -38,18 +32,19 @@ function resolvePlatform(): CanvasPlatform {
         default:
             throw new Error(`Unsupported platform with origin ${currentOrigin}`);
     }
-}
+})();
+
+export const PlatformSettings = Settings.create('platform', {
+    debug: new BooleanSetting(false),
+    debugLogSize: new NumberSetting(100, [(_, newValue): void => resizeDebugLog(newValue)]),
+});
 
 export const Platform = {
     get colors(): readonly PixelColor[] {
-        return ACTIVE_PLATFORM.colors;
+        return activePlatform.colors;
     },
 
-    get settings(): typeof platformSettings {
-        return platformSettings;
-    },
-
-    initialize(): void {
+    initPlatform(): void {
         NetworkInterceptor.init();
         addStyles(
             platformStyle,
@@ -62,7 +57,7 @@ export const Platform = {
             newTemplateDialogStyle,
             imagePaletteDiffDialogStyle,
         );
-        ACTIVE_PLATFORM.initialize();
+        activePlatform.initialize();
     },
 
     async addMapInstanceHook(): Promise<void> {
@@ -73,7 +68,7 @@ export const Platform = {
         hookAdded = true;
 
         debug('Adding map instance hook');
-        await ACTIVE_PLATFORM.addMapInstanceHook((instance) => {
+        await activePlatform.addMapInstanceHook((instance) => {
             mapInstance = instance;
             debug('Map instance captured', instance);
             resolveMapInstance(instance);
@@ -84,7 +79,7 @@ export const Platform = {
         return mapInstancePromise;
     },
 
-    getMapInstance(): MapLibreInstance {
+    getCurrentMapInstance(): MapLibreInstance {
         if (mapInstance == null) {
             throw new Error('Map instance is not available yet. Please call waitForMapInstance() first.');
         }
@@ -93,21 +88,23 @@ export const Platform = {
     },
 
     getCurrentColor(): PixelColor | null {
-        const colors = ACTIVE_PLATFORM.colors;
-        return ACTIVE_PLATFORM.getCurrentColor(colors);
+        const colors = activePlatform.colors;
+        return activePlatform.getCurrentColor(colors);
     },
 
     renderPlatformSpecificAppViewContent(): HTMLElementChild | HTMLElementChild[] | null {
-        return ACTIVE_PLATFORM.renderPlatformSpecificAppViewContent();
+        return activePlatform.renderPlatformSpecificAppViewContent();
     },
 
     renderPlatformSpecificSettingsContent(destroyPromise: Promise<void>): HTMLElementChild | HTMLElementChild[] | null {
-        return ACTIVE_PLATFORM.renderPlatformSpecificSettingsContent(destroyPromise);
+        return activePlatform.renderPlatformSpecificSettingsContent(destroyPromise);
     },
 
     latLonToPixel(mapPosition: MapPoint): Point {
         // todo
     },
 
-    pixelToLatLon(position: Point): MapPoint {},
+    pixelToLatLon(position: Point): MapPoint {
+        // todo
+    },
 };

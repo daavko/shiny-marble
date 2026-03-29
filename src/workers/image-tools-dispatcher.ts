@@ -1,4 +1,7 @@
+import { MAX_CANVAS_DIMENSION } from '../core/const';
+import { debug, debugDetailed } from '../core/debug';
 import type { PixelColor } from '../platform/types';
+import { assertCanvasCtx } from '../util/canvas';
 import type {
     HighlightNonMatchingPixelsTaskRequest,
     ImageToolsTaskResult,
@@ -40,12 +43,14 @@ async function verifyImageMatchesPalette(
                 matches: event.data.matches,
             });
         } else {
+            debugDetailed('Error in verifyImageMatchesPalette task', event.data.error);
             reject(event.data.error);
         }
         worker.removeEventListener('message', listener);
     };
     worker.addEventListener('message', listener);
 
+    debugDetailed('Posting verifyImageMatchesPalette task', image, palette);
     const pixelBuffer = image.data.buffer;
     worker.postMessage(
         {
@@ -80,12 +85,14 @@ async function highlightNonMatchingPixels(
         if (event.data.success) {
             resolve(new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height));
         } else {
+            debugDetailed('Error in highlightNonMatchingPixels task', event.data.error);
             reject(event.data.error);
         }
         worker.removeEventListener('message', listener);
     };
     worker.addEventListener('message', listener);
 
+    debugDetailed('Posting highlightNonMatchingPixels task', image, palette, darkenPercentage, highlightColorRgba);
     const pixelBuffer = image.data.buffer;
     worker.postMessage(
         {
@@ -111,13 +118,13 @@ async function upscalePixelArt(image: ImageData, scale: number): Promise<ImageDa
 
     const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        throw new Error('Failed to obtain 2D context for destination OffscreenCanvas');
-    }
+    assertCanvasCtx(ctx, 'Failed to obtain 2D context for destination OffscreenCanvas');
 
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(bitmap, 0, 0, srcWidth, srcHeight, 0, 0, canvasWidth, canvasHeight);
     bitmap.close();
+
+    debugDetailed('Upscaled pixel art image', image, { srcWidth, srcHeight }, { canvasWidth, canvasHeight });
 
     return ctx.getImageData(0, 0, canvasWidth, canvasHeight);
 }
@@ -128,6 +135,9 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
     if (srcWidth === 0 || srcHeight === 0 || maxWidth <= 0 || maxHeight <= 0) {
         return new ImageData(0, 0);
     }
+
+    maxWidth = Math.min(maxWidth, MAX_CANVAS_DIMENSION);
+    maxHeight = Math.min(maxHeight, MAX_CANVAS_DIMENSION);
 
     if (srcWidth < maxWidth && srcHeight < maxWidth) {
         const scale = Math.ceil(Math.max(maxWidth / srcWidth, maxHeight / srcHeight));
@@ -153,10 +163,7 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
 
     const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-        throw new Error('Failed to obtain 2D context for destination OffscreenCanvas');
-    }
+    assertCanvasCtx(ctx, 'Failed to obtain 2D context for destination OffscreenCanvas');
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -164,6 +171,8 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
     const bitmap = await createImageBitmap(image);
     ctx.drawImage(bitmap, 0, 0, srcWidth, srcHeight, 0, 0, canvasWidth, canvasHeight);
     bitmap.close();
+
+    debugDetailed('Created thumbnail of image', image, { srcWidth, srcHeight }, { canvasWidth, canvasHeight });
 
     return ctx.getImageData(0, 0, canvasWidth, canvasHeight);
 }
@@ -182,12 +191,14 @@ async function detectCanvasFingerprintingProtection(): Promise<boolean> {
         if (event.data.success) {
             resolve(event.data.protectionDetected);
         } else {
+            debugDetailed('Error in detectCanvasFingerprintingProtection task', event.data.error);
             reject(event.data.error);
         }
         worker.removeEventListener('message', listener);
     };
     worker.addEventListener('message', listener);
 
+    debug('Posting detectCanvasFingerprintingProtection task');
     worker.postMessage({
         taskId,
         task: 'detectCanvasFingerprintingProtection',

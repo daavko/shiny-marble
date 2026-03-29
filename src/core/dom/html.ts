@@ -30,7 +30,7 @@ type HTMLEventListenerWithOptions<K extends keyof HTMLElementEventMap> = [
     AddEventListenerOptions,
 ];
 
-type HTMLElementEventListenerMap = {
+export type HTMLElementEventListenerMap = {
     [K in keyof HTMLElementEventMap]?:
         | HTMLEventListenerFn<K>
         | HTMLEventListenerWithOptions<K>

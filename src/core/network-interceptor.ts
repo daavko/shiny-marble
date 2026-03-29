@@ -1,5 +1,5 @@
 import picomatch, { type Matcher } from 'picomatch/posix';
-import { debug } from '../platform/debug';
+import { debug } from './debug';
 
 interface SimpleMatcher {
     hostname: string;

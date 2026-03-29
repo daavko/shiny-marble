@@ -2,7 +2,7 @@ import { NetworkInterceptor } from '../../../core/network-interceptor';
 
 let blockerInterceptorSymbol: symbol | null = null;
 
-export function enableBplaceAnalyticsBlocker(): void {
+function enableBplaceAnalyticsBlocker(): void {
     if (blockerInterceptorSymbol) {
         return;
     }

@@ -1,0 +1,1 @@
+export const MAX_CANVAS_DIMENSION = 8192;

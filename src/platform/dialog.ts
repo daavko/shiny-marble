@@ -5,7 +5,7 @@ import { renderMdiIcon } from '../ui/mdi-icon';
 export interface DialogRef {
     dialog: HTMLDialogElement;
     dialogBody: HTMLElement;
-    close: () => void;
+    closeDialog: () => void;
     closePromise: Promise<void>;
 }
 
@@ -49,7 +49,7 @@ export function createDialog(title: string, config: DialogConfig, content: HTMLE
     return {
         dialog,
         dialogBody,
-        close: () => dialog.close(),
+        closeDialog: () => dialog.close(),
         closePromise,
     };
 }

@@ -1,4 +1,5 @@
 import { mdiClose } from '@mdi/js';
+import { debugDetailed } from '../core/debug';
 import { el } from '../core/dom/html';
 import { renderMdiIcon } from './mdi-icon';
 
@@ -23,10 +24,8 @@ function createAlertElement(message: string, duration: number, alertTypeClass: s
         el(
             'button',
             {
-                class: 'sm-alert__close-btn',
-                events: {
-                    click: () => removeAlert(alertElement),
-                },
+                class: ['sm-platform__icon-btn', 'sm-platform__icon-btn--dense', 'sm-alert__close-btn'],
+                events: { click: () => removeAlert(alertElement) },
             },
             [renderMdiIcon(mdiClose)],
         ),
@@ -41,7 +40,7 @@ export function showInfoAlert(message: string, duration = DEFAULT_INFO_MESSAGE_D
 }
 
 export function showErrorAlert(message: string, context?: unknown, duration = DEFAULT_ERROR_MESSAGE_DURATION): void {
-    console.error(message, context);
+    debugDetailed(`Error alert: ${message}`, context);
     const alertElement = createAlertElement(message, duration, 'sm-alert--error');
     ALERTS_CONTAINER.appendChild(alertElement);
 }

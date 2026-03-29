@@ -1,6 +1,7 @@
 .sm-alerts-container {
     position: fixed;
     top: 16px;
+    z-index: 10;
 }
 
 .sm-app-icon {

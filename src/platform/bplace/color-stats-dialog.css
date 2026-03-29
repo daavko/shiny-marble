@@ -10,7 +10,7 @@
                 width: 56px;
                 height: 20px;
                 border-radius: 4px;
-                border: 1px solid #ccc;
+                border: 1px solid var(--sm-soft-border-color);
             }
         }
 
@@ -24,14 +24,6 @@
             text-align: right;
             font-family: monospace;
             font-size: 1.25em;
-        }
-
-        tr:nth-child(odd) {
-            background-color: #efefef;
-        }
-
-        tr:nth-child(even) {
-            background-color: #fff;
         }
     }
 }

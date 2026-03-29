@@ -36,7 +36,7 @@ function highlightNonMatchingPixels(
         }
 
         if (palette.some((color) => color.rgba === pixelValue)) {
-            const r = Math.round(((pixelValue >> 0) & 0xff) * (1 - darkenPercentage));
+            const r = Math.round((pixelValue & 0xff) * (1 - darkenPercentage));
             const g = Math.round(((pixelValue >> 8) & 0xff) * (1 - darkenPercentage));
             const b = Math.round(((pixelValue >> 16) & 0xff) * (1 - darkenPercentage));
             resultView[i] = (pixelValue & 0xff000000) | (b << 16) | (g << 8) | r;

@@ -6,14 +6,23 @@ interface StoredTemplate {
     id: string;
     name: string;
     position: Point;
-    image: ImageData;
+    hash: string;
     thumbnail: ImageData;
+}
+
+interface StoredTemplateImage {
+    hash: string;
+    image: ImageData;
 }
 
 interface TemplateStorageDBSchema extends DBSchema {
     templates: {
         key: string;
         value: StoredTemplate;
+    };
+    templateImages: {
+        key: string;
+        value: StoredTemplateImage;
     };
 }
 
@@ -49,6 +58,7 @@ async function getStorage(): Promise<TemplateStorageDB> {
             if (oldVersion < 1) {
                 // never opened before, create object store
                 db.createObjectStore('templates', { keyPath: 'id' });
+                db.createObjectStore('templateImages', { keyPath: 'hash' });
             }
         },
         blocked: (currentVersion, blockedVersion, event) => {
@@ -87,14 +97,12 @@ export const TemplateStorage = {
         return await db.get('templates', id);
     },
     async getTemplates(ids: string[]): Promise<Map<string, StoredTemplate>> {
-        const templates = new Map<string, StoredTemplate>();
-        for (const id of ids) {
-            const template = await this.getTemplate(id);
-            if (template) {
-                templates.set(id, template);
-            }
-        }
-        return templates;
+        const db = await getStorage();
+        const tx = db.transaction('templates', 'readonly');
+        const store = tx.objectStore('templates');
+        const results = await Promise.all(ids.map((id) => store.get(id)));
+        await tx.done;
+        return new Map<string, StoredTemplate>(results.filter((t) => t != null).map((t) => [t.id, t]));
     },
     async getAllTemplates(): Promise<StoredTemplate[]> {
         const db = await getStorage();
@@ -103,5 +111,25 @@ export const TemplateStorage = {
     async deleteTemplate(id: string): Promise<void> {
         const db = await getStorage();
         await db.delete('templates', id);
+    },
+    async saveTemplateImage(image: StoredTemplateImage): Promise<void> {
+        const db = await getStorage();
+        await db.put('templateImages', image);
+    },
+    async getTemplateImage(hash: string): Promise<StoredTemplateImage | undefined> {
+        const db = await getStorage();
+        return await db.get('templateImages', hash);
+    },
+    async getTemplateImages(hashes: string[]): Promise<Map<string, StoredTemplateImage>> {
+        const db = await getStorage();
+        const tx = db.transaction('templateImages', 'readonly');
+        const store = tx.objectStore('templateImages');
+        const results = await Promise.all(hashes.map((hash) => store.get(hash)));
+        await tx.done;
+        return new Map<string, StoredTemplateImage>(results.filter((t) => t != null).map((t) => [t.hash, t]));
+    },
+    async deleteTemplateImage(hash: string): Promise<void> {
+        const db = await getStorage();
+        await db.delete('templateImages', hash);
     },
 };

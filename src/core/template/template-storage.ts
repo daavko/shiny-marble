@@ -70,14 +70,14 @@ async function getStorage(): Promise<TemplateStorageDB> {
         },
         blocking: (currentVersion, blockedVersion, event) => {
             showErrorAlert(
-                'Storage error: A newer version of Shiny Marble is open in another tab, and this tab is preventing it from accessing template storage. Please close this tab.',
+                'Storage warning: A newer version of Shiny Marble is open in another tab, and this tab is preventing it from accessing template storage. Please close this tab.',
                 { event, currentVersion, blockedVersion },
                 30000,
             );
         },
         terminated: () => {
             showErrorAlert(
-                'Storage error: Template storage was unexpectedly closed. Please reload the page. If this issue persists, please report it.',
+                'Storage error: Template storage was unexpectedly closed. Please reload the page. If the problem persists, please report it.',
                 undefined,
                 30000,
             );

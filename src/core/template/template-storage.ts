@@ -1,6 +1,7 @@
 import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
 import { showErrorAlert } from '../../ui/alerts-container';
 import type { Point } from '../../util/geometry';
+import { debug } from '../debug';
 
 interface StoredTemplate {
     id: string;
@@ -54,7 +55,8 @@ export const TemplateStorageEvents: TemplateStorageEventTarget = new EventTarget
 
 async function getStorage(): Promise<TemplateStorageDB> {
     indexedDbInstance ??= await openDB<TemplateStorageDBSchema>('shinymarble', CURRENT_DB_VERSION, {
-        upgrade: (db, oldVersion) => {
+        upgrade: (db, oldVersion, newVersion) => {
+            debug(`Upgrading template storage from version ${oldVersion} to ${newVersion}`);
             if (oldVersion < 1) {
                 // never opened before, create object store
                 db.createObjectStore('templates', { keyPath: 'id' });

@@ -1,8 +1,23 @@
 import { type DBSchema, openDB } from 'idb';
 import { showErrorAlert } from '../ui/alerts-container';
 import type { SettingUpdateCallback } from './settings';
+import { debug, debugDetailed } from '../core/debug';
 
 const ChangesBroadcaster = new BroadcastChannel('sm-settings-changes');
+
+interface SettingChangeEventData {
+    type: 'settingChange';
+    settings: string;
+    key: string;
+    newValue: unknown;
+}
+
+interface SettingsResetEventData {
+    type: 'reset';
+    settings: string;
+}
+
+type SettingsEventData = SettingChangeEventData | SettingsResetEventData;
 
 export interface NewSetting<TValue> {
     readonly defaultValue: TValue;
@@ -94,10 +109,15 @@ type NewSettingsWithoutImplProperties<TSettings extends Record<string, NewSettin
     [K in keyof NewSettingsImpl]: `Property name "${K}" is reserved and cannot be used in settings shape.`;
 };
 
+interface SavedNewSetting {
+    key: string;
+    value: unknown;
+}
+
 interface NewSettingsDBSchema extends DBSchema {
     settings: {
         key: string;
-        value: unknown;
+        value: SavedNewSetting;
         indexes: { key: string };
     };
 }
@@ -109,6 +129,7 @@ export function createSettings<TSettings extends Record<string, NewSetting<unkno
 ): NewSettings<TSettings> {
     const storageLayer = openDB<NewSettingsDBSchema>(`sm-settings-${name}`, versionNumber, {
         upgrade: (db, oldVersion) => {
+            debug(`Upgrading settings storage "${name}" from version ${oldVersion} to ${versionNumber}`);
             if (oldVersion < 1) {
                 // never opened before, create object store
                 const store = db.createObjectStore('settings', { keyPath: 'key' });
@@ -153,28 +174,39 @@ export function createSettings<TSettings extends Record<string, NewSetting<unkno
             const missingKeys = settingsKeys.difference(allStoredSettings);
             const existingKeys = settingsKeys.intersection(allStoredSettings);
 
-            for (const [settingKey, setting] of Object.entries(settingsShape as TSettings)) {
-                try {
-                    const storedValue = await store.get(settingKey);
-                    if (storedValue != null) {
-                        setting.set(storedValue);
-                    } else {
-                        await store.put({ key: settingKey, value: setting.get() });
-                    }
-                } catch (e) {
-                    console.error(`Error loading setting "${settingKey}" from storage:`, e);
-                }
+            debugDetailed(`Deleting extra keys from settings storage "${name}":`, extraKeys);
+            for (const extraKey of extraKeys) {
+                await store.delete(extraKey);
+            }
 
-                setting.addCallback((_, newValue) => {
-                    store.put({ key: settingKey, value: newValue }).catch((e) => {
-                        console.error(`Error saving setting "${settingKey}" to storage:`, e);
-                    });
-                });
+            debugDetailed(`Adding missing keys to settings storage "${name}":`, missingKeys);
+            for (const missingKey of missingKeys) {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- we know it's there, we literally just mapped the keys from the settings shape
+                const setting = settingsMap.get(missingKey)!;
+                await store.put({ key: missingKey, value: setting.get() });
+            }
+
+            debugDetailed(`Loading existing keys from settings storage "${name}":`, existingKeys);
+            for (const existingKey of existingKeys) {
+                const savedSetting = await store.get(existingKey);
+                const setting = settingsMap.get(existingKey);
+                setting?.set(savedSetting?.value);
             }
         })
         .catch((e: unknown) => {
             rejectInit(e);
         });
+
+    initPromise.then(() => {
+        ChangesBroadcaster.addEventListener('message', (event: MessageEvent<SettingsEventData>) => {
+            switch (event.data.type) {
+                case 'settingChange':
+                // todo
+                case 'reset':
+                // todo
+            }
+        });
+    });
 
     // todo
 

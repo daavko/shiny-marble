@@ -11,7 +11,6 @@ import { newTemplateDialogStyle } from '../ui/dialogs/new-template-dialog';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { inputStyle } from '../ui/input';
 import { mdiIconStyle } from '../ui/mdi-icon';
-import type { MapPoint, Point } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
 import platformStyle from './platform.css';
 import { BooleanSetting, NumberSetting, Settings } from './settings';
@@ -100,11 +99,11 @@ export const Platform = {
         return activePlatform.renderPlatformSpecificSettingsContent(destroyPromise);
     },
 
-    latLonToPixel(mapPosition: MapPoint): Point {
-        // todo
-    },
-
-    pixelToLatLon(position: Point): MapPoint {
-        // todo
-    },
+    // latLonToPixel(mapPosition: MapPoint): Point {
+    //     // todo
+    // },
+    //
+    // pixelToLatLon(position: Point): MapPoint {
+    //     // todo
+    // },
 };

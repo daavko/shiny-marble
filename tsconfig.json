@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "target": "esnext",
-        "lib": ["esnext", "dom", "dom.iterable", "dom.asynciterable"],
+        "lib": ["esnext", "dom"],
         "module": "esnext",
         "moduleDetection": "force",
         "moduleResolution": "bundler",
@@ -16,7 +16,8 @@
         "outDir": "dist",
         "composite": true,
         "incremental": true,
-        "tsBuildInfoFile": ".ts/.tsbuildinfo"
+        "tsBuildInfoFile": ".ts/.tsbuildinfo",
+        "types": ["picomatch"]
     },
     "include": ["src"]
 }

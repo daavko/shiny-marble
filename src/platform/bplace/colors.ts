@@ -1,5 +1,5 @@
-import type { PixelColor } from '../types';
 import { rgbaRawToHexWithAlpha } from '../../util/color';
+import type { PixelColor } from '../types';
 
 export const BPLACE_COLORS: PixelColor[] = [
     { name: 'Pastel red', rgba: 0xffd1d1ff },

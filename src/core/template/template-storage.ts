@@ -1,12 +1,14 @@
 import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
 import { showErrorAlert } from '../../ui/alerts-container';
-import type { Point } from '../../util/geometry';
+import type { Dimensions, Point } from '../../util/geometry';
+import { waitForDataAndTransaction } from '../../util/idb';
 import { debug } from '../debug';
 
-interface StoredTemplate {
+export interface StoredTemplate {
     id: string;
     name: string;
     position: Point;
+    imageSize: Dimensions;
     hash: string;
     thumbnail: ImageData;
 }
@@ -102,8 +104,10 @@ export const TemplateStorage = {
         const db = await getStorage();
         const tx = db.transaction('templates', 'readonly');
         const store = tx.objectStore('templates');
-        const results = await Promise.all(ids.map((id) => store.get(id)));
-        await tx.done;
+        const results = await waitForDataAndTransaction(
+            ids.map((id) => store.get(id)),
+            tx,
+        );
         return new Map<string, StoredTemplate>(results.filter((t) => t != null).map((t) => [t.id, t]));
     },
     async getAllTemplates(): Promise<StoredTemplate[]> {
@@ -126,8 +130,10 @@ export const TemplateStorage = {
         const db = await getStorage();
         const tx = db.transaction('templateImages', 'readonly');
         const store = tx.objectStore('templateImages');
-        const results = await Promise.all(hashes.map((hash) => store.get(hash)));
-        await tx.done;
+        const results = await waitForDataAndTransaction(
+            hashes.map((hash) => store.get(hash)),
+            tx,
+        );
         return new Map<string, StoredTemplateImage>(results.filter((t) => t != null).map((t) => [t.hash, t]));
     },
     async deleteTemplateImage(hash: string): Promise<void> {

@@ -1,4 +1,4 @@
-import { type DBSchema, openDB } from 'idb';
+import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
 import { debug, debugDetailed } from '../core/debug';
 import { showErrorAlert } from '../ui/alerts-container';
 import type { SettingUpdateCallback } from './settings';
@@ -23,8 +23,8 @@ type SettingEqualityFunction<TValue> = (value1: TValue, value2: TValue) => boole
 
 interface NewSettingInitializer<TValue> {
     readonly defaultValue: TValue;
-    readonly valueUpdateCallbacks?: SettingUpdateCallback<TValue>[];
-    readonly equalityFunction?: SettingEqualityFunction<TValue>;
+    readonly valueUpdateCallbacks: SettingUpdateCallback<TValue>[];
+    readonly equalityFunction: SettingEqualityFunction<TValue>;
 }
 
 export interface NewSetting<TValue> {
@@ -35,77 +35,20 @@ export interface NewSetting<TValue> {
     removeCallback(callback: SettingUpdateCallback<TValue>): void;
 }
 
+interface NewSettingInternal<TValue> extends NewSetting<TValue> {
+    setWithoutInternalCallbacks(value: TValue): void;
+}
+
 type SettingFromInitializer<TInit> = TInit extends NewSettingInitializer<infer TValue> ? NewSetting<TValue> : never;
-
-export abstract class NewSettingBase<TValue> implements NewSetting<TValue> {
-    protected readonly valueUpdateCallbacks: Set<SettingUpdateCallback<TValue>>;
-
-    protected currentValue: TValue;
-
-    protected constructor(
-        readonly defaultValue: TValue,
-        valueUpdateCallbacks?: SettingUpdateCallback<TValue>[],
-    ) {
-        this.currentValue = defaultValue;
-        this.valueUpdateCallbacks = new Set(valueUpdateCallbacks);
-    }
-
-    addCallback(callback: SettingUpdateCallback<TValue>): void {
-        this.valueUpdateCallbacks.add(callback);
-    }
-
-    removeCallback(callback: SettingUpdateCallback<TValue>): void {
-        this.valueUpdateCallbacks.delete(callback);
-    }
-
-    get(): TValue {
-        return this.currentValue;
-    }
-
-    set(value: TValue): void {
-        const oldValue = this.currentValue;
-        if (this.valuesEqual(oldValue, value)) {
-            return;
-        }
-        this.currentValue = value;
-        this.notifyCallbacks(oldValue, value);
-    }
-
-    reset(): void {
-        this.set(this.defaultValue);
-    }
-
-    protected notifyCallbacks(oldValue: TValue, newValue: TValue): void {
-        for (const callback of this.valueUpdateCallbacks) {
-            callback(oldValue, newValue);
-        }
-    }
-
-    protected valuesEqual(value1: TValue, value2: TValue): boolean {
-        return value1 === value2;
-    }
-}
-
-export class NewBooleanSetting extends NewSettingBase<boolean> {
-    constructor(defaultValue: boolean, valueUpdateCallbacks?: SettingUpdateCallback<boolean>[]) {
-        super(defaultValue, valueUpdateCallbacks);
-    }
-}
-
-export class NewNumberSetting extends NewSettingBase<number> {
-    constructor(defaultValue: number, valueUpdateCallbacks?: SettingUpdateCallback<number>[]) {
-        super(defaultValue, valueUpdateCallbacks);
-    }
-}
-
-export class NewStringSetting extends NewSettingBase<string> {
-    constructor(defaultValue: string, valueUpdateCallbacks?: SettingUpdateCallback<string>[]) {
-        super(defaultValue, valueUpdateCallbacks);
-    }
-}
+type SettingInternalFromInitializer<TInit> =
+    TInit extends NewSettingInitializer<infer TValue> ? NewSettingInternal<TValue> : never;
 
 type NewSettings<TSettings extends Record<string, NewSettingInitializer<unknown>>> = {
     [K in keyof TSettings]: SettingFromInitializer<TSettings[K]>;
+} & NewSettingsImpl;
+
+type NewSettingsInternal<TSettings extends Record<string, NewSettingInitializer<unknown>>> = {
+    [K in keyof TSettings]: SettingInternalFromInitializer<TSettings[K]>;
 } & NewSettingsImpl;
 
 interface NewSettingsImpl {
@@ -130,7 +73,22 @@ interface NewSettingsDBSchema extends DBSchema {
     };
 }
 
-function settingFromInitializer<TValue = unknown>(initializer: NewSettingInitializer<TValue>): NewSetting<TValue> {
+export function createSetting<TValue>(
+    defaultValue: TValue,
+    valueUpdateCallbacks: NoInfer<SettingUpdateCallback<TValue>>[] = [],
+    equalityFunction?: NoInfer<SettingEqualityFunction<TValue>>,
+): NoInfer<NewSettingInitializer<TValue>> {
+    return {
+        defaultValue,
+        valueUpdateCallbacks,
+        equalityFunction: equalityFunction ?? ((a, b): boolean => a === b),
+    };
+}
+
+function settingFromInitializer<TValue>(
+    initializer: NewSettingInitializer<TValue>,
+    internalCallbacks: SettingUpdateCallback<TValue>[],
+): NoInfer<NewSettingInternal<TValue>> {
     const { defaultValue, valueUpdateCallbacks: initialCallbacks, equalityFunction } = initializer;
 
     let value = defaultValue;
@@ -141,11 +99,14 @@ function settingFromInitializer<TValue = unknown>(initializer: NewSettingInitial
             return value;
         },
         set value(newValue: TValue) {
-            if (equalityFunction ? equalityFunction(value, newValue) : value === newValue) {
+            if (equalityFunction(value, newValue)) {
                 return;
             }
             const oldValue = value;
             value = newValue;
+            for (const callback of internalCallbacks) {
+                callback(oldValue, newValue);
+            }
             for (const callback of valueUpdateCallbacks) {
                 callback(oldValue, newValue);
             }
@@ -159,15 +120,22 @@ function settingFromInitializer<TValue = unknown>(initializer: NewSettingInitial
         removeCallback(callback: SettingUpdateCallback<TValue>): void {
             valueUpdateCallbacks.delete(callback);
         },
+
+        setWithoutInternalCallbacks(newValue: TValue): void {
+            if (equalityFunction(value, newValue)) {
+                return;
+            }
+            const oldValue = value;
+            value = newValue;
+            for (const callback of valueUpdateCallbacks) {
+                callback(oldValue, newValue);
+            }
+        },
     };
 }
 
-export function createSettings<TSettings extends Record<string, NewSettingInitializer<unknown>>>(
-    name: string,
-    versionNumber: number,
-    settingsShape: Readonly<TSettings> & NewSettingsWithoutImplProperties,
-): NewSettings<TSettings> {
-    const storageLayer = openDB<NewSettingsDBSchema>(`sm-settings-${name}`, versionNumber, {
+async function createSettingsStorage(name: string, versionNumber: number): Promise<IDBPDatabase<NewSettingsDBSchema>> {
+    return openDB<NewSettingsDBSchema>(`sm-settings-${name}`, versionNumber, {
         upgrade: (db, oldVersion) => {
             debug(`Upgrading settings storage "${name}" from version ${oldVersion} to ${versionNumber}`);
             if (oldVersion < 1) {
@@ -192,14 +160,54 @@ export function createSettings<TSettings extends Record<string, NewSettingInitia
         },
         terminated: () => {
             showErrorAlert(
-                `Storage error: Settings storage "${name} was unexpectedly closed. Please reload the page. If the problem persists, please report it."`,
+                `Storage error: Settings storage "${name}" was unexpectedly closed. Please reload the page. If the problem persists, please report it."`,
                 undefined,
                 30000,
             );
         },
     });
+}
+
+export function createSettings<TSettings extends Record<string, NewSettingInitializer<unknown>>>(
+    name: string,
+    versionNumber: number,
+    settingsShape: TSettings & NewSettingsWithoutImplProperties,
+): NewSettings<TSettings> {
+    const storageLayer = createSettingsStorage(name, versionNumber);
 
     const { promise: initPromise, resolve: resolveInit, reject: rejectInit } = Promise.withResolvers<void>();
+
+    const settingStorageCallback: SettingUpdateCallback<unknown> = (oldValue, newValue) => {};
+
+    function createSettingStorageCallback(key: string): SettingUpdateCallback<unknown> {
+        return (_oldValue, newValue) => {
+            storageLayer.then(async (db) => {
+                // todo: check that this is correct...
+                await db.put('settings', { key, value: newValue });
+            });
+        };
+    }
+
+    function createSettingBroadcastCallback(key: string): SettingUpdateCallback<unknown> {
+        return (_oldValue, newValue) => {
+            ChangesBroadcaster.postMessage({
+                type: 'settingChange',
+                settings: name,
+                key,
+                newValue,
+            } satisfies SettingChangeEventData);
+        };
+    }
+
+    const settingsKeys = new Set(Object.keys(settingsShape));
+    let settingsImpl: Partial<NewSettingsInternal<TSettings>> = {};
+    for (const [key, initializer] of Object.entries(settingsShape as TSettings)) {
+        const setting = settingFromInitializer(initializer, []);
+        settingsImpl = {
+            ...settingsImpl,
+            [key]: setting,
+        };
+    }
 
     storageLayer
         .then(async (db) => {
@@ -207,8 +215,6 @@ export function createSettings<TSettings extends Record<string, NewSettingInitia
             const store = tx.objectStore('settings');
 
             const allStoredSettings = new Set(await store.getAllKeys());
-            const settingsKeys = new Set(Object.keys(settingsShape));
-            const settingsMap = new Map(Object.entries(settingsShape as TSettings));
 
             const extraKeys = allStoredSettings.difference(settingsKeys);
             const missingKeys = settingsKeys.difference(allStoredSettings);
@@ -222,15 +228,14 @@ export function createSettings<TSettings extends Record<string, NewSettingInitia
             debugDetailed(`Adding missing keys to settings storage "${name}":`, missingKeys);
             for (const missingKey of missingKeys) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- we know it's there, we literally just mapped the keys from the settings shape
-                const setting = settingsMap.get(missingKey)!;
-                await store.put({ key: missingKey, value: setting.defaultValue });
+                const setting = settingsImpl[missingKey as keyof TSettings]!;
+                await store.put({ key: missingKey, value: setting.value });
             }
 
             debugDetailed(`Loading existing keys from settings storage "${name}":`, existingKeys);
             for (const existingKey of existingKeys) {
                 const savedSetting = await store.get(existingKey);
-                const setting = settingsMap.get(existingKey);
-                setting?.set(savedSetting?.value);
+                settingsImpl[existingKey as keyof TSettings]?.setWithoutInternalCallbacks(savedSetting?.value);
             }
         })
         .catch((e: unknown) => {

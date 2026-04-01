@@ -1,7 +1,7 @@
 import { type DBSchema, openDB } from 'idb';
+import { debug, debugDetailed } from '../core/debug';
 import { showErrorAlert } from '../ui/alerts-container';
 import type { SettingUpdateCallback } from './settings';
-import { debug, debugDetailed } from '../core/debug';
 
 const ChangesBroadcaster = new BroadcastChannel('sm-settings-changes');
 
@@ -19,15 +19,23 @@ interface SettingsResetEventData {
 
 type SettingsEventData = SettingChangeEventData | SettingsResetEventData;
 
-export interface NewSetting<TValue> {
-    readonly defaultValue: TValue;
+type SettingEqualityFunction<TValue> = (value1: TValue, value2: TValue) => boolean;
 
-    get(): TValue;
-    set(value: TValue): void;
+interface NewSettingInitializer<TValue> {
+    readonly defaultValue: TValue;
+    readonly valueUpdateCallbacks?: SettingUpdateCallback<TValue>[];
+    readonly equalityFunction?: SettingEqualityFunction<TValue>;
+}
+
+export interface NewSetting<TValue> {
+    get value(): TValue;
+    set value(value: TValue);
     reset(): void;
     addCallback(callback: SettingUpdateCallback<TValue>): void;
     removeCallback(callback: SettingUpdateCallback<TValue>): void;
 }
+
+type SettingFromInitializer<TInit> = TInit extends NewSettingInitializer<infer TValue> ? NewSetting<TValue> : never;
 
 export abstract class NewSettingBase<TValue> implements NewSetting<TValue> {
     protected readonly valueUpdateCallbacks: Set<SettingUpdateCallback<TValue>>;
@@ -96,8 +104,8 @@ export class NewStringSetting extends NewSettingBase<string> {
     }
 }
 
-type NewSettings<TSettings extends Record<string, NewSetting<unknown>>> = {
-    [K in keyof TSettings]: TSettings[K];
+type NewSettings<TSettings extends Record<string, NewSettingInitializer<unknown>>> = {
+    [K in keyof TSettings]: SettingFromInitializer<TSettings[K]>;
 } & NewSettingsImpl;
 
 interface NewSettingsImpl {
@@ -105,7 +113,7 @@ interface NewSettingsImpl {
     reset(): void;
 }
 
-type NewSettingsWithoutImplProperties<TSettings extends Record<string, NewSetting<unknown>>> = {
+type NewSettingsWithoutImplProperties = {
     [K in keyof NewSettingsImpl]: `Property name "${K}" is reserved and cannot be used in settings shape.`;
 };
 
@@ -122,10 +130,42 @@ interface NewSettingsDBSchema extends DBSchema {
     };
 }
 
-export function createSettings<TSettings extends Record<string, NewSetting<unknown>>>(
+function settingFromInitializer<TValue = unknown>(initializer: NewSettingInitializer<TValue>): NewSetting<TValue> {
+    const { defaultValue, valueUpdateCallbacks: initialCallbacks, equalityFunction } = initializer;
+
+    let value = defaultValue;
+    const valueUpdateCallbacks = new Set(initialCallbacks);
+
+    return {
+        get value(): TValue {
+            return value;
+        },
+        set value(newValue: TValue) {
+            if (equalityFunction ? equalityFunction(value, newValue) : value === newValue) {
+                return;
+            }
+            const oldValue = value;
+            value = newValue;
+            for (const callback of valueUpdateCallbacks) {
+                callback(oldValue, newValue);
+            }
+        },
+        reset(): void {
+            this.value = defaultValue;
+        },
+        addCallback(callback: SettingUpdateCallback<TValue>): void {
+            valueUpdateCallbacks.add(callback);
+        },
+        removeCallback(callback: SettingUpdateCallback<TValue>): void {
+            valueUpdateCallbacks.delete(callback);
+        },
+    };
+}
+
+export function createSettings<TSettings extends Record<string, NewSettingInitializer<unknown>>>(
     name: string,
     versionNumber: number,
-    settingsShape: Readonly<TSettings> & NewSettingsWithoutImplProperties<TSettings>,
+    settingsShape: Readonly<TSettings> & NewSettingsWithoutImplProperties,
 ): NewSettings<TSettings> {
     const storageLayer = openDB<NewSettingsDBSchema>(`sm-settings-${name}`, versionNumber, {
         upgrade: (db, oldVersion) => {
@@ -183,7 +223,7 @@ export function createSettings<TSettings extends Record<string, NewSetting<unkno
             for (const missingKey of missingKeys) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- we know it's there, we literally just mapped the keys from the settings shape
                 const setting = settingsMap.get(missingKey)!;
-                await store.put({ key: missingKey, value: setting.get() });
+                await store.put({ key: missingKey, value: setting.defaultValue });
             }
 
             debugDetailed(`Loading existing keys from settings storage "${name}":`, existingKeys);

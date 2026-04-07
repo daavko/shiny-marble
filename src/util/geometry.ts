@@ -19,8 +19,3 @@ export interface Extent {
     maxX: number;
     maxY: number;
 }
-
-export interface MapPoint {
-    lat: number;
-    lon: number;
-}

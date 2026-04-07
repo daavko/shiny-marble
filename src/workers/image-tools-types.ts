@@ -24,10 +24,17 @@ export interface HighlightNonMatchingPixelsTaskRequest extends BaseImageToolsTas
 export type DetectCanvasFingerprintingProtectionTaskRequest =
     BaseImageToolsTask<DetectCanvasFingerprintingProtectionTaskName>;
 
+export interface DetemplatizeBlueMarbleTileTaskRequest extends BaseImageToolsTask<'detemplatizeBlueMarbleTile'> {
+    pixelBuffer: ArrayBuffer;
+    width: number;
+    height: number;
+}
+
 export type ImageToolsTaskRequest =
     | VerifyImageMatchesPaletteTaskRequest
     | HighlightNonMatchingPixelsTaskRequest
-    | DetectCanvasFingerprintingProtectionTaskRequest;
+    | DetectCanvasFingerprintingProtectionTaskRequest
+    | DetemplatizeBlueMarbleTileTaskRequest;
 
 interface BaseImageToolsTaskResult<T extends string> {
     task: T;
@@ -77,7 +84,24 @@ export type DetectCanvasFingerprintingProtectionTaskResult =
     | DetectCanvasFingerprintingProtectionTaskSuccessResult
     | DetectCanvasFingerprintingProtectionTaskErrorResult;
 
+export interface DetemplatizeBlueMarbleTileTaskSuccessResult extends BaseImageToolsTaskResult<'detemplatizeBlueMarbleTile'> {
+    success: true;
+    pixelBuffer: ArrayBuffer;
+    width: number;
+    height: number;
+}
+
+export interface DetemplatizeBlueMarbleTileTaskErrorResult extends BaseImageToolsTaskResult<'detemplatizeBlueMarbleTile'> {
+    success: false;
+    error: unknown;
+}
+
+export type DetemplatizeBlueMarbleTileTaskResult =
+    | DetemplatizeBlueMarbleTileTaskSuccessResult
+    | DetemplatizeBlueMarbleTileTaskErrorResult;
+
 export type ImageToolsTaskResult =
     | VerifyImageMatchesPaletteTaskResult
     | HighlightNonMatchingPixelsTaskResult
-    | DetectCanvasFingerprintingProtectionTaskResult;
+    | DetectCanvasFingerprintingProtectionTaskResult
+    | DetemplatizeBlueMarbleTileTaskResult;

@@ -15,4 +15,11 @@ export interface TemplateParseError<T extends string> {
 
 export type TemplateParseResult<T extends string> = TemplateParseSuccess | TemplateParseError<T>;
 
-export type BaseParsedTemplateErrorCode = 'unknown' | 'parseError';
+export type BaseParsedTemplateErrorCode =
+    | 'unknown'
+    | 'parseError'
+    | 'invalidImageData'
+    | 'noResizedImages'
+    | 'imageTooLarge';
+
+export type BaseTemplateParseResult = TemplateParseResult<BaseParsedTemplateErrorCode>;

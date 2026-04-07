@@ -1,4 +1,6 @@
 import * as v from 'valibot';
+import { Platform } from '../../platform/platform';
+import { handleBlobFromParsedTemplate } from './common';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
 
 const wplaceTemplateSchema = v.object({
@@ -16,19 +18,35 @@ const wplaceTemplateSchema = v.object({
     }),
 });
 
-type WplaceTemplateErrorCode = BaseParsedTemplateErrorCode | 'badBounds' | 'imageTooLarge';
+type WplaceTemplateErrorCode = BaseParsedTemplateErrorCode | 'badBounds';
 type WplaceTemplateParseResult = TemplateParseResult<WplaceTemplateErrorCode>;
 
 export async function parseWplaceTemplateBlob(blob: Blob): Promise<WplaceTemplateParseResult> {
     try {
         const text = await blob.text();
         const json: unknown = JSON.parse(text);
-        return parseWplaceTemplate(json);
+        return await parseWplaceTemplate(json);
     } catch (e: unknown) {
         return { success: false, errorCode: 'unknown', cause: e };
     }
 }
 
-export function parseWplaceTemplate(json: unknown): WplaceTemplateParseResult {
-    // todo
+export async function parseWplaceTemplate(json: unknown): Promise<WplaceTemplateParseResult> {
+    const parseResult = v.safeParse(wplaceTemplateSchema, json);
+    if (!parseResult.success) {
+        return { success: false, errorCode: 'parseError', cause: parseResult.issues };
+    }
+
+    const { name, image, bounds } = parseResult.output;
+
+    // todo: verify that this actually works correctly and that bounds will result in correct pixel coords
+    const topLeftPixel = Platform.latLonToPixel({ lat: bounds.north, lon: bounds.west }, 'floor');
+    const bottomRightPixel = Platform.latLonToPixel({ lat: bounds.south, lon: bounds.east }, 'floor');
+
+    // todo: handle wrapping at world edges
+    const expectedWidth = bottomRightPixel.x - topLeftPixel.x;
+    const expectedHeight = bottomRightPixel.y - topLeftPixel.y;
+
+    const imageBlob = await fetch(image.dataUrl).then((res) => res.blob());
+    return handleBlobFromParsedTemplate(imageBlob, name, topLeftPixel, expectedWidth, expectedHeight);
 }

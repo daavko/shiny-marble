@@ -1,4 +1,4 @@
-import { type Map as MapLibreInstance, MercatorCoordinate } from 'maplibre-gl';
+import { type LngLatLike, type Map as MapLibreInstance, MercatorCoordinate } from 'maplibre-gl';
 import { debug } from '../core/debug';
 import type { HTMLElementChild } from '../core/dom/html';
 import { addStyles } from '../core/dom/styles';
@@ -117,11 +117,21 @@ export const Platform = {
 
     getViewportCenterPixel(): Point {
         const map = Platform.getCurrentMapInstance();
-        const viewportCenter = MercatorCoordinate.fromLngLat(map.getCenter());
-        return {
-            x: viewportCenter.x * activePlatform.canvasSizePixels.width,
-            y: viewportCenter.y * activePlatform.canvasSizePixels.height,
-        };
+        return Platform.latLonToPixel(map.getCenter());
+    },
+
+    latLonToPixel(mapPosition: LngLatLike, adjust: 'floor' | 'round' | 'ceil' = 'round'): Point {
+        const mercatorCoord = MercatorCoordinate.fromLngLat(mapPosition);
+        const rawX = mercatorCoord.x * activePlatform.canvasSizePixels.width;
+        const rawY = mercatorCoord.y * activePlatform.canvasSizePixels.height;
+        switch (adjust) {
+            case 'floor':
+                return { x: Math.floor(rawX), y: Math.floor(rawY) };
+            case 'round':
+                return { x: Math.round(rawX), y: Math.round(rawY) };
+            case 'ceil':
+                return { x: Math.ceil(rawX), y: Math.ceil(rawY) };
+        }
     },
 
     // latLonToPixel(mapPosition: MapPoint): Point {

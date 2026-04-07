@@ -3,6 +3,7 @@ import { debug, debugDetailed } from '../core/debug';
 import type { PixelColor } from '../platform/types';
 import { assertCanvasCtx } from '../util/canvas';
 import type {
+    DetemplatizeBlueMarbleTileTaskRequest,
     HighlightNonMatchingPixelsTaskRequest,
     ImageToolsTaskResult,
     VerifyImageMatchesPaletteTaskRequest,
@@ -38,9 +39,10 @@ async function verifyImageMatchesPalette(
         }
 
         if (event.data.success) {
-            debug('Received result from verifyImageMatchesPalette task');
+            const imageData = new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height);
+            debugDetailed('Received result from verifyImageMatchesPalette task', imageData, event.data.matches);
             resolve({
-                image: new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height),
+                image: imageData,
                 matches: event.data.matches,
             });
         } else {
@@ -84,8 +86,9 @@ async function highlightNonMatchingPixels(
         }
 
         if (event.data.success) {
-            debug('Received result from highlightNonMatchingPixels task');
-            resolve(new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height));
+            const imageData = new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height);
+            debugDetailed('Received result from highlightNonMatchingPixels task', imageData);
+            resolve(imageData);
         } else {
             debugDetailed('Error in highlightNonMatchingPixels task', event.data.error);
             reject(event.data.error);
@@ -221,9 +224,50 @@ async function imageToBlob(image: ImageData): Promise<Blob> {
 async function computeImageHash(image: ImageData): Promise<string> {
     const buffer = image.data.buffer;
     const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    return Array.from(new Uint8Array(hashBuffer))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
+    return new Uint8Array(hashBuffer).toHex();
+}
+
+async function detemplatizeBlueMarbleTile(tile: ImageData): Promise<ImageData> {
+    const { promise, resolve, reject } = Promise.withResolvers<ImageData>();
+    const worker = getWorker();
+
+    const taskId = crypto.randomUUID();
+
+    const listener = (event: MessageEvent<ImageToolsTaskResult>): void => {
+        if (event.data.taskId !== taskId || event.data.task !== 'detemplatizeBlueMarbleTile') {
+            return;
+        }
+
+        if (event.data.success) {
+            const imageData = new ImageData(
+                new Uint8ClampedArray(event.data.pixelBuffer),
+                event.data.width,
+                event.data.height,
+            );
+            debugDetailed('Received result from detemplatizeBlueMarbleTile task', imageData);
+            resolve(imageData);
+        } else {
+            debugDetailed('Error in detemplatizeBlueMarbleTile task', event.data.error);
+            reject(event.data.error);
+        }
+        worker.removeEventListener('message', listener);
+    };
+    worker.addEventListener('message', listener);
+
+    debugDetailed('Posting detemplatizeBlueMarbleTile task', tile);
+    const pixelBuffer = tile.data.buffer;
+    worker.postMessage(
+        {
+            taskId,
+            task: 'detemplatizeBlueMarbleTile',
+            pixelBuffer,
+            width: tile.width,
+            height: tile.height,
+        } satisfies DetemplatizeBlueMarbleTileTaskRequest,
+        [pixelBuffer],
+    );
+
+    return promise;
 }
 
 export const ImageTools = {

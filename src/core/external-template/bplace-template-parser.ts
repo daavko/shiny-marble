@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { handleBlobFromParsedTemplate } from './common';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
 
 const bplaceTemplateSchema = v.object({
@@ -16,32 +17,35 @@ const bplaceTemplateSchema = v.object({
     }),
 });
 
-type BplaceTemplateErrorCode = BaseParsedTemplateErrorCode | 'badScale' | 'badRotation' | 'imageTooLarge';
+type BplaceTemplateErrorCode = BaseParsedTemplateErrorCode | 'badScale' | 'badRotation';
 type BplaceTemplateParseResult = TemplateParseResult<BplaceTemplateErrorCode>;
 
 export async function parseBplaceTemplateBlob(blob: Blob): Promise<BplaceTemplateParseResult> {
     try {
         const text = await blob.text();
         const json: unknown = JSON.parse(text);
-        return parseBplaceTemplate(json);
+        return await parseBplaceTemplate(json);
     } catch (e: unknown) {
         return { success: false, errorCode: 'unknown', cause: e };
     }
 }
 
-export function parseBplaceTemplate(json: unknown): BplaceTemplateParseResult {
+export async function parseBplaceTemplate(json: unknown): Promise<BplaceTemplateParseResult> {
     const parseResult = v.safeParse(bplaceTemplateSchema, json);
     if (!parseResult.success) {
         return { success: false, errorCode: 'parseError', cause: parseResult.issues };
     }
 
-    if (parseResult.output.template.scale !== 1) {
+    const { template } = parseResult.output;
+
+    if (template.scale !== 1) {
         return { success: false, errorCode: 'badScale' };
     }
 
-    if (parseResult.output.template.rotation !== 0) {
+    if (template.rotation !== 0) {
         return { success: false, errorCode: 'badRotation' };
     }
 
-    // todo
+    const imageBlob = await fetch(template.imageData).then((res) => res.blob());
+    return handleBlobFromParsedTemplate(imageBlob, template.name, template.position, template.width, template.height);
 }

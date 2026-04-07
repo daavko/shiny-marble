@@ -77,6 +77,34 @@ function detectCanvasFingerprintingProtection(): boolean {
     return false;
 }
 
+function detemplatizeBlueMarbleTile(
+    pixelBuffer: ArrayBuffer,
+    width: number,
+    height: number,
+): { pixelBuffer: ArrayBuffer; width: number; height: number } {
+    if (width % 3 !== 0 || height % 3 !== 0) {
+        throw new Error('Input dimensions must be multiples of 3 for detemplatizeBlueMarbleTile');
+    }
+
+    const srcView = new Uint32Array(pixelBuffer);
+    const destWidth = width / 3;
+    const destHeight = height / 3;
+    const destBuffer = new ArrayBuffer(destWidth * destHeight * 4);
+    const destView = new Uint32Array(destBuffer);
+
+    for (let y = 0; y < destHeight; y++) {
+        const srcRowStart = (y * 3 + 1) * width;
+        const destRowStart = y * destWidth;
+        for (let x = 0; x < destWidth; x++) {
+            const srcIndex = srcRowStart + (x * 3 + 1);
+            const destIndex = destRowStart + x;
+            destView[destIndex] = srcView[srcIndex];
+        }
+    }
+
+    return { pixelBuffer: destBuffer, width: destWidth, height: destHeight };
+}
+
 function postTaskResult(data: ImageToolsTaskResult, transfer?: Transferable[]): void {
     globalThis.postMessage(data, { transfer });
 }
@@ -124,6 +152,35 @@ function handleTaskRequest(request: ImageToolsTaskRequest): void {
             }
 
             postTaskResult({ task: 'detectCanvasFingerprintingProtection', taskId, success: true, protectionDetected });
+            break;
+        }
+        case 'detemplatizeBlueMarbleTile': {
+            const { taskId, pixelBuffer, width, height } = request;
+            let resultBuffer: ArrayBuffer;
+            let resultWidth: number;
+            let resultHeight: number;
+            try {
+                ({
+                    pixelBuffer: resultBuffer,
+                    width: resultWidth,
+                    height: resultHeight,
+                } = detemplatizeBlueMarbleTile(pixelBuffer, width, height));
+            } catch (error) {
+                postTaskResult({ task: 'detemplatizeBlueMarbleTile', taskId, success: false, error });
+                return;
+            }
+
+            postTaskResult(
+                {
+                    task: 'detemplatizeBlueMarbleTile',
+                    taskId,
+                    success: true,
+                    pixelBuffer: resultBuffer,
+                    width: resultWidth,
+                    height: resultHeight,
+                },
+                [resultBuffer],
+            );
             break;
         }
     }

@@ -1,9 +1,10 @@
 import * as v from 'valibot';
+import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
 
 const bplaceTemplateSchema = v.object({
     template: v.object({
         name: v.string(),
-        imageData: v.string(),
+        imageData: v.string(), // data url for a png
         position: v.object({
             x: v.number(),
             y: v.number(),
@@ -14,21 +15,33 @@ const bplaceTemplateSchema = v.object({
         height: v.number(),
     }),
 });
-type BplaceTemplate = v.InferOutput<typeof bplaceTemplateSchema>;
 
-export async function parseBplaceTemplateBlob(blob: Blob): Promise<BplaceTemplate> {
-    const text = await blob.text();
-    const json: unknown = JSON.parse(text);
-    return parseBplaceTemplate(json);
+type BplaceTemplateErrorCode = BaseParsedTemplateErrorCode | 'badScale' | 'badRotation' | 'imageTooLarge';
+type BplaceTemplateParseResult = TemplateParseResult<BplaceTemplateErrorCode>;
+
+export async function parseBplaceTemplateBlob(blob: Blob): Promise<BplaceTemplateParseResult> {
+    try {
+        const text = await blob.text();
+        const json: unknown = JSON.parse(text);
+        return parseBplaceTemplate(json);
+    } catch (e: unknown) {
+        return { success: false, errorCode: 'unknown', cause: e };
+    }
 }
 
-export function parseBplaceTemplate(json: unknown): BplaceTemplate {
+export function parseBplaceTemplate(json: unknown): BplaceTemplateParseResult {
     const parseResult = v.safeParse(bplaceTemplateSchema, json);
     if (!parseResult.success) {
-        throw new Error('Failed to parse Bplace template', { cause: parseResult.issues });
+        return { success: false, errorCode: 'parseError', cause: parseResult.issues };
     }
 
-    if (parseResult.output.template.scale != 1) {
-        throw new Error('Bplace template scale is not 1, which is not supported');
+    if (parseResult.output.template.scale !== 1) {
+        return { success: false, errorCode: 'badScale' };
     }
+
+    if (parseResult.output.template.rotation !== 0) {
+        return { success: false, errorCode: 'badRotation' };
+    }
+
+    // todo
 }

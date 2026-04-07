@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
 
 interface BlueMarbleTileCoords {
     tileX: number;
@@ -72,19 +73,29 @@ const blueMarbleTemplateSchema = v.object({
         }),
     ),
 });
-type BlueMarbleTemplate = v.InferOutput<typeof blueMarbleTemplateSchema>;
 
-export async function parseBlueMarbleTemplateBlob(blob: Blob): Promise<BlueMarbleTemplate> {
-    const text = await blob.text();
-    const json: unknown = JSON.parse(text);
-    return parseBlueMarbleTemplate(json);
+type BlueMarbleTemplateErrorCode =
+    | BaseParsedTemplateErrorCode
+    | 'noDisabledColors'
+    | 'noEnhancedColors'
+    | 'tilesDontMatch';
+export type BlueMarbleTemplateParseResult = TemplateParseResult<BlueMarbleTemplateErrorCode>;
+
+export async function parseBlueMarbleTemplateBlob(blob: Blob): Promise<BlueMarbleTemplateParseResult> {
+    try {
+        const text = await blob.text();
+        const json: unknown = JSON.parse(text);
+        return parseBlueMarbleTemplate(json);
+    } catch (e: unknown) {
+        return { success: false, errorCode: 'unknown', cause: e };
+    }
 }
 
-export function parseBlueMarbleTemplate(json: unknown): BlueMarbleTemplate {
+export function parseBlueMarbleTemplate(json: unknown): BlueMarbleTemplateParseResult {
     const parseResult = v.safeParse(blueMarbleTemplateSchema, json);
     if (parseResult.success) {
-        return parseResult.output;
+        // todo
     } else {
-        throw new Error('Failed to parse BlueMarble template', { cause: parseResult.issues });
+        return { success: false, errorCode: 'parseError', cause: parseResult.issues };
     }
 }

@@ -38,6 +38,7 @@ async function verifyImageMatchesPalette(
         }
 
         if (event.data.success) {
+            debug('Received result from verifyImageMatchesPalette task');
             resolve({
                 image: new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height),
                 matches: event.data.matches,
@@ -83,6 +84,7 @@ async function highlightNonMatchingPixels(
         }
 
         if (event.data.success) {
+            debug('Received result from highlightNonMatchingPixels task');
             resolve(new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height));
         } else {
             debugDetailed('Error in highlightNonMatchingPixels task', event.data.error);
@@ -129,11 +131,11 @@ async function upscalePixelArt(image: ImageData, scale: number): Promise<ImageDa
     return ctx.getImageData(0, 0, canvasWidth, canvasHeight);
 }
 
-async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: number): Promise<ImageData> {
+async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: number): Promise<Blob> {
     let { width: srcWidth, height: srcHeight } = image;
 
     if (srcWidth === 0 || srcHeight === 0 || maxWidth <= 0 || maxHeight <= 0) {
-        return new ImageData(0, 0);
+        throw new Error('Invalid dimensions for createThumbnail');
     }
 
     maxWidth = Math.min(maxWidth, MAX_CANVAS_DIMENSION);
@@ -174,7 +176,7 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
 
     debugDetailed('Created thumbnail of image', image, { srcWidth, srcHeight }, { canvasWidth, canvasHeight });
 
-    return ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+    return canvas.convertToBlob({ type: 'image/png' });
 }
 
 async function detectCanvasFingerprintingProtection(): Promise<boolean> {
@@ -189,6 +191,7 @@ async function detectCanvasFingerprintingProtection(): Promise<boolean> {
         }
 
         if (event.data.success) {
+            debug('Received result from detectCanvasFingerprintingProtection task', event.data.protectionDetected);
             resolve(event.data.protectionDetected);
         } else {
             debugDetailed('Error in detectCanvasFingerprintingProtection task', event.data.error);
@@ -207,9 +210,27 @@ async function detectCanvasFingerprintingProtection(): Promise<boolean> {
     return promise;
 }
 
+async function imageToBlob(image: ImageData): Promise<Blob> {
+    const canvas = new OffscreenCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+    assertCanvasCtx(ctx, 'Failed to obtain 2D context for OffscreenCanvas in imageToBlob');
+    ctx.putImageData(image, 0, 0);
+    return canvas.convertToBlob({ type: 'image/png' });
+}
+
+async function computeImageHash(image: ImageData): Promise<string> {
+    const buffer = image.data.buffer;
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
 export const ImageTools = {
     verifyImageMatchesPalette,
     highlightNonMatchingPixels,
     createThumbnail,
     detectCanvasFingerprintingProtection,
+    computeImageHash,
+    imageToBlob,
 };

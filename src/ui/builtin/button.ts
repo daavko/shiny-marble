@@ -4,7 +4,7 @@ import {
     type HTMLElementEventListenerMap,
     type HTMLElementOptions,
     type SVGElementOptions,
-} from '../core/dom/html';
+} from '../../core/dom/html';
 import { renderMdiIcon } from './mdi-icon';
 
 export function renderBlockButton(
@@ -29,6 +29,36 @@ export function renderBlockButton(
             },
         },
         Array.isArray(contents) ? contents : [contents],
+    );
+}
+
+export function renderIconButton(
+    iconPath: string,
+    onClick: HTMLElementEventListenerMap['click'],
+    variant: 'default' | 'dense' = 'default',
+    additionalOptions: HTMLElementOptions = {},
+): HTMLButtonElement {
+    let additionalOptionsClassList: string[] = [];
+    if (Array.isArray(additionalOptions.class)) {
+        additionalOptionsClassList = additionalOptions.class;
+    } else if (typeof additionalOptions.class === 'string') {
+        additionalOptionsClassList = [additionalOptions.class];
+    }
+
+    if (variant === 'dense') {
+        additionalOptionsClassList.push('sm-platform__icon-btn--dense');
+    }
+
+    return el(
+        'button',
+        {
+            class: ['sm-platform__icon-btn', ...additionalOptionsClassList],
+            events: {
+                ...additionalOptions.events,
+                click: onClick,
+            },
+        },
+        [renderMdiIcon(iconPath)],
     );
 }
 

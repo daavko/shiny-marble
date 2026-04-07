@@ -1,19 +1,25 @@
-import type { Map as MapLibreInstance } from 'maplibre-gl';
-import { debug, resizeDebugLog } from '../core/debug';
+import { type Map as MapLibreInstance, MercatorCoordinate } from 'maplibre-gl';
+import { debug } from '../core/debug';
 import type { HTMLElementChild } from '../core/dom/html';
 import { addStyles } from '../core/dom/styles';
 import { NetworkInterceptor } from '../core/network-interceptor';
-import { alertsContainerStyle } from '../ui/alerts-container';
-import { appIconStyle } from '../ui/app-icon';
-import { appViewStyle } from '../ui/app-view';
+import { TemplateRegistry } from '../core/template/template-registry';
+import { dialogStyle } from '../ui/builtin/dialog';
+import { inputStyle } from '../ui/builtin/input';
+import { mdiIconStyle } from '../ui/builtin/mdi-icon';
+import { popoverMenuStyle } from '../ui/builtin/popover-menu';
+import { alertsContainerStyle } from '../ui/components/alerts-container';
+import { appIconStyle } from '../ui/components/app-icon';
+import { appViewStyle } from '../ui/components/app-view';
+import { confirmationDialogStyle } from '../ui/dialogs/confirmation-dialog';
 import { imagePaletteDiffDialogStyle } from '../ui/dialogs/image-palette-diff-dialog';
 import { newTemplateDialogStyle } from '../ui/dialogs/new-template-dialog';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
-import { inputStyle } from '../ui/input';
-import { mdiIconStyle } from '../ui/mdi-icon';
+import { templateNameDialogStyle } from '../ui/dialogs/template-name-dialog';
+import type { Point } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
 import platformStyle from './platform.css';
-import { BooleanSetting, NumberSetting, Settings } from './settings';
+import { createSetting, createSettings } from './settings';
 import type { CanvasPlatform, PixelColor } from './types';
 import { WplacePlatform } from './wplace/platform';
 
@@ -33,9 +39,9 @@ const activePlatform = ((): CanvasPlatform => {
     }
 })();
 
-export const PlatformSettings = Settings.create('platform', {
-    debug: new BooleanSetting(false),
-    debugLogSize: new NumberSetting(100, [(_, newValue): void => resizeDebugLog(newValue)]),
+export const PlatformSettings = createSettings('platform', 1, {
+    debug: createSetting(false),
+    debugLogSize: createSetting(100, [(_, newValue): void => console.log('would resize debug log to', newValue)]),
 });
 
 export const Platform = {
@@ -43,7 +49,9 @@ export const Platform = {
         return activePlatform.colors;
     },
 
-    initPlatform(): void {
+    async initPlatform(): Promise<void> {
+        await PlatformSettings.init();
+
         NetworkInterceptor.init();
         addStyles(
             platformStyle,
@@ -55,8 +63,16 @@ export const Platform = {
             inputStyle,
             newTemplateDialogStyle,
             imagePaletteDiffDialogStyle,
+            confirmationDialogStyle,
+            popoverMenuStyle,
+            dialogStyle,
+            templateNameDialogStyle,
         );
-        activePlatform.initialize();
+        await activePlatform.initialize();
+    },
+
+    async initTemplateFunctionality(): Promise<void> {
+        await TemplateRegistry.initialize();
     },
 
     async addMapInstanceHook(): Promise<void> {
@@ -69,7 +85,7 @@ export const Platform = {
         debug('Adding map instance hook');
         await activePlatform.addMapInstanceHook((instance) => {
             mapInstance = instance;
-            debug('Map instance captured', instance);
+            debug('Map instance captured');
             resolveMapInstance(instance);
         });
     },
@@ -97,6 +113,15 @@ export const Platform = {
 
     renderPlatformSpecificSettingsContent(destroyPromise: Promise<void>): HTMLElementChild | HTMLElementChild[] | null {
         return activePlatform.renderPlatformSpecificSettingsContent(destroyPromise);
+    },
+
+    getViewportCenterPixel(): Point {
+        const map = Platform.getCurrentMapInstance();
+        const viewportCenter = MercatorCoordinate.fromLngLat(map.getCenter());
+        return {
+            x: viewportCenter.x * activePlatform.canvasSizePixels.width,
+            y: viewportCenter.y * activePlatform.canvasSizePixels.height,
+        };
     },
 
     // latLonToPixel(mapPosition: MapPoint): Point {

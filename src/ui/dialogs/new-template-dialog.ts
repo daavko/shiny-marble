@@ -1,11 +1,15 @@
 import { MAX_CANVAS_DIMENSION } from '../../core/const';
 import { debug, debugDetailed } from '../../core/debug';
 import { el } from '../../core/dom/html';
-import { createDialog } from '../../platform/dialog';
+import { TemplateRegistry } from '../../core/template/template-registry';
 import { Platform } from '../../platform/platform';
 import { assertCanvasCtx } from '../../util/canvas';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { renderBlockButton } from '../builtin/button';
+import { createDialog } from '../builtin/dialog';
+import { showInfoAlert } from '../components/alerts-container';
 import { showImagePaletteDiffDialog } from './image-palette-diff-dialog';
+import { showTemplateNameDialog } from './template-name-dialog';
 
 export { default as newTemplateDialogStyle } from './new-template-dialog.css';
 
@@ -16,11 +20,16 @@ export function showNewTemplateDialog(): void {
             return;
         }
 
-        void handleFileSelected(files[0]);
+        handleFileSelected(files[0]).catch((e: unknown) => {
+            addError(
+                'An unexpected error occurred while processing the file. Please try again. If the problem persists, report this error.',
+            );
+            debugDetailed('Error handling file selection in new template dialog', e);
+        });
     }
 
-    function handleDrop(e: DragEvent): void {
-        const data = e.dataTransfer;
+    function handleDrop(event: DragEvent): void {
+        const data = event.dataTransfer;
         if (data == null) {
             return;
         }
@@ -30,10 +39,15 @@ export function showNewTemplateDialog(): void {
             return;
         }
 
-        e.preventDefault();
+        event.preventDefault();
         dropArea.classList.remove('drag-over');
 
-        void handleFileSelected(files[0]);
+        handleFileSelected(files[0]).catch((e: unknown) => {
+            addError(
+                'An unexpected error occurred while processing the file. Please try again. If the problem persists, report this error.',
+            );
+            debugDetailed('Error handling file drop in new template dialog', e);
+        });
     }
 
     function addError(message: string): void {
@@ -47,6 +61,8 @@ export function showNewTemplateDialog(): void {
 
     async function handleFileSelected(file: File): Promise<void> {
         if (!file.type.startsWith('image/')) {
+            addError('Unsupported file type. Please select an image file.');
+            debug(`Unsupported file type selected: ${file.type}`);
             return;
         }
 
@@ -77,22 +93,32 @@ export function showNewTemplateDialog(): void {
         imageBitmap.close();
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-        try {
-            const { matches, image } = await ImageTools.verifyImageMatchesPalette(imageData, Platform.colors);
+        const { matches, image } = await ImageTools.verifyImageMatchesPalette(imageData, Platform.colors);
 
-            if (matches) {
-                // todo: add template to active templates
-            } else {
-                const diff = await ImageTools.highlightNonMatchingPixels(image, Platform.colors, 0.75, 0xff0000ff);
-                showImagePaletteDiffDialog(diff);
-            }
-        } catch (e) {
-            addError('An error occurred while processing the image. If this persists, please report this error.');
-            debugDetailed('Error processing new template image', e);
+        if (!matches) {
+            const diff = await ImageTools.highlightNonMatchingPixels(image, Platform.colors, 0.75, 0xff0000ff);
+            showImagePaletteDiffDialog(diff);
+            dialog.close();
             return;
         }
 
+        if (await TemplateRegistry.hasTemplate(image)) {
+            addError('A template with the same image already exists.');
+            debug('Template image already exists in registry');
+            return;
+        }
+
+        const name = await showTemplateNameDialog(file.name.replace(/\.\w+$/, ''), true);
+
+        if (name === '') {
+            addError('Template creation cancelled.');
+            debug('Template creation cancelled by user');
+            return;
+        }
+
+        await TemplateRegistry.addTemplate({ name, image });
         dialog.close();
+        showInfoAlert(`Template "${name}" added successfully`, 2000);
     }
 
     const fileInput = el('input', {
@@ -118,9 +144,7 @@ export function showNewTemplateDialog(): void {
         },
         [
             el('p', ['Drop or paste your image file here.']),
-            el('button', { class: 'sm-platform__block-btn', events: { click: () => fileInput.click() } }, [
-                'Select a file',
-            ]),
+            renderBlockButton('Select a file', () => fileInput.click()),
             el('p', [
                 'Only image files are supported.',
                 el('br'),

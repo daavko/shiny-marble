@@ -1,224 +1,278 @@
-import type { GenericSchema } from 'valibot';
-import * as v from 'valibot';
-import { debugDetailed } from '../core/debug';
-import { showErrorAlert } from '../ui/alerts-container';
+import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
+import { debug, debugDetailed } from '../core/debug';
+import { showErrorAlert } from '../ui/components/alerts-container';
+
+const ChangesBroadcaster = new BroadcastChannel('sm-settings-changes');
 
 export type SettingUpdateCallback<TValue> = (oldValue: TValue, newValue: TValue) => void;
 
-export interface Setting<TValue, TSerializedValue> {
-    readonly defaultValue: TValue;
+interface SettingChangeEventData {
+    type: 'settingChange';
+    settings: string;
+    key: string;
+    newValue: unknown;
+}
 
-    get(): TValue;
-    set(value: TValue): void;
+interface SettingsResetEventData {
+    type: 'reset';
+    settings: string;
+}
+
+type SettingsEventData = SettingChangeEventData | SettingsResetEventData;
+
+type SettingEqualityFunction<TValue> = (value1: TValue, value2: TValue) => boolean;
+
+interface SettingInitializer<TValue> {
+    readonly defaultValue: TValue;
+    readonly valueUpdateCallbacks: SettingUpdateCallback<TValue>[];
+    readonly equalityFunction: SettingEqualityFunction<TValue>;
+}
+
+interface SettingInitializerLike {
+    readonly defaultValue: unknown;
+    readonly valueUpdateCallbacks: readonly SettingUpdateCallback<never>[];
+    readonly equalityFunction: SettingEqualityFunction<never>;
+}
+
+type SettingValue<TInitializer> = TInitializer extends SettingInitializer<infer TValue> ? TValue : never;
+
+export interface Setting<TValue> {
+    get value(): TValue;
+    set value(value: TValue);
     reset(): void;
     addCallback(callback: SettingUpdateCallback<TValue>): void;
     removeCallback(callback: SettingUpdateCallback<TValue>): void;
-
-    init(value: unknown): void;
-    parseValue(value: unknown): TValue;
-    serializeValue(value: TValue): TSerializedValue;
 }
 
-export abstract class SettingBase<TValue, TSerializedValue = TValue> implements Setting<TValue, TSerializedValue> {
-    protected readonly valueUpdateCallbacks: Set<SettingUpdateCallback<TValue>>;
-
-    protected currentValue: TValue;
-
-    protected constructor(
-        readonly defaultValue: TValue,
-        protected readonly schema: GenericSchema<unknown, TValue>,
-        valueUpdateCallbacks: SettingUpdateCallback<TValue>[] = [],
-    ) {
-        this.valueUpdateCallbacks = new Set(valueUpdateCallbacks);
-        this.currentValue = defaultValue;
-    }
-
-    addCallback(callback: SettingUpdateCallback<TValue>): void {
-        this.valueUpdateCallbacks.add(callback);
-    }
-
-    removeCallback(callback: SettingUpdateCallback<TValue>): void {
-        this.valueUpdateCallbacks.delete(callback);
-    }
-
-    get(): TValue {
-        return this.currentValue;
-    }
-
-    set(value: TValue): void {
-        const oldValue = this.currentValue;
-        if (this.valuesEqual(oldValue, value)) {
-            return;
-        }
-        this.currentValue = value;
-        this.notifyCallbacks(oldValue, value);
-    }
-
-    reset(): void {
-        this.set(this.defaultValue);
-    }
-
-    init(value: unknown): void {
-        this.currentValue = this.parseValue(value);
-    }
-
-    parseValue(value: unknown): TValue {
-        const parsed = v.safeParse(this.schema, value);
-        if (parsed.success) {
-            return parsed.output;
-        } else {
-            debugDetailed('Failed to parse setting value', parsed.issues);
-            return this.defaultValue;
-        }
-    }
-
-    serializeValue(value: TValue): TSerializedValue {
-        // Default implementation, can be overridden by subclasses
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe for default typing
-        return value as unknown as TSerializedValue;
-    }
-
-    protected notifyCallbacks(oldValue: TValue, newValue: TValue): void {
-        for (const callback of this.valueUpdateCallbacks) {
-            callback(oldValue, newValue);
-        }
-    }
-
-    protected valuesEqual(value1: TValue, value2: TValue): boolean {
-        return value1 === value2;
-    }
+interface SettingInternal<TValue> extends Setting<TValue> {
+    setWithoutInternalCallbacks(value: TValue): void;
+    resetWithoutInternalCallbacks(): void;
 }
 
-export class BooleanSetting extends SettingBase<boolean> {
-    constructor(defaultValue: boolean, valueUpdateCallbacks: SettingUpdateCallback<boolean>[] = []) {
-        super(defaultValue, v.boolean(), valueUpdateCallbacks);
-    }
-}
-
-export class NumberSetting extends SettingBase<number> {
-    constructor(defaultValue: number, valueUpdateCallbacks: SettingUpdateCallback<number>[] = []) {
-        super(defaultValue, v.number(), valueUpdateCallbacks);
-    }
-}
-
-export class StringSetting extends SettingBase<string> {
-    constructor(defaultValue: string, valueUpdateCallbacks: SettingUpdateCallback<string>[] = []) {
-        super(defaultValue, v.string(), valueUpdateCallbacks);
-    }
-}
-
-type SettingsWithSettingKeys<TSettingsClass, T extends Record<string, Setting<unknown, unknown>>> = TSettingsClass & {
-    [K in keyof T]: T[K];
+type SettingsProps<TSettings extends Record<string, SettingInitializerLike>> = {
+    [K in keyof TSettings]: Setting<SettingValue<TSettings[K]>>;
 };
 
-export class Settings<const TSettings extends Record<string, Setting<unknown, unknown>>> {
-    private static readonly schema = v.pipe(v.string(), v.parseJson(), v.record(v.string(), v.unknown()));
+export interface SettingsImpl {
+    init(): Promise<void>;
+    reset(): void;
+}
 
-    protected constructor(
-        private readonly storageKey: string,
-        readonly settings: TSettings,
-    ) {
-        this.init();
+type Settings<TSettings extends Record<string, SettingInitializerLike>> = SettingsProps<TSettings> & SettingsImpl;
 
-        for (const setting of Object.values(this.settings)) {
-            setting.addCallback(() => {
-                this.saveStoredValue(this.collectSerializedSettings());
+type SettingsWithoutImplProperties<TSettings extends Record<string, SettingInitializerLike>> = {
+    [K in keyof SettingsImpl &
+        keyof TSettings]: `Property name "${K}" is reserved and cannot be used in settings shape.`;
+};
+
+interface SavedSetting {
+    key: string;
+    value: unknown;
+}
+
+interface SettingsDBSchema extends DBSchema {
+    settings: {
+        key: string;
+        value: SavedSetting;
+        indexes: { key: string };
+    };
+}
+
+export function createSetting<TValue>(
+    defaultValue: TValue,
+    valueUpdateCallbacks: NoInfer<SettingUpdateCallback<TValue>>[] = [],
+    equalityFunction?: NoInfer<SettingEqualityFunction<TValue>>,
+): SettingInitializer<TValue> {
+    return {
+        defaultValue,
+        valueUpdateCallbacks,
+        equalityFunction: equalityFunction ?? ((a, b): boolean => a === b),
+    };
+}
+
+function settingFromInitializer(
+    initializer: SettingInitializer<unknown>,
+    internalCallbacks: SettingUpdateCallback<unknown>[],
+): NoInfer<SettingInternal<unknown>> {
+    const { defaultValue, valueUpdateCallbacks: initialCallbacks, equalityFunction } = initializer;
+
+    let value = defaultValue;
+    const valueUpdateCallbacks = new Set(initialCallbacks);
+
+    return {
+        get value(): unknown {
+            return value;
+        },
+        set value(newValue: unknown) {
+            if (equalityFunction(value, newValue)) {
+                return;
+            }
+            const oldValue = value;
+            value = newValue;
+            for (const callback of internalCallbacks) {
+                callback(oldValue, newValue);
+            }
+            for (const callback of valueUpdateCallbacks) {
+                callback(oldValue, newValue);
+            }
+        },
+        reset(): void {
+            this.value = defaultValue;
+        },
+        addCallback(callback: SettingUpdateCallback<unknown>): void {
+            valueUpdateCallbacks.add(callback);
+        },
+        removeCallback(callback: SettingUpdateCallback<unknown>): void {
+            valueUpdateCallbacks.delete(callback);
+        },
+
+        setWithoutInternalCallbacks(newValue: unknown): void {
+            if (equalityFunction(value, newValue)) {
+                return;
+            }
+            const oldValue = value;
+            value = newValue;
+            for (const callback of valueUpdateCallbacks) {
+                callback(oldValue, newValue);
+            }
+        },
+        resetWithoutInternalCallbacks(): void {
+            this.setWithoutInternalCallbacks(defaultValue);
+        },
+    };
+}
+
+async function createSettingsStorage(name: string, versionNumber: number): Promise<IDBPDatabase<SettingsDBSchema>> {
+    return openDB<SettingsDBSchema>(`sm-settings-${name}`, versionNumber, {
+        upgrade: (db, oldVersion) => {
+            debug(`Upgrading settings storage "${name}" from version ${oldVersion} to ${versionNumber}`);
+            if (oldVersion < 1) {
+                // never opened before, create object store
+                const store = db.createObjectStore('settings', { keyPath: 'key' });
+                store.createIndex('key', 'key', { unique: true });
+            }
+        },
+        blocked: (currentVersion, blockedVersion, event) => {
+            showErrorAlert(
+                `Storage error: An older version of Shiny Marble is open in another tab, preventing access to settings storage "${name}". Please close other tabs running Shiny Marble and reload this page.`,
+                { event, currentVersion, blockedVersion },
+                30000,
+            );
+        },
+        blocking: (currentVersion, blockedVersion, event) => {
+            showErrorAlert(
+                `Storage error: A new version of Shiny Marble is open in another tab, and this tab is preventing it from accessing settings storage "${name}". Please close this tab.`,
+                { event, currentVersion, blockedVersion },
+                30000,
+            );
+        },
+        terminated: () => {
+            showErrorAlert(
+                `Storage error: Settings storage "${name}" was unexpectedly closed. Please reload the page. If the problem persists, please report it."`,
+                undefined,
+                30000,
+            );
+        },
+    });
+}
+
+export function createSettings<const TSettings extends Record<string, SettingInitializerLike>>(
+    name: string,
+    versionNumber: number,
+    settingsShape: TSettings & SettingsWithoutImplProperties<TSettings>,
+): Settings<TSettings> {
+    let storageLayer: IDBPDatabase<SettingsDBSchema> | null = null;
+    async function getStorageLayer(): Promise<IDBPDatabase<SettingsDBSchema>> {
+        storageLayer ??= await createSettingsStorage(name, versionNumber);
+        return storageLayer;
+    }
+
+    function createSettingStorageCallback(key: string): SettingUpdateCallback<unknown> {
+        return (_oldValue, newValue) => {
+            void getStorageLayer().then(async (db) => {
+                await db.put('settings', { key, value: newValue });
             });
+        };
+    }
+
+    function createSettingBroadcastCallback(key: string): SettingUpdateCallback<unknown> {
+        return (_oldValue, newValue) => {
+            ChangesBroadcaster.postMessage({
+                type: 'settingChange',
+                settings: name,
+                key,
+                newValue,
+            } satisfies SettingChangeEventData);
+        };
+    }
+
+    const settingsKeys = new Set(Object.keys(settingsShape));
+    const settingsImpl: Record<string, SettingInternal<unknown>> = {};
+    for (const [key, initializer] of Object.entries(settingsShape as TSettings)) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
+        settingsImpl[key] = settingFromInitializer(initializer as SettingInitializer<unknown>, [
+            createSettingStorageCallback(key),
+            createSettingBroadcastCallback(key),
+        ]);
+    }
+
+    async function init(): Promise<void> {
+        const db = await getStorageLayer();
+
+        const tx = db.transaction('settings', 'readwrite');
+        const store = tx.objectStore('settings');
+
+        const allStoredSettings = new Set(await store.getAllKeys());
+
+        const extraKeys = allStoredSettings.difference(settingsKeys);
+        const missingKeys = settingsKeys.difference(allStoredSettings);
+        const existingKeys = settingsKeys.intersection(allStoredSettings);
+
+        debugDetailed(`Deleting extra keys from settings storage "${name}":`, extraKeys);
+        for (const extraKey of extraKeys) {
+            await store.delete(extraKey);
         }
 
-        window.addEventListener('storage', (event) => {
-            if (event.key !== this.storageKey || event.newValue == null) {
-                return;
-            }
+        debugDetailed(`Adding missing keys to settings storage "${name}":`, missingKeys);
+        for (const missingKey of missingKeys) {
+            const setting = settingsImpl[missingKey];
+            await store.put({ key: missingKey, value: setting.value });
+        }
 
-            const parsedNewSettings = v.safeParse(Settings.schema, event.newValue);
-            if (!parsedNewSettings.success) {
-                debugDetailed('Failed to parse settings from storage event', parsedNewSettings.issues);
-                return;
-            }
+        debugDetailed(`Loading existing keys from settings storage "${name}":`, existingKeys);
+        for (const existingKey of existingKeys) {
+            const savedSetting = await store.get(existingKey);
+            settingsImpl[existingKey].setWithoutInternalCallbacks(savedSetting?.value);
+        }
 
-            const newSettings = { ...this.collectDefaultSerializedSettings(), ...parsedNewSettings.output };
-            for (const [key, setting] of Object.entries(this.settings)) {
-                setting.set(setting.parseValue(newSettings[key]));
+        await tx.done;
+
+        ChangesBroadcaster.addEventListener('message', (event: MessageEvent<SettingsEventData>) => {
+            debugDetailed('Received settings change event', event.data);
+            switch (event.data.type) {
+                case 'settingChange':
+                    if (event.data.settings === name) {
+                        settingsImpl[event.data.key].setWithoutInternalCallbacks(event.data.newValue);
+                    }
+                    break;
+                case 'reset':
+                    if (event.data.settings === name) {
+                        for (const setting of Object.values(settingsImpl)) {
+                            setting.resetWithoutInternalCallbacks();
+                        }
+                    }
             }
         });
     }
 
-    static create<const TSettings extends Record<string, Setting<unknown, unknown>>>(
-        storageKey: string,
-        settings: TSettings & {
-            [K in keyof Settings<TSettings> &
-                keyof TSettings]: `Property with name "${K}" already exists on type Settings, can't use as a setting key`;
-        },
-    ): SettingsWithSettingKeys<Settings<TSettings>, TSettings> {
-        const settingsObject = new Settings(`sm_settings_${storageKey}`, settings);
-        for (const [key, setting] of Object.entries(settings)) {
-            if (Object.hasOwn(settingsObject, key)) {
-                throw new Error(
-                    `Property with name "${key}" already exists on Settings object, can't use as a setting key`,
-                );
+    return {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe, impossible to type
+        ...(settingsImpl as SettingsProps<TSettings>),
+        init,
+        reset: (): void => {
+            for (const setting of Object.values(settingsImpl)) {
+                setting.reset();
             }
-            Object.defineProperty(settingsObject, key, {
-                value: setting,
-                writable: false,
-            });
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- dynamic properties, not typeable
-        return settingsObject as unknown as SettingsWithSettingKeys<Settings<TSettings>, TSettings>;
-    }
-
-    reset(): void {
-        for (const setting of Object.values(this.settings)) {
-            setting.reset();
-        }
-        this.saveStoredValue(this.collectSerializedSettings());
-    }
-
-    private init(): void {
-        const resolvedValue = {
-            ...this.collectDefaultSerializedSettings(),
-            ...this.loadStoredValue(),
-        };
-        this.saveStoredValue(resolvedValue);
-        for (const [key, setting] of Object.entries(this.settings)) {
-            setting.init(resolvedValue[key]);
-        }
-    }
-
-    private loadStoredValue(): Record<string, unknown> {
-        const storedValue = localStorage.getItem(this.storageKey);
-        if (storedValue == null) {
-            return {};
-        }
-
-        const parsedValue = v.safeParse(Settings.schema, storedValue);
-        if (parsedValue.success) {
-            return parsedValue.output;
-        } else {
-            const errorMessage = `Stored settings for ${this.storageKey} are invalid`;
-            showErrorAlert(errorMessage, new Error(errorMessage, { cause: parsedValue.issues }));
-            return {};
-        }
-    }
-
-    private saveStoredValue(value: Record<string, unknown>): void {
-        localStorage.setItem(this.storageKey, JSON.stringify(value));
-    }
-
-    private collectSerializedSettings(): Record<string, unknown> {
-        const serializedSettings: Record<string, unknown> = {};
-        for (const [key, setting] of Object.entries(this.settings)) {
-            serializedSettings[key] = setting.serializeValue(setting.get());
-        }
-        return serializedSettings;
-    }
-
-    private collectDefaultSerializedSettings(): Record<string, unknown> {
-        const serializedSettings: Record<string, unknown> = {};
-        for (const [key, setting] of Object.entries(this.settings)) {
-            serializedSettings[key] = setting.serializeValue(setting.defaultValue);
-        }
-        return serializedSettings;
-    }
+        },
+    };
 }

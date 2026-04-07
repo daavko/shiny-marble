@@ -1,15 +1,23 @@
-import { el } from '../core/dom/html';
-import { createRandomElementId } from '../util/string';
+import { el } from '../../core/dom/html';
+import { createRandomElementId } from '../../util/string';
 
 export { default as inputStyle } from './input.css';
 
-function createFormControl(label: string, inputElement: HTMLElement, content?: HTMLElement): HTMLElement {
+function createFormControl(
+    label: string,
+    inputElement: HTMLInputElement | HTMLSelectElement,
+    content?: HTMLElement,
+): HTMLElement {
     const id = createRandomElementId();
     inputElement.id = id;
-    return el('label', { class: 'sm-form-control', attributes: { for: id } }, [
+    inputElement.addEventListener('input', () => {
+        formControl.classList.toggle('sm-form-control--invalid', !inputElement.validity.valid);
+    });
+    const formControl = el('label', { class: 'sm-form-control', attributes: { for: id } }, [
         el('span', { class: 'sm-form-control__label' }, [label]),
         content ?? inputElement,
     ]);
+    return formControl;
 }
 
 export function createCheckbox(label: string): [HTMLElement, HTMLInputElement] {

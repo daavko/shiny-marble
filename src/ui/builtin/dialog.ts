@@ -1,31 +1,33 @@
 import { mdiClose } from '@mdi/js';
-import { el, type HTMLElementChild } from '../core/dom/html';
-import { renderMdiIcon } from '../ui/mdi-icon';
+import { el, type HTMLElementChild } from '../../core/dom/html';
+import { renderIconButton } from './button';
+
+export { default as dialogStyle } from './dialog.css';
 
 export interface DialogRef {
     dialog: HTMLDialogElement;
     dialogBody: HTMLElement;
-    closeDialog: () => void;
-    closePromise: Promise<void>;
+    closePromise: Promise<string>;
 }
 
 export interface DialogConfig {
     customClass?: string;
     large?: boolean;
+    closedBy?: 'any' | 'closerequest' | 'none';
 }
 
 export function createDialog(title: string, config: DialogConfig, content: HTMLElementChild[]): DialogRef {
-    const { promise: closePromise, resolve: closeResolve } = Promise.withResolvers<void>();
+    const { promise: closePromise, resolve: closeResolve } = Promise.withResolvers<string>();
 
     const dialogBody = el('div', { class: 'sm-dialog__content' }, content);
     const dialog = el(
         'dialog',
         {
             class: ['sm-dialog', config.large === true ? 'sm-dialog--large' : '', config.customClass ?? ''],
-            attributes: { closedBy: 'any' },
+            attributes: { closedBy: config.closedBy ?? 'any' },
             events: {
                 close: () => {
-                    closeResolve();
+                    closeResolve(dialog.returnValue);
                     dialog.remove();
                 },
             },
@@ -33,14 +35,7 @@ export function createDialog(title: string, config: DialogConfig, content: HTMLE
         [
             el('header', { class: 'sm-dialog__header' }, [
                 el('h1', [title]),
-                el(
-                    'button',
-                    {
-                        class: 'sm-platform__icon-btn',
-                        events: { click: () => dialog.close() },
-                    },
-                    [renderMdiIcon(mdiClose)],
-                ),
+                renderIconButton(mdiClose, () => dialog.close()),
             ]),
             dialogBody,
         ],
@@ -49,7 +44,6 @@ export function createDialog(title: string, config: DialogConfig, content: HTMLE
     return {
         dialog,
         dialogBody,
-        closeDialog: () => dialog.close(),
         closePromise,
     };
 }

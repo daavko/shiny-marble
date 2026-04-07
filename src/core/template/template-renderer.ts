@@ -1,16 +1,18 @@
 import type { CustomLayerInterface, CustomRenderMethodInput, Map } from 'maplibre-gl';
 
 export class TemplateRenderer implements CustomLayerInterface {
-    readonly id = 'sm-template';
+    readonly id = 'shinymarble-template';
     readonly type = 'custom';
     readonly renderingMode = '2d';
 
+    private map: Map | null = null;
+
     onAdd(map: Map, gl: WebGLRenderingContext | WebGL2RenderingContext): void {
-        // todo
+        this.map = map;
     }
 
     onRemove(map: Map, gl: WebGLRenderingContext | WebGL2RenderingContext): void {
-        // todo
+        this.map = null;
     }
 
     prerender(gl: WebGLRenderingContext | WebGL2RenderingContext, options: CustomRenderMethodInput): void {

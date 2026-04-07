@@ -1,5 +1,5 @@
 import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
-import { showErrorAlert } from '../../ui/alerts-container';
+import { showErrorAlert } from '../../ui/components/alerts-container';
 import type { Dimensions, Point } from '../../util/geometry';
 import { waitForDataAndTransaction } from '../../util/idb';
 import { debug } from '../debug';
@@ -10,12 +10,14 @@ export interface StoredTemplate {
     position: Point;
     imageSize: Dimensions;
     hash: string;
-    thumbnail: ImageData;
+    // image/png Blob
+    thumbnail: Blob;
 }
 
 interface StoredTemplateImage {
     hash: string;
-    image: ImageData;
+    // image/png Blob
+    image: Blob;
 }
 
 interface TemplateStorageDBSchema extends DBSchema {
@@ -139,5 +141,18 @@ export const TemplateStorage = {
     async deleteTemplateImage(hash: string): Promise<void> {
         const db = await getStorage();
         await db.delete('templateImages', hash);
+    },
+    async cleanupUnusedTemplateImages(usedHashes: Set<string>): Promise<void> {
+        const db = await getStorage();
+        const tx = db.transaction('templateImages', 'readwrite');
+        const store = tx.objectStore('templateImages');
+        const allImageHashes = new Set(await store.getAllKeys());
+        const hashesToDelete = Array.from(allImageHashes.difference(usedHashes));
+        if (hashesToDelete.length > 0) {
+            await waitForDataAndTransaction(
+                hashesToDelete.map((hash) => store.delete(hash)),
+                tx,
+            );
+        }
     },
 };

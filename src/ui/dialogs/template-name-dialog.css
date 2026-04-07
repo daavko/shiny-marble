@@ -1,0 +1,8 @@
+.sm-template-name-dialog {
+    .sm-template-name-dialog__button-row {
+        margin-top: 16px;
+        display: flex;
+        gap: 8px;
+        justify-content: end;
+    }
+}

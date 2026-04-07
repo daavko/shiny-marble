@@ -1,0 +1,34 @@
+.sm-popover-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    z-index: 9999;
+}
+
+.sm-popover-menu {
+    padding: 0;
+    box-shadow: var(--sm-small-box-shadow);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+    position-area: var(--sm-popover-menu-vertical-position) var(--sm-popover-menu-horizontal-position);
+    position-try: normal flip-block;
+    top: 4px;
+    bottom: 4px;
+
+    .sm-popover-menu__item {
+        padding: 4px 12px;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        background: var(--sm-background-color);
+
+        &:not(:last-child) {
+            border-bottom: 1px solid var(--sm-soft-border-color);
+        }
+
+        &:hover {
+            background-color: var(--sm-hover-background-color);
+        }
+    }
+}

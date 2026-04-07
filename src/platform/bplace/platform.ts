@@ -2,11 +2,12 @@ import { Map as MapLibreInstance } from 'maplibre-gl';
 import { debug } from '../../core/debug';
 import { el } from '../../core/dom/html';
 import { addStyle, addStyles, removeStyle } from '../../core/dom/styles';
-import { createBooleanSetting, createNumberRangeSetting } from '../../ui/settings-ui';
+import { renderBlockButton } from '../../ui/builtin/button';
+import { createBooleanSetting, createNumberRangeSetting } from '../../ui/builtin/settings-ui';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
-import { BooleanSetting, NumberSetting, Settings } from '../settings';
+import { createSetting, createSettings } from '../settings';
 import type { CanvasPlatform } from '../types';
 import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
 import { BPLACE_COLORS } from './colors';
@@ -46,39 +47,36 @@ function toggleStylesheet(style: string, enabled: boolean): void {
     }
 }
 
-const bplaceSettings = Settings.create('bplace-platform', {
-    enableDailyLocationHighlight: new BooleanSetting(true),
-    dailyLocationHighlightOpacity: new NumberSetting(0.25),
-    hideAchievementConfetti: new BooleanSetting(false, [
+const bplaceSettings = createSettings('bplace-platform', 1, {
+    enableDailyLocationHighlight: createSetting(true),
+    dailyLocationHighlightOpacity: createSetting(0.25),
+    hideAchievementConfetti: createSetting(false, [
         (_, newValue): void => toggleStylesheet(hideAchievementConfettiStyle, newValue),
     ]),
-    hideBuyChromasButton: new BooleanSetting(false, [
+    hideBuyChromasButton: createSetting(false, [
         (_, newValue): void => toggleStylesheet(hideBuyChromasButtonStyle, newValue),
     ]),
-    hideGuildNotificationBadge: new BooleanSetting(false, [
+    hideGuildNotificationBadge: createSetting(false, [
         (_, newValue): void => toggleStylesheet(hideGuildNotificationBadgeStyle, newValue),
     ]),
-    blockAnalytics: new BooleanSetting(true, [(_, newValue): void => toggleBplaceAnalyticsBlocker(newValue)]),
-    fakeBetaTester: new BooleanSetting(false, [(_, newValue): void => toggleBplaceFakeBeta(newValue)]),
+    blockAnalytics: createSetting(true, [(_, newValue): void => toggleBplaceAnalyticsBlocker(newValue)]),
+    fakeBetaTester: createSetting(false, [(_, newValue): void => toggleBplaceFakeBeta(newValue)]),
 });
 
-interface BplacePlatform extends CanvasPlatform {
-    readonly settings: typeof bplaceSettings;
-}
-
-export const BplacePlatform: BplacePlatform = {
+export const BplacePlatform: CanvasPlatform = {
     colors: BPLACE_COLORS,
-    get settings() {
-        return bplaceSettings;
-    },
-    initialize() {
-        addStyles(bplacePlatformStyle, bplaceColorStatsDialogStyle);
-        toggleStylesheet(hideAchievementConfettiStyle, bplaceSettings.hideAchievementConfetti.get());
-        toggleStylesheet(hideBuyChromasButtonStyle, bplaceSettings.hideBuyChromasButton.get());
-        toggleStylesheet(hideGuildNotificationBadgeStyle, bplaceSettings.hideGuildNotificationBadge.get());
+    canvasSizePixels: { width: 1335834, height: 1335834 },
+    tileDimensions: { width: 512, height: 512 },
+    async initialize() {
+        await bplaceSettings.init();
 
-        toggleBplaceAnalyticsBlocker(bplaceSettings.blockAnalytics.get());
-        toggleBplaceFakeBeta(bplaceSettings.fakeBetaTester.get());
+        addStyles(bplacePlatformStyle, bplaceColorStatsDialogStyle);
+        toggleStylesheet(hideAchievementConfettiStyle, bplaceSettings.hideAchievementConfetti.value);
+        toggleStylesheet(hideBuyChromasButtonStyle, bplaceSettings.hideBuyChromasButton.value);
+        toggleStylesheet(hideGuildNotificationBadgeStyle, bplaceSettings.hideGuildNotificationBadge.value);
+
+        toggleBplaceAnalyticsBlocker(bplaceSettings.blockAnalytics.value);
+        toggleBplaceFakeBeta(bplaceSettings.fakeBetaTester.value);
     },
     async addMapInstanceHook(resolveMapInstance) {
         const moduleHrefs = gatherModuleHrefs('/assets/');
@@ -261,17 +259,13 @@ export const BplacePlatform: BplacePlatform = {
     },
     renderPlatformSpecificAppViewContent() {
         return [
-            el('section', [el('h2', { class: 'sm-app-view__section-heading' }, ['Location highlight']), 'soon(tm)']),
-            el('hr'),
+            // el('section', [el('h2', { class: 'sm-app-view__section-heading' }, ['Location highlight']), 'soon(tm)']),
+            // el('hr'),
             el('section', [
-                el(
-                    'button',
-                    {
-                        class: ['sm-platform__block-btn', 'sm-app-view__bplace-show-colors'],
-                        events: { click: () => void showColorStatsDialog() },
-                    },
-                    ['Show my color stats'],
-                ),
+                el('h2', { class: 'sm-app-view__section-heading' }, ['Bplace utilities']),
+                renderBlockButton('Show my color stats', () => void showColorStatsDialog(), {
+                    class: 'sm-app-view__bplace-show-colors',
+                }),
             ]),
         ];
     },

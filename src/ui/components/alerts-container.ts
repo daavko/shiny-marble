@@ -1,7 +1,7 @@
 import { mdiClose } from '@mdi/js';
-import { debugDetailed } from '../core/debug';
-import { el } from '../core/dom/html';
-import { renderMdiIcon } from './mdi-icon';
+import { debugDetailed } from '../../core/debug';
+import { el } from '../../core/dom/html';
+import { renderIconButton } from '../builtin/button';
 
 export { default as alertsContainerStyle } from './alerts-container.css';
 
@@ -21,14 +21,7 @@ function removeAlert(alertElement: Element): void {
 function createAlertElement(message: string, duration: number, alertTypeClass: string): Element {
     const alertElement = el('div', { class: ['sm-alert', alertTypeClass] }, [
         el('span', [message]),
-        el(
-            'button',
-            {
-                class: ['sm-platform__icon-btn', 'sm-platform__icon-btn--dense', 'sm-alert__close-btn'],
-                events: { click: () => removeAlert(alertElement) },
-            },
-            [renderMdiIcon(mdiClose)],
-        ),
+        renderIconButton(mdiClose, () => removeAlert(alertElement), 'dense', { class: 'sm-alert__close-btn' }),
     ]);
     setTimeout(() => removeAlert(alertElement), duration);
     return alertElement;

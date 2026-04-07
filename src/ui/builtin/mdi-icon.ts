@@ -1,4 +1,4 @@
-import { svgEl, type SVGElementOptions } from '../core/dom/html';
+import { svgEl, type SVGElementOptions } from '../../core/dom/html';
 
 export { default as mdiIconStyle } from './mdi-icon.css';
 

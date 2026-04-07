@@ -1,8 +1,8 @@
 import { mdiChevronLeft } from '@mdi/js';
 import { el } from '../../core/dom/html';
-import { createDialog } from '../../platform/dialog';
 import { downloadBlob } from '../../util/file';
-import { renderBlockButtonWithIcon } from '../button';
+import { renderBlockButton, renderBlockButtonWithIcon } from '../builtin/button';
+import { createDialog } from '../builtin/dialog';
 import { showNewTemplateDialog } from './new-template-dialog';
 
 export { default as imagePaletteDiffDialogStyle } from './image-palette-diff-dialog.css';
@@ -19,17 +19,13 @@ export function showImagePaletteDiffDialog(image: ImageData): void {
     ctx.putImageData(image, 0, 0);
 
     function handleSaveClick(): void {
-        canvas.toBlob(
-            (blob) => {
-                if (blob) {
-                    downloadBlob(blob, 'image-palette-diff.png');
-                } else {
-                    alert('Failed to generate image blob');
-                }
-            },
-            'image/png',
-            1,
-        );
+        canvas.toBlob((blob) => {
+            if (blob) {
+                downloadBlob(blob, 'image-palette-diff.png');
+            } else {
+                alert('Failed to generate image blob');
+            }
+        }, 'image/png');
     }
 
     const { dialog } = createDialog(
@@ -46,27 +42,7 @@ export function showImagePaletteDiffDialog(image: ImageData): void {
                     dialog.close();
                     showNewTemplateDialog();
                 }),
-                // el(
-                //     'button',
-                //     {
-                //         class: 'sm-platform__block-btn',
-                //         events: {
-                //             click: () => {
-                //                 dialog.close();
-                //                 showNewTemplateDialog();
-                //             },
-                //         },
-                //     },
-                //     [renderMdiIcon(mdiChevronLeft), 'Back to New Template dialog'],
-                // ),
-                el(
-                    'button',
-                    {
-                        class: 'sm-platform__block-btn',
-                        events: { click: () => handleSaveClick() },
-                    },
-                    ['Save highlighted image'],
-                ),
+                renderBlockButton('Save highlighted image', () => handleSaveClick()),
             ]),
         ],
     );

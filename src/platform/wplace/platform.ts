@@ -10,6 +10,8 @@ import wplacePlatformStyle from './platform.css';
 
 export const WplacePlatform: CanvasPlatform = {
     colors: WPLACE_COLORS,
+    canvasSizePixels: { width: 2048000, height: 2048000 },
+    tileDimensions: { width: 1000, height: 1000 },
     initialize(): void {
         addStyle(wplacePlatformStyle);
     },
@@ -43,7 +45,24 @@ export const WplacePlatform: CanvasPlatform = {
                             firstArg.v._canvas instanceof HTMLCanvasElement
                         ) {
                             // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe due to checks
-                            resolveMapInstance(firstArg.v as MapLibreInstance);
+                            const mapInstance = firstArg.v as MapLibreInstance;
+
+                            // workaround for wplace devs being absolute fucking morons and updating the layer order
+                            // every single fucking frame, therefore preventing the 'load' event from firing
+                            const updateResetInterval = setInterval(() => {
+                                if (
+                                    !mapInstance.loaded() &&
+                                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- actually necessary
+                                    mapInstance.style?.loaded() &&
+                                    !mapInstance._sourcesDirty &&
+                                    mapInstance._styleDirty
+                                ) {
+                                    mapInstance.style._resetUpdates();
+                                    clearInterval(updateResetInterval);
+                                }
+                            }, 100);
+
+                            resolveMapInstance(mapInstance);
                             valuePrototype.capture = originalCapture;
                         }
 

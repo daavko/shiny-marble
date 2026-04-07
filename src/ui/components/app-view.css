@@ -1,0 +1,119 @@
+.sm-app-view {
+    background: var(--sm-background-color);
+    border: 1px solid var(--sm-card-border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--sm-large-box-shadow);
+
+    .sm-app-view__inner {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        scrollbar-width: thin;
+        min-width: 400px;
+        max-width: 500px;
+        max-height: 600px;
+        overflow-y: auto;
+
+        > hr {
+            border: none;
+            border-top: 1px solid var(--sm-soft-border-color);
+            margin: 0;
+        }
+    }
+
+    .sm-app-view__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        border-bottom: 1px solid var(--sm-hard-border-color);
+
+        .sm-app-view__title {
+            font-size: 1.5rem;
+
+            .sm-app-view__title-icon {
+                display: inline-block;
+                margin-right: 4px;
+                vertical-align: -8px;
+            }
+        }
+
+        .sm-app-view__header-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: end;
+        }
+    }
+
+    .sm-app-view__section-heading {
+        font-size: 1.25rem;
+        margin: 0 0 8px;
+    }
+
+    .sm-app-view__footer {
+        font-size: 0.75rem;
+        color: var(--sm-secondary-text-color);
+    }
+}
+
+.sm-app-view__templates {
+    .sm-app-view__no-templates {
+        text-align: center;
+        height: 3rem;
+        line-height: 3rem;
+        color: var(--sm-secondary-text-color);
+    }
+
+    .sm-app-view__templates-list {
+        margin-bottom: 16px;
+
+        .sm-app-view__template-item {
+            display: grid;
+            column-gap: 8px;
+            grid-template-columns: 56px minmax(0, 1fr) auto;
+            grid-template-rows: auto auto;
+
+            .sm-app-view__template-item__thumbnail {
+                grid-column: 1;
+                grid-row: span 2;
+                width: 100%;
+                aspect-ratio: 1 / 1;
+                object-fit: cover;
+            }
+
+            .sm-app-view__template-item__title {
+                grid-column: 2;
+                grid-row: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .sm-app-view__template-item__statistics {
+                grid-column: 2;
+                grid-row: 2;
+                color: var(--sm-secondary-text-color);
+            }
+
+            .sm-app-view__template-item__menu-button {
+                grid-column: 3;
+                grid-row: span 2;
+                align-self: center;
+            }
+        }
+    }
+
+    .sm-app-view__templates-buttons {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+    }
+}
+
+.sm-app-view__utilities {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}

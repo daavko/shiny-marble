@@ -1,7 +1,7 @@
 import { debug } from './core/debug';
 import { Platform } from './platform/platform';
-import { renderAlertsContainer, showErrorAlert } from './ui/alerts-container';
-import { renderAppIcon } from './ui/app-icon';
+import { renderAlertsContainer, showErrorAlert } from './ui/components/alerts-container';
+import { renderAppIcon } from './ui/components/app-icon';
 import { waitWithTimeout } from './util/promise';
 import { ImageTools } from './workers/image-tools-dispatcher';
 
@@ -12,10 +12,10 @@ function formatCanvasFingerprintingError(browser: string): string {
 async function init(): Promise<void> {
     debug('Initializing Shiny Marble');
 
-    Platform.initPlatform();
     renderAlertsContainer();
+    await Platform.initPlatform();
 
-    const { promise: mapLoadPromise, resolve: resolveMapLoaded } = Promise.withResolvers<void>();
+    const { promise: mapLoadPromise, resolve: resolveMapLoaded } = Promise.withResolvers<true>();
     try {
         await Platform.addMapInstanceHook();
 
@@ -23,7 +23,7 @@ async function init(): Promise<void> {
 
         if (!maybeMap) {
             showErrorAlert(
-                "Could not find map within 10 seconds. Shiny Marble will continue to wait for the map to load. If it doesn't load within a reasonable time, try reloading. If that doesn't help, please report this error.",
+                "Could not find map within 10 seconds. Shiny Marble will continue to wait for the map. If it doesn't load within a reasonable time, try reloading. If that doesn't help, please report this error.",
                 undefined,
                 10000,
             );
@@ -35,44 +35,65 @@ async function init(): Promise<void> {
         // const cityCenter = [-67.35400168661789, 9.90099895844917];
         // const circleGeoJson = turf.circle(cityCenter, 5000, { steps: 64, units: 'meters' });
 
-        map.on('load', function () {
-            resolveMapLoaded();
-            // setTimeout(() => {
-            //     map.addSource('shiny-marble-circle', {
-            //         type: 'geojson',
-            //         data: {
-            //             type: 'Feature',
-            //             geometry: geoJson,
-            //             properties: {},
-            //         },
-            //     });
-            //
-            //     map.addLayer({
-            //         id: 'shiny-marble-circle-layer',
-            //         type: 'fill',
-            //         source: 'shiny-marble-circle',
-            //         paint: {
-            //             'fill-color': '#ff0000',
-            //             'fill-opacity': 0.2,
-            //         },
-            //     });
-            //     map.addLayer({
-            //         id: 'shiny-marble-circle-outline-layer',
-            //         type: 'line',
-            //         source: 'shiny-marble-circle',
-            //         paint: {
-            //             'line-color': '#ff0000',
-            //             'line-width': 2,
-            //         },
-            //     });
-            // }, 2000);
-        });
+        if (map.loaded()) {
+            debug('Map already loaded on initialization');
+            resolveMapLoaded(true);
+        } else {
+            debug('Map not loaded on initialization, waiting for load event');
+            map.on('load', function (e) {
+                debug('Map load event fired', e);
+                resolveMapLoaded(true);
+                // setTimeout(() => {
+                //     map.addSource('shiny-marble-circle', {
+                //         type: 'geojson',
+                //         data: {
+                //             type: 'Feature',
+                //             geometry: geoJson,
+                //             properties: {},
+                //         },
+                //     });
+                //
+                //     map.addLayer({
+                //         id: 'shiny-marble-circle-layer',
+                //         type: 'fill',
+                //         source: 'shiny-marble-circle',
+                //         paint: {
+                //             'fill-color': '#ff0000',
+                //             'fill-opacity': 0.2,
+                //         },
+                //     });
+                //     map.addLayer({
+                //         id: 'shiny-marble-circle-outline-layer',
+                //         type: 'line',
+                //         source: 'shiny-marble-circle',
+                //         paint: {
+                //             'line-color': '#ff0000',
+                //             'line-width': 2,
+                //         },
+                //     });
+                // }, 2000);
+            });
+        }
     } catch (e: unknown) {
         showErrorAlert('Failed to load Map instance. Shiny Marble will not be functional.', e, 10000);
         return;
     }
 
-    await mapLoadPromise;
+    const maybeMap = await waitWithTimeout(mapLoadPromise, 10000);
+    if (!maybeMap) {
+        showErrorAlert(
+            "Map did not load within 10 seconds. Shiny Marble will continue to wait for the map to load. If it doesn't load within a reasonable time, try reloading. If that doesn't help, please report this error.",
+            undefined,
+            10000,
+        );
+        await mapLoadPromise;
+    }
+
+    try {
+        await Platform.initTemplateFunctionality();
+    } catch (e: unknown) {
+        showErrorAlert('Failed to initialize template functionality. Shiny Marble will not be functional.', e, 10000);
+    }
 
     renderAppIcon();
 

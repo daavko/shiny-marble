@@ -1,6 +1,6 @@
 import { debugDetailed } from '../../core/debug';
 import { el } from '../../core/dom/html';
-import { createDialog } from '../dialog';
+import { createDialog } from '../../ui/builtin/dialog';
 import { fetchUserColorStats } from './supabase';
 
 export { default as bplaceColorStatsDialogStyle } from './color-stats-dialog.css';

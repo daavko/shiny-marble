@@ -17,6 +17,7 @@
     input:is([type='text'], [type='number']),
     select {
         padding: 4px 8px;
+        margin-top: 2px;
         border: 1px solid var(--sm-hard-border-color);
         background: var(--sm-background-color);
         border-radius: 4px;
@@ -24,16 +25,26 @@
             border-color 0.2s ease,
             outline 0.2s ease;
 
-        :focus {
+        &:focus {
             border-color: var(--sm-soft-border-color);
             outline: 2px solid var(--sm-primary-color);
-            outline-offset: 2px;
+            outline-offset: 1px;
         }
 
-        :disabled {
+        &:disabled {
             background-color: var(--sm-hover-background-color);
             border-color: var(--sm-soft-border-color);
             cursor: not-allowed;
+        }
+    }
+
+    &.sm-form-control--invalid {
+        color: var(--sm-error-foreground-color);
+
+        input:is([type='text'], [type='number']),
+        select {
+            border-color: var(--sm-error-foreground-color);
+            outline-color: var(--sm-error-foreground-color);
         }
     }
 

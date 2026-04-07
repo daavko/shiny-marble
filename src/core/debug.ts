@@ -4,7 +4,7 @@ import { downloadBlob } from '../util/file';
 const DEBUG_LOG: string[] = [];
 
 export function debugEnabled(): boolean {
-    return PlatformSettings.debug.get();
+    return PlatformSettings.debug.value;
 }
 
 export function debug(message: string, ...data: unknown[]): void {
@@ -290,6 +290,8 @@ function stringifyArbitraryValue(value: unknown, depth: number): string {
                 return stringifyMap(value, depth - 1);
             } else if (value instanceof Set) {
                 return stringifySet(value, depth - 1);
+            } else if (value instanceof Blob) {
+                return `Blob [type: ${value.type}; size: ${value.size} bytes]`;
             } else {
                 return stringifyObject(value, depth - 1);
             }

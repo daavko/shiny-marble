@@ -1,0 +1,7 @@
+.sm-app-info {
+    background: var(--sm-background-color);
+    border: 1px solid var(--sm-card-border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--sm-large-box-shadow);
+}

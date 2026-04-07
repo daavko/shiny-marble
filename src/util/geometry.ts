@@ -13,6 +13,13 @@ export interface Dimensions {
     height: number;
 }
 
+export interface Extent {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+}
+
 export interface MapPoint {
     lat: number;
     lon: number;

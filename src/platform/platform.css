@@ -28,6 +28,9 @@
     --sm-error-foreground-color: #ce1f1f;
     --sm-error-on-background-color: black;
     --sm-error-background-color: #e59b9b;
+
+    --sm-small-box-shadow: 0 1px 4px 2px rgba(0, 0, 0, 0.2);
+    --sm-large-box-shadow: 1px 3px 5px 1px rgba(0, 0, 0, 0.3);
 }
 
 button.sm-platform__icon-btn {
@@ -77,45 +80,6 @@ button.sm-platform__block-btn {
 
 .sm-shine-icon {
     color: var(--sm-brand-color);
-}
-
-.sm-dialog {
-    position: relative;
-    border: 1px solid var(--sm-card-border-color);
-    border-radius: var(--sm-card-border-radius);
-    background-color: white;
-    min-width: min(100dvw - 32px, 400px);
-    max-height: min(100dvh - 32px, 600px);
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    margin: auto;
-
-    &.sm-dialog--large {
-        min-width: min(100dvw - 32px, 600px);
-        max-height: min(100dvh - 32px, 800px);
-    }
-
-    &::backdrop {
-        background-color: rgba(0, 0, 0, 0.25);
-        backdrop-filter: blur(4px);
-    }
-
-    .sm-dialog__header {
-        padding: 12px;
-        border-bottom: 1px solid var(--sm-hard-border-color);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-
-        h1 {
-            font-size: 1.5rem;
-        }
-    }
-
-    .sm-dialog__content {
-        padding: 12px;
-        overflow-y: auto;
-    }
 }
 
 .sm-table--evenodd {

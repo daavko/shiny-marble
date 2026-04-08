@@ -1,5 +1,6 @@
 import * as v from 'valibot';
 import { WplacePlatform } from '../../platform/wplace/platform';
+import { assertCanvasCtx } from '../../util/canvas';
 import type { Dimensions, Point } from '../../util/geometry';
 import { MAX_CANVAS_DIMENSION } from '../const';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
@@ -136,9 +137,6 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
         };
     });
 
-    const canvas = new OffscreenCanvas(WplacePlatform.tileDimensions.width, WplacePlatform.tileDimensions.height);
-    const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx, 'Could not get 2D context from canvas');
     const totalDimensions: Dimensions = {
         width: 0,
         height: 0,
@@ -174,9 +172,9 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
             return { success: false, errorCode: 'imageTooLarge' };
         }
 
-        // todo: handle world wrapping
+        // todo: handle wrapping at world edges
         detemplatizedTiles.push({
-            coords: {
+            position: {
                 x: tile.coords.x - templateCoords.x,
                 y: tile.coords.y - templateCoords.y,
             },
@@ -184,5 +182,21 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
         });
     }
 
-    // todo: stitch the tiles together into one image
+    const canvas = new OffscreenCanvas(totalDimensions.width, totalDimensions.height);
+    const ctx = canvas.getContext('2d');
+    assertCanvasCtx(ctx, 'Could not get 2D context from canvas');
+
+    for (const tile of detemplatizedTiles) {
+        ctx.drawImage(tile.bitmap, tile.position.x, tile.position.y);
+        tile.bitmap.close();
+    }
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    return {
+        success: true,
+        name: template.name,
+        position: templateCoords,
+        image: imageData,
+    };
 }

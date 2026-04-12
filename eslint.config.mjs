@@ -30,6 +30,8 @@ export default defineConfig([
             ],
             '@eslint-community/eslint-comments/require-description': 'error',
 
+            'accessor-pairs': 'error',
+
             '@typescript-eslint/default-param-last': 'warn',
             '@typescript-eslint/explicit-function-return-type': 'warn',
             '@typescript-eslint/explicit-member-accessibility': ['warn', { accessibility: 'no-public' }],

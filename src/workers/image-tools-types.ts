@@ -1,4 +1,5 @@
 import type { PixelColor } from '../platform/types';
+import type { Extent } from '../util/geometry';
 
 interface BaseImageToolsTask<T extends string> {
     task: T;
@@ -8,14 +9,17 @@ interface BaseImageToolsTask<T extends string> {
 type VerifyImageMachesPaletteTaskName = 'verifyImageMatchesPalette';
 type HighlightNonMatchingPixelsTaskName = 'highlightNonMatchingPixels';
 type DetectCanvasFingerprintingProtectionTaskName = 'detectCanvasFingerprintingProtection';
+type DetemplatizeBlueMarbleTileTaskName = 'detemplatizeBlueMarbleTile';
+type FindTransparentBorderTaskName = 'findTransparentBorder';
+type ImageToPaletteIndexBufferTaskName = 'imageToPaletteIndexBuffer';
 
 export interface VerifyImageMatchesPaletteTaskRequest extends BaseImageToolsTask<VerifyImageMachesPaletteTaskName> {
-    pixelBuffer: ArrayBuffer;
+    image: ImageData;
     palette: readonly PixelColor[];
 }
 
 export interface HighlightNonMatchingPixelsTaskRequest extends BaseImageToolsTask<HighlightNonMatchingPixelsTaskName> {
-    pixelBuffer: ArrayBuffer;
+    image: ImageData;
     palette: readonly PixelColor[];
     darkenPercentage: number;
     highlightColorRgba: number;
@@ -24,17 +28,26 @@ export interface HighlightNonMatchingPixelsTaskRequest extends BaseImageToolsTas
 export type DetectCanvasFingerprintingProtectionTaskRequest =
     BaseImageToolsTask<DetectCanvasFingerprintingProtectionTaskName>;
 
-export interface DetemplatizeBlueMarbleTileTaskRequest extends BaseImageToolsTask<'detemplatizeBlueMarbleTile'> {
-    pixelBuffer: ArrayBuffer;
-    width: number;
-    height: number;
+export interface DetemplatizeBlueMarbleTileTaskRequest extends BaseImageToolsTask<DetemplatizeBlueMarbleTileTaskName> {
+    image: ImageData;
+}
+
+export interface FindTransparentBorderTaskRequest extends BaseImageToolsTask<FindTransparentBorderTaskName> {
+    image: ImageData;
+}
+
+export interface ImageToPaletteIndexBufferTaskRequest extends BaseImageToolsTask<ImageToPaletteIndexBufferTaskName> {
+    image: ImageData;
+    palette: readonly PixelColor[];
 }
 
 export type ImageToolsTaskRequest =
     | VerifyImageMatchesPaletteTaskRequest
     | HighlightNonMatchingPixelsTaskRequest
     | DetectCanvasFingerprintingProtectionTaskRequest
-    | DetemplatizeBlueMarbleTileTaskRequest;
+    | DetemplatizeBlueMarbleTileTaskRequest
+    | FindTransparentBorderTaskRequest
+    | ImageToPaletteIndexBufferTaskRequest;
 
 interface BaseImageToolsTaskResult<T extends string> {
     task: T;
@@ -43,7 +56,6 @@ interface BaseImageToolsTaskResult<T extends string> {
 
 export interface VerifyImageMatchesPaletteTaskSuccessResult extends BaseImageToolsTaskResult<VerifyImageMachesPaletteTaskName> {
     success: true;
-    pixelBuffer: ArrayBuffer;
     matches: boolean;
 }
 
@@ -58,7 +70,7 @@ export type VerifyImageMatchesPaletteTaskResult =
 
 export interface HighlightNonMatchingPixelsTaskSuccessResult extends BaseImageToolsTaskResult<HighlightNonMatchingPixelsTaskName> {
     success: true;
-    pixelBuffer: ArrayBuffer;
+    image: ImageData;
 }
 
 export interface HighlightNonMatchingPixelsTaskErrorResult extends BaseImageToolsTaskResult<HighlightNonMatchingPixelsTaskName> {
@@ -84,14 +96,12 @@ export type DetectCanvasFingerprintingProtectionTaskResult =
     | DetectCanvasFingerprintingProtectionTaskSuccessResult
     | DetectCanvasFingerprintingProtectionTaskErrorResult;
 
-export interface DetemplatizeBlueMarbleTileTaskSuccessResult extends BaseImageToolsTaskResult<'detemplatizeBlueMarbleTile'> {
+export interface DetemplatizeBlueMarbleTileTaskSuccessResult extends BaseImageToolsTaskResult<DetemplatizeBlueMarbleTileTaskName> {
     success: true;
-    pixelBuffer: ArrayBuffer;
-    width: number;
-    height: number;
+    image: ImageData;
 }
 
-export interface DetemplatizeBlueMarbleTileTaskErrorResult extends BaseImageToolsTaskResult<'detemplatizeBlueMarbleTile'> {
+export interface DetemplatizeBlueMarbleTileTaskErrorResult extends BaseImageToolsTaskResult<DetemplatizeBlueMarbleTileTaskName> {
     success: false;
     error: unknown;
 }
@@ -100,8 +110,47 @@ export type DetemplatizeBlueMarbleTileTaskResult =
     | DetemplatizeBlueMarbleTileTaskSuccessResult
     | DetemplatizeBlueMarbleTileTaskErrorResult;
 
+export interface FindTransparentBorderTaskSuccessResult extends BaseImageToolsTaskResult<FindTransparentBorderTaskName> {
+    success: true;
+    border: Extent | 'fullyTransparent' | 'noTransparentBorder';
+}
+
+export interface FindTransparentBorderTaskErrorResult extends BaseImageToolsTaskResult<FindTransparentBorderTaskName> {
+    success: false;
+    error: unknown;
+}
+
+export type FindTransparentBorderTaskResult =
+    | FindTransparentBorderTaskSuccessResult
+    | FindTransparentBorderTaskErrorResult;
+
+export interface ImageToPaletteIndexBufferTaskSuccessResult extends BaseImageToolsTaskResult<ImageToPaletteIndexBufferTaskName> {
+    success: true;
+    buffer: Uint8Array;
+}
+
+export interface ImageToPaletteIndexBufferTaskErrorResult extends BaseImageToolsTaskResult<ImageToPaletteIndexBufferTaskName> {
+    success: false;
+    error: unknown;
+}
+
+export type ImageToPaletteIndexBufferTaskResult =
+    | ImageToPaletteIndexBufferTaskSuccessResult
+    | ImageToPaletteIndexBufferTaskErrorResult;
+
 export type ImageToolsTaskResult =
     | VerifyImageMatchesPaletteTaskResult
     | HighlightNonMatchingPixelsTaskResult
     | DetectCanvasFingerprintingProtectionTaskResult
-    | DetemplatizeBlueMarbleTileTaskResult;
+    | DetemplatizeBlueMarbleTileTaskResult
+    | FindTransparentBorderTaskResult
+    | ImageToPaletteIndexBufferTaskResult;
+
+export function assertTaskResultType<T extends ImageToolsTaskResult['task']>(
+    result: ImageToolsTaskResult,
+    expectedTask: T,
+): asserts result is Extract<ImageToolsTaskResult, { task: T }> {
+    if (result.task !== expectedTask) {
+        throw new Error(`Expected task result of type ${expectedTask} but got ${result.task}`);
+    }
+}

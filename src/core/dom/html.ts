@@ -24,8 +24,8 @@ interface AnyElementOptions extends ElementOptions {
     events?: AnyEventListenerMap;
 }
 
-type HTMLEventListenerFn<K extends keyof HTMLElementEventMap> = (evt: HTMLElementEventMap[K]) => void;
-type HTMLEventListenerWithOptions<K extends keyof HTMLElementEventMap> = [
+export type HTMLEventListenerFn<K extends keyof HTMLElementEventMap> = (evt: HTMLElementEventMap[K]) => void;
+export type HTMLEventListenerWithOptions<K extends keyof HTMLElementEventMap> = [
     HTMLEventListenerFn<K>,
     AddEventListenerOptions,
 ];
@@ -37,18 +37,21 @@ export type HTMLElementEventListenerMap = {
         | (HTMLEventListenerFn<K> | HTMLEventListenerWithOptions<K>)[];
 };
 
-type SVGEventListenerFn<K extends keyof SVGElementEventMap> = (evt: SVGElementEventMap[K]) => void;
-type SVGEventListenerWithOptions<K extends keyof SVGElementEventMap> = [SVGEventListenerFn<K>, AddEventListenerOptions];
+export type SVGEventListenerFn<K extends keyof SVGElementEventMap> = (evt: SVGElementEventMap[K]) => void;
+export type SVGEventListenerWithOptions<K extends keyof SVGElementEventMap> = [
+    SVGEventListenerFn<K>,
+    AddEventListenerOptions,
+];
 
-type SVGElementEventListenerMap = {
+export type SVGElementEventListenerMap = {
     [K in keyof SVGElementEventMap]?:
         | SVGEventListenerFn<K>
         | SVGEventListenerWithOptions<K>
         | (SVGEventListenerFn<K> | SVGEventListenerWithOptions<K>)[];
 };
 
-type AnyEventListenerFn = (evt: Event) => void;
-type AnyEventListenerWithOptions = [AnyEventListenerFn, AddEventListenerOptions];
+export type AnyEventListenerFn = (evt: Event) => void;
+export type AnyEventListenerWithOptions = [AnyEventListenerFn, AddEventListenerOptions];
 
 function isEventListenerWithOptions(
     listener: AnyEventListenerWithOptions | (AnyEventListenerFn | AnyEventListenerWithOptions)[],

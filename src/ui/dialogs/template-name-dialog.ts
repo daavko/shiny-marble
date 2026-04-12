@@ -3,8 +3,6 @@ import { renderBlockButton } from '../builtin/button';
 import { createDialog } from '../builtin/dialog';
 import { createTextInput } from '../builtin/input';
 
-export { default as templateNameDialogStyle } from './template-name-dialog.css';
-
 export async function showTemplateNameDialog(currentName: string, newTemplate: boolean): Promise<string> {
     let label: string;
     if (newTemplate) {
@@ -16,7 +14,7 @@ export async function showTemplateNameDialog(currentName: string, newTemplate: b
     nameInput.value = currentName;
     nameInput.required = true;
 
-    const { dialog, closePromise } = createDialog('Template Name', { customClass: 'sm-template-name-dialog' }, [
+    const { dialog, resultPromise } = createDialog('Template Name', { size: 'small' }, [
         el(
             'form',
             {
@@ -33,15 +31,17 @@ export async function showTemplateNameDialog(currentName: string, newTemplate: b
             },
             [
                 formControl,
-                el('div', { class: 'sm-template-name-dialog__button-row' }, [
+                el('div', { class: ['sm-row', 'sm-row--end', 'sm-mt-16'] }, [
                     renderBlockButton(
                         'Use this name',
                         () => {
                             // no-op, the form submit handler will take care of this
                         },
-                        { attributes: { type: 'submit' } },
+                        { variant: 'primary', elementOptions: { attributes: { type: 'submit' } } },
                     ),
-                    renderBlockButton('Cancel', () => dialog.close(), { attributes: { type: 'button' } }),
+                    renderBlockButton('Cancel', () => dialog.close(), {
+                        elementOptions: { attributes: { type: 'button' } },
+                    }),
                 ]),
             ],
         ),
@@ -50,5 +50,5 @@ export async function showTemplateNameDialog(currentName: string, newTemplate: b
     document.body.appendChild(dialog);
     dialog.showModal();
 
-    return closePromise;
+    return resultPromise;
 }

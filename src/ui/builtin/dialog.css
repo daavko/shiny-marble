@@ -3,15 +3,25 @@
     border: 1px solid var(--sm-card-border-color);
     border-radius: var(--sm-card-border-radius);
     background-color: white;
-    min-width: min(100dvw - 32px, 400px);
+    width: min(100dvw - 32px, 400px);
     max-height: min(100dvh - 32px, 600px);
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     margin: auto;
 
-    &.sm-dialog--large {
-        min-width: min(100dvw - 32px, 600px);
+    &.sm-dialog--small {
+        width: min(100dvw - 32px, 400px);
+        max-height: min(100dvh - 32px, 600px);
+    }
+
+    &.sm-dialog--medium {
+        width: min(100dvw - 32px, 600px);
         max-height: min(100dvh - 32px, 800px);
+    }
+
+    &.sm-dialog--large {
+        width: min(100dvw - 32px, 800px);
+        max-height: min(100dvh - 32px, 1000px);
     }
 
     &::backdrop {

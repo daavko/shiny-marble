@@ -1,5 +1,6 @@
 import { mdiClose } from '@mdi/js';
 import { el, type HTMLElementChild } from '../../core/dom/html';
+import { createEffectContext, type EffectContext } from '../../core/effects';
 import { renderIconButton } from './button';
 
 export { default as dialogStyle } from './dialog.css';
@@ -7,26 +8,37 @@ export { default as dialogStyle } from './dialog.css';
 export interface DialogRef {
     dialog: HTMLDialogElement;
     dialogBody: HTMLElement;
-    closePromise: Promise<string>;
+    resultPromise: Promise<string>;
+    dialogContext: EffectContext;
 }
+
+export type DialogSize = 'small' | 'medium' | 'large';
+
+const dialogSizeClasses: Record<DialogSize, string> = {
+    small: 'sm-dialog--small',
+    medium: 'sm-dialog--medium',
+    large: 'sm-dialog--large',
+};
 
 export interface DialogConfig {
     customClass?: string;
-    large?: boolean;
+    size?: DialogSize;
     closedBy?: 'any' | 'closerequest' | 'none';
 }
 
 export function createDialog(title: string, config: DialogConfig, content: HTMLElementChild[]): DialogRef {
-    const { promise: closePromise, resolve: closeResolve } = Promise.withResolvers<string>();
+    const { promise: resultPromise, resolve: closeResolve } = Promise.withResolvers<string>();
+    const dialogContext = createEffectContext();
 
     const dialogBody = el('div', { class: 'sm-dialog__content' }, content);
     const dialog = el(
         'dialog',
         {
-            class: ['sm-dialog', config.large === true ? 'sm-dialog--large' : '', config.customClass ?? ''],
+            class: ['sm-dialog', dialogSizeClasses[config.size ?? 'medium'], config.customClass ?? ''],
             attributes: { closedBy: config.closedBy ?? 'any' },
             events: {
                 close: () => {
+                    dialogContext.destroy();
                     closeResolve(dialog.returnValue);
                     dialog.remove();
                 },
@@ -35,7 +47,9 @@ export function createDialog(title: string, config: DialogConfig, content: HTMLE
         [
             el('header', { class: 'sm-dialog__header' }, [
                 el('h1', [title]),
-                renderIconButton(mdiClose, () => dialog.close()),
+                renderIconButton(mdiClose, () => {
+                    dialog.close();
+                }),
             ]),
             dialogBody,
         ],
@@ -44,6 +58,7 @@ export function createDialog(title: string, config: DialogConfig, content: HTMLE
     return {
         dialog,
         dialogBody,
-        closePromise,
+        resultPromise,
+        dialogContext,
     };
 }

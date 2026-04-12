@@ -10,13 +10,17 @@ export interface StoredTemplate {
     position: Point;
     imageSize: Dimensions;
     hash: string;
-    // image/png Blob
+    /**
+     * image/png Blob
+     */
     thumbnail: Blob;
 }
 
-interface StoredTemplateImage {
+export interface StoredTemplateImage {
     hash: string;
-    // image/png Blob
+    /**
+     * image/png Blob
+     */
     image: Blob;
 }
 

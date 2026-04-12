@@ -1,0 +1,20 @@
+.sm-row {
+    display: flex;
+    gap: 8px;
+
+    &.sm-row--center {
+        justify-content: center;
+    }
+
+    &.sm-row--end {
+        justify-content: end;
+    }
+}
+
+.sm-mt-16 {
+    margin-top: 16px;
+}
+
+.sm-mt-12 {
+    margin-top: 12px;
+}

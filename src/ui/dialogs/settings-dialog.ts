@@ -8,9 +8,13 @@ import { createBooleanSetting, createNumberSetting } from '../builtin/settings-u
 export { default as settingsDialogStyle } from './settings-dialog.css';
 
 export function showSettingsDialog(): void {
-    const { dialog, dialogBody, closePromise } = createDialog('Settings', { customClass: 'sm-settings-dialog' }, []);
+    const { dialog, dialogBody, dialogContext } = createDialog(
+        'Settings',
+        { customClass: 'sm-settings-dialog', size: 'small' },
+        [],
+    );
 
-    const platformSpecificSettings = Platform.renderPlatformSpecificSettingsContent(closePromise);
+    const platformSpecificSettings = Platform.renderPlatformSpecificSettingsContent(dialogContext);
 
     if (platformSpecificSettings != null) {
         if (Array.isArray(platformSpecificSettings)) {
@@ -24,8 +28,8 @@ export function showSettingsDialog(): void {
         // el('section', { class: 'sm-settings__section' }, [el('h2', ['Template settings']), el('p', ['TODO'])]),
         el('section', { class: 'sm-settings__section' }, [
             el('h2', ['Debug settings']),
-            createBooleanSetting(PlatformSettings.debug, 'Enable debug logging', closePromise),
-            createNumberSetting(PlatformSettings.debugLogSize, 'Debug log size', closePromise, {
+            createBooleanSetting(PlatformSettings.debug, 'Enable debug logging', dialogContext),
+            createNumberSetting(PlatformSettings.debugLogSize, 'Debug log size', dialogContext, {
                 min: 0,
             }),
             renderBlockButton('Download debug log', () => downloadDebugLog()),

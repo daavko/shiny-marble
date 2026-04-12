@@ -11,6 +11,7 @@ export interface PopoverMenuItem {
 }
 
 export interface PopoverMenuConfig {
+    container?: HTMLElement;
     vertical: PopoverVerticalPosition;
     horizontal: PopoverHorizontalPosition;
 }
@@ -69,8 +70,12 @@ export function openPopoverMenu(
         },
         items.map((item) => createPopoverItem(item)),
     );
-    document.body.appendChild(backdrop);
-    document.body.appendChild(menu);
+
+    const menuContainer = config.container ?? document.body;
+
+    menuContainer.appendChild(backdrop);
+    menuContainer.appendChild(menu);
+
     menu.showPopover({ source: triggerElement });
 
     return () => menu.hidePopover();

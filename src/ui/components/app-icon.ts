@@ -13,7 +13,7 @@ export function renderAppIcon(): void {
                 class: 'sm-app-icon',
                 events: { click: () => toggleAppView() },
             },
-            [renderMdiIcon(mdiStarFourPointsCircleOutline, { class: ['sm-shine-icon', 'sm-app-icon__icon'] })],
+            [renderMdiIcon(mdiStarFourPointsCircleOutline, { class: 'sm-shine-icon', style: { zIndex: '1' } })],
         ),
     );
 }

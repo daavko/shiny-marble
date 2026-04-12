@@ -2,25 +2,27 @@ import { type LngLatLike, type Map as MapLibreInstance, MercatorCoordinate } fro
 import { debug } from '../core/debug';
 import type { HTMLElementChild } from '../core/dom/html';
 import { addStyles } from '../core/dom/styles';
+import type { EffectContext } from '../core/effects';
 import { NetworkInterceptor } from '../core/network-interceptor';
-import { TemplateRegistry } from '../core/template/template-registry';
+import { TemplateRegistry } from '../core/template/registry';
+import { buttonStyle } from '../ui/builtin/button';
 import { dialogStyle } from '../ui/builtin/dialog';
 import { inputStyle } from '../ui/builtin/input';
 import { mdiIconStyle } from '../ui/builtin/mdi-icon';
 import { popoverMenuStyle } from '../ui/builtin/popover-menu';
+import { tooltipStyle } from '../ui/builtin/tooltip';
 import { alertsContainerStyle } from '../ui/components/alerts-container';
 import { appIconStyle } from '../ui/components/app-icon';
 import { appViewStyle } from '../ui/components/app-view';
-import { confirmationDialogStyle } from '../ui/dialogs/confirmation-dialog';
-import { imagePaletteDiffDialogStyle } from '../ui/dialogs/image-palette-diff-dialog';
-import { newTemplateDialogStyle } from '../ui/dialogs/new-template-dialog';
+import { templateImagePickerStyle } from '../ui/components/template-image-picker';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
-import { templateNameDialogStyle } from '../ui/dialogs/template-name-dialog';
+import { templateListDialogStyle } from '../ui/dialogs/template-list-dialog';
 import type { Point } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
 import platformStyle from './platform.css';
 import { createSetting, createSettings } from './settings';
 import type { CanvasPlatform, PixelColor } from './types';
+import utilStyle from './util.css';
 import { WplacePlatform } from './wplace/platform';
 
 let mapInstance: MapLibreInstance | null = null;
@@ -40,8 +42,8 @@ const activePlatform = ((): CanvasPlatform => {
 })();
 
 export const PlatformSettings = createSettings('platform', 1, {
-    debug: createSetting(false),
-    debugLogSize: createSetting(100, [(_, newValue): void => console.log('would resize debug log to', newValue)]),
+    debug: createSetting(true),
+    debugLogSize: createSetting(100, [(newValue): void => console.log('would resize debug log to', newValue)]),
 });
 
 export const Platform = {
@@ -51,22 +53,24 @@ export const Platform = {
 
     async initPlatform(): Promise<void> {
         await PlatformSettings.init();
+        debug('Initializing platform');
 
         NetworkInterceptor.init();
         addStyles(
             platformStyle,
+            utilStyle,
             alertsContainerStyle,
             appIconStyle,
             mdiIconStyle,
+            buttonStyle,
             appViewStyle,
             settingsDialogStyle,
             inputStyle,
-            newTemplateDialogStyle,
-            imagePaletteDiffDialogStyle,
-            confirmationDialogStyle,
             popoverMenuStyle,
             dialogStyle,
-            templateNameDialogStyle,
+            templateImagePickerStyle,
+            templateListDialogStyle,
+            tooltipStyle,
         );
         await activePlatform.initialize();
     },
@@ -111,8 +115,8 @@ export const Platform = {
         return activePlatform.renderPlatformSpecificAppViewContent();
     },
 
-    renderPlatformSpecificSettingsContent(destroyPromise: Promise<void>): HTMLElementChild | HTMLElementChild[] | null {
-        return activePlatform.renderPlatformSpecificSettingsContent(destroyPromise);
+    renderPlatformSpecificSettingsContent(context: EffectContext): HTMLElementChild | HTMLElementChild[] | null {
+        return activePlatform.renderPlatformSpecificSettingsContent(context);
     },
 
     getViewportCenterPixel(): Point {

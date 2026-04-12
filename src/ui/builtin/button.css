@@ -1,0 +1,62 @@
+button.sm-icon-btn {
+    padding: 8px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    background-color: transparent;
+
+    &:hover {
+        background-color: var(--sm-hover-transparent-background-color);
+    }
+
+    &.sm-icon-btn--dense {
+        padding: 4px;
+    }
+
+    &.sm-icon-btn--primary {
+        color: var(--sm-primary-text-color);
+    }
+
+    &.sm-icon-btn--danger {
+        color: var(--sm-error-foreground-color);
+    }
+}
+
+button.sm-block-btn {
+    text-align: center;
+    padding: 4px 12px;
+    border: 1px solid var(--sm-soft-border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    background: var(--sm-background-color);
+
+    &:hover {
+        background-color: var(--sm-hover-background-color);
+    }
+
+    &.sm-block-btn--with-icon {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        &.sm-block-btn--icon-left {
+            padding-left: 4px;
+        }
+
+        &.sm-block-btn--icon-right {
+            padding-right: 4px;
+        }
+    }
+
+    &.sm-block-btn--primary {
+        border-color: var(--sm-primary-color);
+        color: var(--sm-primary-text-color);
+    }
+
+    &.sm-block-btn--danger {
+        border-color: var(--sm-error-foreground-color);
+        color: var(--sm-error-foreground-color);
+    }
+}

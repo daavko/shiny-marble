@@ -2,6 +2,7 @@
     --sm-brand-color: #b219ee;
 
     --sm-primary-color: #bb66dc;
+    --sm-primary-text-color: #6f2d8a;
     --sm-background-color: white;
     --sm-text-color: black;
     --sm-secondary-text-color: #444444;
@@ -31,51 +32,6 @@
 
     --sm-small-box-shadow: 0 1px 4px 2px rgba(0, 0, 0, 0.2);
     --sm-large-box-shadow: 1px 3px 5px 1px rgba(0, 0, 0, 0.3);
-}
-
-button.sm-platform__icon-btn {
-    padding: 8px;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background-color 0.1s ease;
-    background-color: transparent;
-
-    &:hover {
-        background-color: var(--sm-hover-transparent-background-color);
-    }
-
-    &.sm-platform__icon-btn--dense {
-        padding: 4px;
-    }
-}
-
-button.sm-platform__block-btn {
-    text-align: center;
-    padding: 4px 12px;
-    border: 1px solid var(--sm-soft-border-color);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-    background: var(--sm-background-color);
-
-    &:hover {
-        background-color: var(--sm-hover-background-color);
-    }
-
-    &.sm-platform__block-btn--with-icon {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-
-        &.sm-platform__block-btn--icon-left {
-            padding-left: 4px;
-        }
-
-        &.sm-platform__block-btn--icon-right {
-            padding-right: 4px;
-        }
-    }
 }
 
 .sm-shine-icon {

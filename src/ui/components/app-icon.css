@@ -21,8 +21,4 @@
             opacity: 100%;
         }
     }
-
-    .sm-app-icon__icon {
-        z-index: 1;
-    }
 }

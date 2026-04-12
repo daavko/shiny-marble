@@ -1,8 +1,9 @@
 import * as v from 'valibot';
-import { WplacePlatform } from '../../platform/wplace/platform';
+import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
 import { assertCanvasCtx } from '../../util/canvas';
 import type { Dimensions, Point } from '../../util/geometry';
-import { MAX_CANVAS_DIMENSION } from '../const';
+import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { WplacePlatform } from '../wplace/platform';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
 
 interface BlueMarbleTileCoords {
@@ -143,32 +144,40 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
     };
     const detemplatizedTiles: {
         position: Point;
-        bitmap: ImageBitmap;
+        tile: ImageData;
     }[] = [];
     for (const tile of tiles) {
         let bitmap: ImageBitmap;
         try {
             bitmap = await createImageBitmap(tile.blob);
         } catch (e) {
-            detemplatizedTiles.forEach((t) => t.bitmap.close());
             return { success: false, errorCode: 'invalidImageData', cause: e };
         }
 
         if (
-            bitmap.width > WplacePlatform.tileDimensions.width ||
-            bitmap.height > WplacePlatform.tileDimensions.height
+            bitmap.width / 3 > WplacePlatform.tileDimensions.width ||
+            bitmap.height / 3 > WplacePlatform.tileDimensions.height
         ) {
             bitmap.close();
-            detemplatizedTiles.forEach((t) => t.bitmap.close());
             return { success: false, errorCode: 'tileTooLarge' };
         }
 
-        totalDimensions.width = Math.max(totalDimensions.width, tile.coords.x + bitmap.width);
-        totalDimensions.height = Math.max(totalDimensions.height, tile.coords.y + bitmap.height);
+        const tileCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const tileCtx = tileCanvas.getContext('2d');
+        assertCanvasCtx(tileCtx, 'Could not get 2D context from tile canvas');
+        tileCtx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const drawnImageData = tileCtx.getImageData(0, 0, tileCanvas.width, tileCanvas.height);
+        const detemplatizedTile = await ImageTools.detemplatizeBlueMarbleTile(drawnImageData);
 
-        if (totalDimensions.width > MAX_CANVAS_DIMENSION || totalDimensions.height > MAX_CANVAS_DIMENSION) {
+        totalDimensions.width = Math.max(totalDimensions.width, tile.coords.x + detemplatizedTile.width);
+        totalDimensions.height = Math.max(totalDimensions.height, tile.coords.y + detemplatizedTile.height);
+
+        if (
+            totalDimensions.width > MAX_TEMPLATE_CANVAS_DIMENSION ||
+            totalDimensions.height > MAX_TEMPLATE_CANVAS_DIMENSION
+        ) {
             bitmap.close();
-            detemplatizedTiles.forEach((t) => t.bitmap.close());
             return { success: false, errorCode: 'imageTooLarge' };
         }
 
@@ -178,7 +187,7 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
                 x: tile.coords.x - templateCoords.x,
                 y: tile.coords.y - templateCoords.y,
             },
-            bitmap,
+            tile: detemplatizedTile,
         });
     }
 
@@ -187,8 +196,7 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
     assertCanvasCtx(ctx, 'Could not get 2D context from canvas');
 
     for (const tile of detemplatizedTiles) {
-        ctx.drawImage(tile.bitmap, tile.position.x, tile.position.y);
-        tile.bitmap.close();
+        ctx.putImageData(tile.tile, tile.position.x, tile.position.y);
     }
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);

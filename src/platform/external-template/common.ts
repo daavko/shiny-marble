@@ -1,6 +1,6 @@
+import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
 import { assertCanvasCtx } from '../../util/canvas';
 import type { Point } from '../../util/geometry';
-import { MAX_CANVAS_DIMENSION } from '../const';
 import type { BaseTemplateParseResult } from './types';
 
 export async function handleBlobFromParsedTemplate(
@@ -21,7 +21,7 @@ export async function handleBlobFromParsedTemplate(
         return { success: false, errorCode: 'noResizedImages' };
     }
 
-    if (bitmap.width > MAX_CANVAS_DIMENSION || bitmap.height > MAX_CANVAS_DIMENSION) {
+    if (bitmap.width > MAX_TEMPLATE_CANVAS_DIMENSION || bitmap.height > MAX_TEMPLATE_CANVAS_DIMENSION) {
         return { success: false, errorCode: 'imageTooLarge' };
     }
 

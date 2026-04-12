@@ -1,5 +1,6 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
 import type { HTMLElementChild } from '../core/dom/html';
+import type { EffectContext } from '../core/effects';
 import type { Dimensions } from '../util/geometry';
 
 export interface PixelColor {
@@ -17,5 +18,5 @@ export interface CanvasPlatform {
     addMapInstanceHook(resolveMapInstance: (mapInstance: MapLibreInstance) => void): Promise<void>;
     getCurrentColor(colors: readonly PixelColor[]): PixelColor | null;
     renderPlatformSpecificAppViewContent(): HTMLElementChild | HTMLElementChild[] | null;
-    renderPlatformSpecificSettingsContent(destoryPromise: Promise<void>): HTMLElementChild | HTMLElementChild[] | null;
+    renderPlatformSpecificSettingsContent(context: EffectContext): HTMLElementChild | HTMLElementChild[] | null;
 }

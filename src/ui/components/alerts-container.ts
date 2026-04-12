@@ -21,7 +21,10 @@ function removeAlert(alertElement: Element): void {
 function createAlertElement(message: string, duration: number, alertTypeClass: string): Element {
     const alertElement = el('div', { class: ['sm-alert', alertTypeClass] }, [
         el('span', [message]),
-        renderIconButton(mdiClose, () => removeAlert(alertElement), 'dense', { class: 'sm-alert__close-btn' }),
+        renderIconButton(mdiClose, () => removeAlert(alertElement), {
+            density: 'dense',
+            elementOptions: { class: 'sm-alert__close-btn' },
+        }),
     ]);
     setTimeout(() => removeAlert(alertElement), duration);
     return alertElement;

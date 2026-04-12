@@ -51,16 +51,16 @@ const bplaceSettings = createSettings('bplace-platform', 1, {
     enableDailyLocationHighlight: createSetting(true),
     dailyLocationHighlightOpacity: createSetting(0.25),
     hideAchievementConfetti: createSetting(false, [
-        (_, newValue): void => toggleStylesheet(hideAchievementConfettiStyle, newValue),
+        (newValue): void => toggleStylesheet(hideAchievementConfettiStyle, newValue),
     ]),
     hideBuyChromasButton: createSetting(false, [
-        (_, newValue): void => toggleStylesheet(hideBuyChromasButtonStyle, newValue),
+        (newValue): void => toggleStylesheet(hideBuyChromasButtonStyle, newValue),
     ]),
     hideGuildNotificationBadge: createSetting(false, [
-        (_, newValue): void => toggleStylesheet(hideGuildNotificationBadgeStyle, newValue),
+        (newValue): void => toggleStylesheet(hideGuildNotificationBadgeStyle, newValue),
     ]),
-    blockAnalytics: createSetting(true, [(_, newValue): void => toggleBplaceAnalyticsBlocker(newValue)]),
-    fakeBetaTester: createSetting(false, [(_, newValue): void => toggleBplaceFakeBeta(newValue)]),
+    blockAnalytics: createSetting(true, [(newValue): void => toggleBplaceAnalyticsBlocker(newValue)]),
+    fakeBetaTester: createSetting(false, [(newValue): void => toggleBplaceFakeBeta(newValue)]),
 });
 
 export const BplacePlatform: CanvasPlatform = {
@@ -225,7 +225,6 @@ export const BplacePlatform: CanvasPlatform = {
         throw new Error('Failed to find React module with useRef');
     },
     getCurrentColor(colors) {
-        // fixed inset-x-0 z-50 flex flex-col-reverse items-center gap-2 animate-slide-in-up pointer-events-none
         const bottomPane = document.querySelector('#root > .w-screen.h-screen > div.fixed.inset-x-0');
         const colorButtonsContainer = bottomPane?.querySelector('.flex.w-full > .flex.flex-wrap.justify-center');
         const selectedColorElement = colorButtonsContainer?.querySelector(
@@ -259,50 +258,44 @@ export const BplacePlatform: CanvasPlatform = {
     },
     renderPlatformSpecificAppViewContent() {
         return [
-            // el('section', [el('h2', { class: 'sm-app-view__section-heading' }, ['Location highlight']), 'soon(tm)']),
-            // el('hr'),
             el('section', [
                 el('h2', { class: 'sm-app-view__section-heading' }, ['Bplace utilities']),
-                renderBlockButton('Show my color stats', () => void showColorStatsDialog(), {
-                    class: 'sm-app-view__bplace-show-colors',
-                }),
+                el('div', { class: ['sm-row', 'sm-row--center'] }, [
+                    renderBlockButton('Show my color stats', () => void showColorStatsDialog()),
+                ]),
             ]),
         ];
     },
-    renderPlatformSpecificSettingsContent(destroyPromise) {
+    renderPlatformSpecificSettingsContent(context) {
         return [
             el('section', { class: 'sm-settings__section' }, [
                 el('h2', ['Bplace-specific settings']),
                 createBooleanSetting(
                     bplaceSettings.enableDailyLocationHighlight,
                     'Enable daily location highlight',
-                    destroyPromise,
+                    context,
                 ),
                 createNumberRangeSetting(
                     bplaceSettings.dailyLocationHighlightOpacity,
                     'Daily location highlight opacity',
-                    destroyPromise,
+                    context,
                     { min: 0, max: 1, step: 0.05 },
                 ),
-                createBooleanSetting(bplaceSettings.blockAnalytics, 'Block analytics requests', destroyPromise),
+                createBooleanSetting(bplaceSettings.blockAnalytics, 'Block analytics requests', context),
                 createBooleanSetting(
                     bplaceSettings.fakeBetaTester,
                     'Fake being a beta tester (requires reload)',
-                    destroyPromise,
+                    context,
                 ),
             ]),
             el('section', { class: 'sm-settings__section' }, [
                 el('h2', ['Bplace toggleable styles']),
-                createBooleanSetting(
-                    bplaceSettings.hideAchievementConfetti,
-                    'Hide achievement confetti',
-                    destroyPromise,
-                ),
-                createBooleanSetting(bplaceSettings.hideBuyChromasButton, 'Hide "buy chromas" button', destroyPromise),
+                createBooleanSetting(bplaceSettings.hideAchievementConfetti, 'Hide achievement confetti', context),
+                createBooleanSetting(bplaceSettings.hideBuyChromasButton, 'Hide "buy chromas" button', context),
                 createBooleanSetting(
                     bplaceSettings.hideGuildNotificationBadge,
                     'Hide guild notification badge',
-                    destroyPromise,
+                    context,
                 ),
             ]),
         ];

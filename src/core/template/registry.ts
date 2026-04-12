@@ -3,7 +3,7 @@ import type { PixelColor } from '../../platform/types';
 import type { Dimensions, Point, Vector } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { debug, debugDetailed } from '../debug';
-import { type StoredTemplate, TemplateStorage } from './template-storage';
+import { type StoredTemplate, TemplateStorage } from './storage';
 
 export type TileId = `${number}_${number}`;
 
@@ -187,10 +187,44 @@ export const TemplateRegistry = {
             return;
         }
 
+        const oldName = template.name;
         template.name = newName;
         await TemplateStorage.saveTemplate(liveTemplateToStoredTemplate(template));
         TemplateRegistryEvents.dispatchEvent(new TemplateChangedEvent(template));
-        debug(`Renamed template with id ${id} to "${newName}"`);
+        debug(`Renamed template with id ${id} from "${oldName}" to "${newName}"`);
+    },
+
+    async replaceTemplateImage(id: string, newImage: ImageData, newImageBlob?: Blob): Promise<boolean> {
+        const template = availableTemplates.get(id);
+        if (!template) {
+            debug(`Cannot replace image of template with id ${id} - template not found`);
+            return false;
+        }
+
+        const newHash = await ImageTools.computeImageHash(newImage);
+        if (newHash === template.hash) {
+            debug(`New image for template with id ${id} has the same hash as the old image, skipping replacement`);
+            return false;
+        }
+
+        const newThumbnail = await ImageTools.createThumbnail(newImage, 100, 100);
+        newImageBlob ??= await ImageTools.imageToBlob(newImage);
+
+        // Update template with new image info
+        knownTemplateHashes.delete(template.hash);
+        template.hash = newHash;
+        template.imageSize = { width: newImage.width, height: newImage.height };
+        URL.revokeObjectURL(template.thumbnailUrl);
+        template.thumbnail = newThumbnail;
+        template.thumbnailUrl = URL.createObjectURL(newThumbnail);
+        knownTemplateHashes.add(newHash);
+
+        await TemplateStorage.saveTemplate(liveTemplateToStoredTemplate(template));
+        await TemplateStorage.saveTemplateImage({ hash: newHash, image: newImageBlob });
+        await TemplateStorage.cleanupUnusedTemplateImages(knownTemplateHashes);
+        TemplateRegistryEvents.dispatchEvent(new TemplateChangedEvent(template));
+        debug(`Replaced image of template with id ${id}`);
+        return true;
     },
 
     async deleteTemplate(id: string): Promise<void> {

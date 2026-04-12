@@ -1,0 +1,50 @@
+.sm-templates-list-dialog {
+    .sm-templates-list-dialog__no-templates {
+        text-align: center;
+        height: 3rem;
+        line-height: 3rem;
+        color: var(--sm-secondary-text-color);
+    }
+
+    .sm-templates-list-dialog__templates-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        .sm-templates-list-dialog__template-item {
+            display: grid;
+            column-gap: 8px;
+            grid-template-columns: 56px minmax(0, 1fr) auto;
+            grid-template-rows: auto auto;
+
+            .sm-templates-list-dialog__template-item__thumbnail {
+                grid-column: 1;
+                grid-row: span 2;
+                width: 100%;
+                aspect-ratio: 1 / 1;
+                object-fit: cover;
+                border-radius: 4px;
+            }
+
+            .sm-templates-list-dialog__template-item__title {
+                grid-column: 2;
+                grid-row: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .sm-templates-list-dialog__template-item__statistics {
+                grid-column: 2;
+                grid-row: 2;
+                color: var(--sm-secondary-text-color);
+            }
+
+            .sm-templates-list-dialog__template-item__menu-buttons {
+                grid-column: 3;
+                grid-row: span 2;
+                align-self: center;
+            }
+        }
+    }
+}

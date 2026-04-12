@@ -14,9 +14,11 @@ function createColorUsageRecordRow(name: string, usageCount: number, hexValue: s
 }
 
 export async function showColorStatsDialog(): Promise<void> {
-    const { dialog, dialogBody } = createDialog('Your Color Stats', { customClass: 'sm-color-stats-dialog' }, [
-        'Loading...',
-    ]);
+    const { dialog, dialogBody } = createDialog(
+        'Your Color Stats',
+        { customClass: 'sm-color-stats-dialog', size: 'small' },
+        ['Loading...'],
+    );
 
     document.body.appendChild(dialog);
     dialog.showModal();

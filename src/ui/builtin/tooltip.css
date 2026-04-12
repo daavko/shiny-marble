@@ -1,0 +1,26 @@
+.sm-tooltip {
+    padding: 6px 12px;
+    background-color: var(--sm-background-color);
+    color: var(--sm-text-color);
+    border-radius: 4px;
+    box-shadow: var(--sm-small-box-shadow);
+    font-size: 0.875rem;
+    white-space: nowrap;
+
+    position-area: var(--sm-tooltip-vertical-position) var(--sm-tooltip-horizontal-position);
+    position-try: normal flip-block;
+
+    &::backdrop {
+        display: none;
+    }
+
+    &.sm-tooltip--vertical-offset {
+        top: 4px;
+        bottom: 4px;
+    }
+
+    &.sm-tooltip--horizontal-offset {
+        left: 4px;
+        right: 4px;
+    }
+}

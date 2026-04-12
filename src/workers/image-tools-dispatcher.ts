@@ -1,71 +1,107 @@
-import { MAX_CANVAS_DIMENSION } from '../core/const';
+import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../core/const';
 import { debug, debugDetailed } from '../core/debug';
 import type { PixelColor } from '../platform/types';
 import { assertCanvasCtx } from '../util/canvas';
-import type {
-    DetemplatizeBlueMarbleTileTaskRequest,
-    HighlightNonMatchingPixelsTaskRequest,
-    ImageToolsTaskResult,
-    VerifyImageMatchesPaletteTaskRequest,
-} from './image-tools-types';
+import type { Extent } from '../util/geometry';
+import { assertTaskResultType, type ImageToolsTaskRequest, type ImageToolsTaskResult } from './image-tools-types';
 import imageToolsWorkerCode from './image-tools.worker';
 import { createWorker } from './worker';
 
-let workerInstance: Worker | null = null;
+const maxWorkerConcurrency = Math.floor(navigator.hardwareConcurrency / 2);
+const activeWorkers = new Set<Worker>();
 
-function getWorker(): Worker {
-    workerInstance = createWorker(imageToolsWorkerCode);
-    return workerInstance;
+const pendingTasks: ImageToolsTaskRequest[] = [];
+const postedTasks: ImageToolsTaskRequest[] = [];
+
+interface ImageToolsEventMap {
+    taskresult: MessageEvent<ImageToolsTaskResult>;
 }
 
-export interface ImageMatchesPaletteResult {
-    image: ImageData;
-    matches: boolean;
+interface ImageToolsEventTarget extends EventTarget {
+    addEventListener<K extends keyof ImageToolsEventMap>(
+        type: K,
+        listener: (this: ImageToolsEventTarget, ev: ImageToolsEventMap[K]) => void,
+        options?: boolean | AddEventListenerOptions,
+    ): void;
+    addEventListener(
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions,
+    ): void;
+    removeEventListener<K extends keyof ImageToolsEventMap>(
+        type: K,
+        listener: (this: ImageToolsEventTarget, ev: ImageToolsEventMap[K]) => void,
+        options?: boolean | EventListenerOptions,
+    ): void;
+    removeEventListener(
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | EventListenerOptions,
+    ): void;
+    dispatchEvent(event: Event): boolean;
 }
 
-async function verifyImageMatchesPalette(
-    image: ImageData,
-    palette: readonly PixelColor[],
-): Promise<ImageMatchesPaletteResult> {
-    const { promise, resolve, reject } = Promise.withResolvers<ImageMatchesPaletteResult>();
-    const { width, height } = image;
-    const worker = getWorker();
+const TaskResultEvents: ImageToolsEventTarget = new EventTarget();
 
-    const taskId = crypto.randomUUID();
+function postTaskToWorkerPool(task: ImageToolsTaskRequest): void {
+    if (activeWorkers.size >= maxWorkerConcurrency) {
+        pendingTasks.push(task);
+    } else {
+        const worker = createWorker(imageToolsWorkerCode);
+        activeWorkers.add(worker);
+
+        const listener = (event: MessageEvent<ImageToolsTaskResult>): void => {
+            TaskResultEvents.dispatchEvent(new MessageEvent('taskresult', { data: event.data }));
+            const nextTask = pendingTasks.shift();
+            if (nextTask) {
+                postedTasks.push(nextTask);
+                worker.postMessage(nextTask);
+            } else {
+                activeWorkers.delete(worker);
+                worker.terminate();
+            }
+        };
+
+        worker.addEventListener('message', listener);
+
+        postedTasks.push(task);
+        worker.postMessage(task);
+    }
+}
+
+async function waitForTaskResult(taskId: string): Promise<ImageToolsTaskResult> {
+    const { promise, resolve } = Promise.withResolvers<ImageToolsTaskResult>();
 
     const listener = (event: MessageEvent<ImageToolsTaskResult>): void => {
-        if (event.data.taskId !== taskId || event.data.task !== 'verifyImageMatchesPalette') {
-            return;
+        if (event.data.taskId === taskId) {
+            TaskResultEvents.removeEventListener('taskresult', listener);
+            resolve(event.data);
         }
-
-        if (event.data.success) {
-            const imageData = new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height);
-            debugDetailed('Received result from verifyImageMatchesPalette task', imageData, event.data.matches);
-            resolve({
-                image: imageData,
-                matches: event.data.matches,
-            });
-        } else {
-            debugDetailed('Error in verifyImageMatchesPalette task', event.data.error);
-            reject(event.data.error);
-        }
-        worker.removeEventListener('message', listener);
     };
-    worker.addEventListener('message', listener);
 
-    debugDetailed('Posting verifyImageMatchesPalette task', image, palette);
-    const pixelBuffer = image.data.buffer;
-    worker.postMessage(
-        {
-            taskId,
-            task: 'verifyImageMatchesPalette',
-            pixelBuffer,
-            palette,
-        } satisfies VerifyImageMatchesPaletteTaskRequest,
-        [pixelBuffer],
-    );
+    TaskResultEvents.addEventListener('taskresult', listener);
 
     return promise;
+}
+
+async function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): Promise<boolean> {
+    const taskId = crypto.randomUUID();
+
+    console.time(`verifyImageMatchesPalette-${taskId}`);
+    debugDetailed('Posting verifyImageMatchesPalette task', image, palette);
+    postTaskToWorkerPool({ taskId, task: 'verifyImageMatchesPalette', image, palette });
+
+    const result = await waitForTaskResult(taskId);
+    assertTaskResultType(result, 'verifyImageMatchesPalette');
+    console.timeEnd(`verifyImageMatchesPalette-${taskId}`);
+
+    if (result.success) {
+        debugDetailed('Received result from verifyImageMatchesPalette task', result.matches);
+        return result.matches;
+    } else {
+        debugDetailed('Error in verifyImageMatchesPalette task', result.error);
+        throw result.error;
+    }
 }
 
 async function highlightNonMatchingPixels(
@@ -74,44 +110,28 @@ async function highlightNonMatchingPixels(
     darkenPercentage: number,
     highlightColorRgba: number,
 ): Promise<ImageData> {
-    const { promise, resolve, reject } = Promise.withResolvers<ImageData>();
-    const { width, height } = image;
-    const worker = getWorker();
-
     const taskId = crypto.randomUUID();
 
-    const listener = (event: MessageEvent<ImageToolsTaskResult>): void => {
-        if (event.data.taskId !== taskId || event.data.task !== 'highlightNonMatchingPixels') {
-            return;
-        }
-
-        if (event.data.success) {
-            const imageData = new ImageData(new Uint8ClampedArray(event.data.pixelBuffer), width, height);
-            debugDetailed('Received result from highlightNonMatchingPixels task', imageData);
-            resolve(imageData);
-        } else {
-            debugDetailed('Error in highlightNonMatchingPixels task', event.data.error);
-            reject(event.data.error);
-        }
-        worker.removeEventListener('message', listener);
-    };
-    worker.addEventListener('message', listener);
-
     debugDetailed('Posting highlightNonMatchingPixels task', image, palette, darkenPercentage, highlightColorRgba);
-    const pixelBuffer = image.data.buffer;
-    worker.postMessage(
-        {
-            taskId,
-            task: 'highlightNonMatchingPixels',
-            pixelBuffer,
-            palette,
-            darkenPercentage,
-            highlightColorRgba,
-        } satisfies HighlightNonMatchingPixelsTaskRequest,
-        [pixelBuffer],
-    );
+    postTaskToWorkerPool({
+        taskId,
+        task: 'highlightNonMatchingPixels',
+        image,
+        palette,
+        darkenPercentage,
+        highlightColorRgba,
+    });
 
-    return promise;
+    const result = await waitForTaskResult(taskId);
+    assertTaskResultType(result, 'highlightNonMatchingPixels');
+
+    if (result.success) {
+        debugDetailed('Received result from highlightNonMatchingPixels task', result.image);
+        return result.image;
+    } else {
+        debugDetailed('Error in highlightNonMatchingPixels task', result.error);
+        throw result.error;
+    }
 }
 
 async function upscalePixelArt(image: ImageData, scale: number): Promise<ImageData> {
@@ -141,8 +161,8 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
         throw new Error('Invalid dimensions for createThumbnail');
     }
 
-    maxWidth = Math.min(maxWidth, MAX_CANVAS_DIMENSION);
-    maxHeight = Math.min(maxHeight, MAX_CANVAS_DIMENSION);
+    maxWidth = Math.min(maxWidth, MAX_TEMPLATE_CANVAS_DIMENSION);
+    maxHeight = Math.min(maxHeight, MAX_TEMPLATE_CANVAS_DIMENSION);
 
     if (srcWidth < maxWidth && srcHeight < maxWidth) {
         const scale = Math.ceil(Math.max(maxWidth / srcWidth, maxHeight / srcHeight));
@@ -183,34 +203,21 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
 }
 
 async function detectCanvasFingerprintingProtection(): Promise<boolean> {
-    const { promise, resolve, reject } = Promise.withResolvers<boolean>();
-    const worker = getWorker();
-
     const taskId = crypto.randomUUID();
 
-    const listener = (event: MessageEvent<ImageToolsTaskResult>): void => {
-        if (event.data.taskId !== taskId || event.data.task !== 'detectCanvasFingerprintingProtection') {
-            return;
-        }
-
-        if (event.data.success) {
-            debug('Received result from detectCanvasFingerprintingProtection task', event.data.protectionDetected);
-            resolve(event.data.protectionDetected);
-        } else {
-            debugDetailed('Error in detectCanvasFingerprintingProtection task', event.data.error);
-            reject(event.data.error);
-        }
-        worker.removeEventListener('message', listener);
-    };
-    worker.addEventListener('message', listener);
-
     debug('Posting detectCanvasFingerprintingProtection task');
-    worker.postMessage({
-        taskId,
-        task: 'detectCanvasFingerprintingProtection',
-    });
+    postTaskToWorkerPool({ taskId, task: 'detectCanvasFingerprintingProtection' });
 
-    return promise;
+    const result = await waitForTaskResult(taskId);
+    assertTaskResultType(result, 'detectCanvasFingerprintingProtection');
+
+    if (result.success) {
+        debug('Received result from detectCanvasFingerprintingProtection task', result.protectionDetected);
+        return result.protectionDetected;
+    } else {
+        debugDetailed('Error in detectCanvasFingerprintingProtection task', result.error);
+        throw result.error;
+    }
 }
 
 async function imageToBlob(image: ImageData): Promise<Blob> {
@@ -228,46 +235,57 @@ async function computeImageHash(image: ImageData): Promise<string> {
 }
 
 async function detemplatizeBlueMarbleTile(tile: ImageData): Promise<ImageData> {
-    const { promise, resolve, reject } = Promise.withResolvers<ImageData>();
-    const worker = getWorker();
-
     const taskId = crypto.randomUUID();
 
-    const listener = (event: MessageEvent<ImageToolsTaskResult>): void => {
-        if (event.data.taskId !== taskId || event.data.task !== 'detemplatizeBlueMarbleTile') {
-            return;
-        }
-
-        if (event.data.success) {
-            const imageData = new ImageData(
-                new Uint8ClampedArray(event.data.pixelBuffer),
-                event.data.width,
-                event.data.height,
-            );
-            debugDetailed('Received result from detemplatizeBlueMarbleTile task', imageData);
-            resolve(imageData);
-        } else {
-            debugDetailed('Error in detemplatizeBlueMarbleTile task', event.data.error);
-            reject(event.data.error);
-        }
-        worker.removeEventListener('message', listener);
-    };
-    worker.addEventListener('message', listener);
-
     debugDetailed('Posting detemplatizeBlueMarbleTile task', tile);
-    const pixelBuffer = tile.data.buffer;
-    worker.postMessage(
-        {
-            taskId,
-            task: 'detemplatizeBlueMarbleTile',
-            pixelBuffer,
-            width: tile.width,
-            height: tile.height,
-        } satisfies DetemplatizeBlueMarbleTileTaskRequest,
-        [pixelBuffer],
-    );
+    postTaskToWorkerPool({ taskId, task: 'detemplatizeBlueMarbleTile', image: tile });
 
-    return promise;
+    const result = await waitForTaskResult(taskId);
+    assertTaskResultType(result, 'detemplatizeBlueMarbleTile');
+
+    if (result.success) {
+        debugDetailed('Received result from detemplatizeBlueMarbleTile task', result.image);
+        return result.image;
+    } else {
+        debugDetailed('Error in detemplatizeBlueMarbleTile task', result.error);
+        throw result.error;
+    }
+}
+
+async function findTransparentBorder(image: ImageData): Promise<Extent | 'fullyTransparent' | 'noTransparentBorder'> {
+    const taskId = crypto.randomUUID();
+
+    debugDetailed('Posting findTransparentBorder task', image);
+    postTaskToWorkerPool({ taskId, task: 'findTransparentBorder', image });
+
+    const result = await waitForTaskResult(taskId);
+    assertTaskResultType(result, 'findTransparentBorder');
+
+    if (result.success) {
+        debugDetailed('Received result from findTransparentBorder task', result.border);
+        return result.border;
+    } else {
+        debugDetailed('Error in findTransparentBorder task', result.error);
+        throw result.error;
+    }
+}
+
+async function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<Uint8Array> {
+    const taskId = crypto.randomUUID();
+
+    debugDetailed('Posting imageToPaletteIndexBuffer task', image, palette);
+    postTaskToWorkerPool({ taskId, task: 'imageToPaletteIndexBuffer', image, palette });
+
+    const result = await waitForTaskResult(taskId);
+    assertTaskResultType(result, 'imageToPaletteIndexBuffer');
+
+    if (result.success) {
+        debugDetailed('Received result from imageToPaletteIndexBuffer task', result.buffer);
+        return result.buffer;
+    } else {
+        debugDetailed('Error in imageToPaletteIndexBuffer task', result.error);
+        throw result.error;
+    }
 }
 
 export const ImageTools = {
@@ -277,4 +295,7 @@ export const ImageTools = {
     detectCanvasFingerprintingProtection,
     computeImageHash,
     imageToBlob,
+    detemplatizeBlueMarbleTile,
+    findTransparentBorder,
+    imageToPaletteIndexBuffer,
 };

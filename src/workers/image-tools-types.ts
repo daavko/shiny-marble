@@ -110,9 +110,11 @@ export type DetemplatizeBlueMarbleTileTaskResult =
     | DetemplatizeBlueMarbleTileTaskSuccessResult
     | DetemplatizeBlueMarbleTileTaskErrorResult;
 
+export type FindTransparentBorderResult = Extent | 'fullyTransparent' | 'noTransparentBorder';
+
 export interface FindTransparentBorderTaskSuccessResult extends BaseImageToolsTaskResult<FindTransparentBorderTaskName> {
     success: true;
-    border: Extent | 'fullyTransparent' | 'noTransparentBorder';
+    border: FindTransparentBorderResult;
 }
 
 export interface FindTransparentBorderTaskErrorResult extends BaseImageToolsTaskResult<FindTransparentBorderTaskName> {

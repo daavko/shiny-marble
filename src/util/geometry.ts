@@ -19,3 +19,5 @@ export interface Extent {
     maxX: number;
     maxY: number;
 }
+
+// todo: consider using a library like @flatten-js/core for geometry constructs (downside: can't be stored in IndexedDB)

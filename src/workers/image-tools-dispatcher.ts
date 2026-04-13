@@ -3,7 +3,12 @@ import { debug, debugDetailed } from '../core/debug';
 import type { PixelColor } from '../platform/types';
 import { assertCanvasCtx } from '../util/canvas';
 import type { Extent } from '../util/geometry';
-import { assertTaskResultType, type ImageToolsTaskRequest, type ImageToolsTaskResult } from './image-tools-types';
+import {
+    assertTaskResultType,
+    type FindTransparentBorderResult,
+    type ImageToolsTaskRequest,
+    type ImageToolsTaskResult,
+} from './image-tools-types';
 import imageToolsWorkerCode from './image-tools.worker';
 import { createWorker } from './worker';
 
@@ -252,7 +257,7 @@ async function detemplatizeBlueMarbleTile(tile: ImageData): Promise<ImageData> {
     }
 }
 
-async function findTransparentBorder(image: ImageData): Promise<Extent | 'fullyTransparent' | 'noTransparentBorder'> {
+async function findTransparentBorder(image: ImageData): Promise<FindTransparentBorderResult> {
     const taskId = crypto.randomUUID();
 
     debugDetailed('Posting findTransparentBorder task', image);

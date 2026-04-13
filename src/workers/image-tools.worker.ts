@@ -1,6 +1,5 @@
 import type { PixelColor } from '../platform/types';
-import type { Extent } from '../util/geometry';
-import type { ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
+import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 
 function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): boolean {
     const uint32View = new Uint32Array(image.data.buffer);
@@ -103,7 +102,7 @@ function detemplatizeBlueMarbleTile(image: ImageData): ImageData {
     return dest;
 }
 
-function findTransparentBorder(image: ImageData): Extent | 'fullyTransparent' | 'noTransparentBorder' {
+function findTransparentBorder(image: ImageData): FindTransparentBorderResult {
     const { width, height } = image;
     const uint32View = new Uint32Array(image.data.buffer);
 

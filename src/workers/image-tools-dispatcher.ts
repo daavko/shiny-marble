@@ -270,6 +270,29 @@ async function findTransparentBorder(image: ImageData): Promise<Extent | 'fullyT
     }
 }
 
+function cropToArea(image: ImageData, area: Extent): ImageData {
+    const { minX, minY, maxX, maxY } = area;
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    assertCanvasCtx(ctx, 'Failed to obtain 2D context for OffscreenCanvas in cropToArea');
+    ctx.putImageData(image, -minX, -minY);
+
+    return ctx.getImageData(0, 0, width, height);
+}
+
+async function cropToNonTransparentArea(image: ImageData): Promise<ImageData> {
+    const border = await findTransparentBorder(image);
+
+    if (border === 'fullyTransparent' || border === 'noTransparentBorder') {
+        return image;
+    } else {
+        return cropToArea(image, border);
+    }
+}
+
 async function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<Uint8Array> {
     const taskId = crypto.randomUUID();
 
@@ -297,5 +320,7 @@ export const ImageTools = {
     imageToBlob,
     detemplatizeBlueMarbleTile,
     findTransparentBorder,
+    cropToArea,
+    cropToNonTransparentArea,
     imageToPaletteIndexBuffer,
 };

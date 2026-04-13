@@ -1,4 +1,5 @@
 import { TemplateRegistry } from '../../core/template/registry';
+import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { createDialog } from '../builtin/dialog';
 import { showInfoAlert } from '../components/alerts-container';
 import { createTemplateImagePicker } from '../components/template-image-picker';
@@ -13,7 +14,9 @@ export function showNewTemplateDialog(): void {
             return;
         }
 
-        await TemplateRegistry.addTemplate({ name, image });
+        const croppedImage = await ImageTools.cropToNonTransparentArea(image);
+
+        await TemplateRegistry.addTemplate({ name, image: croppedImage });
         dialog.close();
         showInfoAlert(`Template "${name}" added successfully`, 2000);
     });

@@ -1,14 +1,14 @@
 import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
 import { showErrorAlert } from '../../ui/components/alerts-container';
-import type { Dimensions, Point } from '../../util/geometry';
+import type { PixelCoordinates, PixelDimensions } from '../../util/geometry';
 import { waitForDataAndTransaction } from '../../util/idb';
 import { debug } from '../debug';
 
 export interface StoredTemplate {
     id: string;
     name: string;
-    position: Point;
-    imageSize: Dimensions;
+    position: PixelCoordinates;
+    imageSize: PixelDimensions;
     hash: string;
     /**
      * image/png Blob

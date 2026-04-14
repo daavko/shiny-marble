@@ -5,6 +5,7 @@ import { addStyle, addStyles, removeStyle } from '../../core/dom/styles';
 import { renderBlockButton } from '../../ui/builtin/button';
 import { createBooleanSetting, createNumberRangeSetting } from '../../ui/builtin/settings-ui';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
+import { pixelDimensions } from '../../util/geometry';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
 import { createSetting, createSettings } from '../settings';
@@ -65,8 +66,8 @@ const bplaceSettings = createSettings('bplace-platform', 1, {
 
 export const BplacePlatform: CanvasPlatform = {
     colors: BPLACE_COLORS,
-    canvasSizePixels: { width: 1335834, height: 1335834 },
-    tileDimensions: { width: 512, height: 512 },
+    canvasSizePixels: pixelDimensions({ width: 1335834, height: 1335834 }),
+    tileDimensions: pixelDimensions({ width: 512, height: 512 }),
     async initialize() {
         await bplaceSettings.init();
 

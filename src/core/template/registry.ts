@@ -1,6 +1,13 @@
 import { Platform } from '../../platform/platform';
 import type { PixelColor } from '../../platform/types';
-import type { Dimensions, Point, Vector } from '../../util/geometry';
+import {
+    pixelCoordinates,
+    type PixelCoordinates,
+    pixelDimensions,
+    type PixelDimensions,
+    type PixelVector,
+    type TileCoordinates,
+} from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { debug, debugDetailed } from '../debug';
 import { type StoredTemplate, TemplateStorage } from './storage';
@@ -10,8 +17,8 @@ export type TileId = `${number}_${number}`;
 export interface LiveTemplate {
     id: string;
     name: string;
-    position: Point;
-    imageSize: Dimensions;
+    position: PixelCoordinates;
+    imageSize: PixelDimensions;
     hash: string;
     thumbnail: Blob;
     thumbnailUrl: string;
@@ -156,11 +163,11 @@ export const TemplateRegistry = {
         const newTemplate: LiveTemplate = {
             id,
             name: template.name,
-            position: {
+            position: pixelCoordinates({
                 x: viewportCenter.x - template.image.width / 2,
                 y: viewportCenter.y - template.image.height / 2,
-            },
-            imageSize: { width, height },
+            }),
+            imageSize: pixelDimensions({ width, height }),
             hash,
             thumbnail,
             thumbnailUrl: URL.createObjectURL(thumbnail),
@@ -176,7 +183,7 @@ export const TemplateRegistry = {
         // todo: compute filled color stats
     },
 
-    async moveTemplate(id: string, amount: Vector): Promise<void> {
+    async moveTemplate(id: string, amount: PixelVector): Promise<void> {
         // todo
     },
 
@@ -213,7 +220,7 @@ export const TemplateRegistry = {
         // Update template with new image info
         knownTemplateHashes.delete(template.hash);
         template.hash = newHash;
-        template.imageSize = { width: newImage.width, height: newImage.height };
+        template.imageSize = pixelDimensions({ width: newImage.width, height: newImage.height });
         URL.revokeObjectURL(template.thumbnailUrl);
         template.thumbnail = newThumbnail;
         template.thumbnailUrl = URL.createObjectURL(newThumbnail);
@@ -235,7 +242,7 @@ export const TemplateRegistry = {
         debug('Deleted template with id', id);
     },
 
-    async handleTileUpdate(tilePosition: Point, tileImage: ImageData): Promise<void> {
+    async handleTileUpdate(tilePosition: TileCoordinates, tileImage: ImageData): Promise<void> {
         // todo
     },
 

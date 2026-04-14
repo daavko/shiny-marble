@@ -1,12 +1,12 @@
 import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
 import { assertCanvasCtx } from '../../util/canvas';
-import type { Point } from '../../util/geometry';
+import type { PixelCoordinates } from '../../util/geometry';
 import type { BaseTemplateParseResult } from './types';
 
 export async function handleBlobFromParsedTemplate(
     imageBlob: Blob,
     name: string,
-    position: Point,
+    position: PixelCoordinates,
     expectedWidth: number,
     expectedHeight: number,
 ): Promise<BaseTemplateParseResult> {

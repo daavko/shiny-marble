@@ -48,6 +48,12 @@ export default defineConfig([
             '@typescript-eslint/no-shadow': 'warn',
             '@typescript-eslint/no-unnecessary-parameter-property-assignment': 'error',
             '@typescript-eslint/no-unsafe-type-assertion': 'warn',
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                {
+                    ignoreRestSiblings: true,
+                },
+            ],
             '@typescript-eslint/prefer-enum-initializers': 'error',
             '@typescript-eslint/prefer-promise-reject-errors': [
                 'warn',

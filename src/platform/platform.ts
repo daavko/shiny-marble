@@ -17,7 +17,7 @@ import { appViewStyle } from '../ui/components/app-view';
 import { templateImagePickerStyle } from '../ui/components/template-image-picker';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { templateListDialogStyle } from '../ui/dialogs/template-list-dialog';
-import type { Point } from '../util/geometry';
+import { pixelCoordinates, type PixelCoordinates } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
 import platformStyle from './platform.css';
 import { createSetting, createSettings } from './settings';
@@ -119,22 +119,22 @@ export const Platform = {
         return activePlatform.renderPlatformSpecificSettingsContent(context);
     },
 
-    getViewportCenterPixel(): Point {
+    getViewportCenterPixel(): PixelCoordinates {
         const map = Platform.getCurrentMapInstance();
         return Platform.latLonToPixel(map.getCenter());
     },
 
-    latLonToPixel(mapPosition: LngLatLike, adjust: 'floor' | 'round' | 'ceil' = 'round'): Point {
+    latLonToPixel(mapPosition: LngLatLike, adjust: 'floor' | 'round' | 'ceil' = 'round'): PixelCoordinates {
         const mercatorCoord = MercatorCoordinate.fromLngLat(mapPosition);
         const rawX = mercatorCoord.x * activePlatform.canvasSizePixels.width;
         const rawY = mercatorCoord.y * activePlatform.canvasSizePixels.height;
         switch (adjust) {
             case 'floor':
-                return { x: Math.floor(rawX), y: Math.floor(rawY) };
+                return pixelCoordinates({ x: Math.floor(rawX), y: Math.floor(rawY) });
             case 'round':
-                return { x: Math.round(rawX), y: Math.round(rawY) };
+                return pixelCoordinates({ x: Math.round(rawX), y: Math.round(rawY) });
             case 'ceil':
-                return { x: Math.ceil(rawX), y: Math.ceil(rawY) };
+                return pixelCoordinates({ x: Math.ceil(rawX), y: Math.ceil(rawY) });
         }
     },
 

@@ -1,5 +1,5 @@
 import type { PixelColor } from '../platform/types';
-import type { Extent } from '../util/geometry';
+import type { PixelExtent } from '../util/geometry';
 
 interface BaseImageToolsTask<T extends string> {
     task: T;
@@ -110,7 +110,7 @@ export type DetemplatizeBlueMarbleTileTaskResult =
     | DetemplatizeBlueMarbleTileTaskSuccessResult
     | DetemplatizeBlueMarbleTileTaskErrorResult;
 
-export type FindTransparentBorderResult = Extent | 'fullyTransparent' | 'noTransparentBorder';
+export type FindTransparentBorderResult = PixelExtent | 'fullyTransparent' | 'noTransparentBorder';
 
 export interface FindTransparentBorderTaskSuccessResult extends BaseImageToolsTaskResult<FindTransparentBorderTaskName> {
     success: true;

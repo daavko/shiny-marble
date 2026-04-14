@@ -1,5 +1,16 @@
 import type { PixelColor } from '../../platform/types';
-import type { Dimensions, Extent, Point } from '../../util/geometry';
+import {
+    extentToRect,
+    getCoveredTiles,
+    intersection,
+    type PixelCoordinates,
+    type PixelDimensions,
+    type PixelRect,
+    rectToExtent,
+    type TileCoordinates,
+    type TileRect,
+    tileToPixelRect,
+} from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import type { FindTransparentBorderResult } from '../../workers/image-tools-types';
 
@@ -7,17 +18,17 @@ export interface OptimizedTemplateTile {
     /**
      * tile position in tile coordinates
      */
-    tile: Point;
+    tile: TileCoordinates;
 
     /**
      * position within the tile in pixel coordinates
      */
-    position: Point;
+    position: PixelCoordinates;
 
     /**
      * dimensions of the compressed data in pixel coordinates
      */
-    dimensions: Dimensions;
+    dimensions: PixelDimensions;
 
     /**
      * compressed binary data containing color indexes
@@ -34,7 +45,7 @@ export interface OptimizedTemplateData {
      * position of the optimized data in pixel coordinates, if the template moves then this can be used to determine
      * whether it needs to be re-optimized and re-saved
      */
-    position: Point;
+    position: PixelCoordinates;
 
     /**
      * tile size this was stored with, in case the canvas changes tile sizes for some reason...
@@ -42,71 +53,41 @@ export interface OptimizedTemplateData {
      * bplace has done this once already so it's better to be safe here, worst case this just causes the template to be
      * re-optimized and re-saved with new tile size
      */
-    tileSize: Dimensions;
+    tileSize: PixelDimensions;
 
     tiles: OptimizedTemplateTile[];
 }
 
-/**
- * Get a list of tile coordinates (in tile coordinate space) that are covered by the template
- */
-function getCoveredTiles(position: Point, tileSize: Dimensions, templateDimensions: Dimensions): Point[] {
-    // todo: make this work for east-west world wrapping
-
-    const coveredTiles: Point[] = [];
-    const startTileX = Math.floor(position.x / tileSize.width);
-    const startTileY = Math.floor(position.y / tileSize.height);
-    const endTileX = Math.ceil((position.x + templateDimensions.width) / tileSize.width);
-    const endTileY = Math.ceil((position.y + templateDimensions.height) / tileSize.height);
-
-    for (let tileY = startTileY; tileY < endTileY; tileY++) {
-        for (let tileX = startTileX; tileX < endTileX; tileX++) {
-            coveredTiles.push({ x: tileX, y: tileY });
-        }
-    }
-
-    return coveredTiles;
-}
-
 interface CroppedTile {
-    position: Point;
-    imageExtent: Extent;
     imageData: ImageData;
+    imageRect: PixelRect;
     borderResult: FindTransparentBorderResult;
 }
 
 async function coveredTilesToCroppedTiles(
-    coveredTiles: Point[],
-    position: Point,
-    tileSize: Dimensions,
+    coveredTiles: TileRect[],
+    position: PixelCoordinates,
+    tileSize: PixelDimensions,
     image: ImageData,
 ): Promise<CroppedTile[]> {
     const croppedTilesPromises: Promise<CroppedTile>[] = [];
     for (const tile of coveredTiles) {
-        const tilePixelX = tile.x * tileSize.width;
-        const tilePixelY = tile.y * tileSize.height;
+        const pixelTile = tileToPixelRect(tile, tileSize);
+        const tileImageRect = intersection(pixelTile, { ...position, width: image.width, height: image.height });
+        if (!tileImageRect) {
+            // this should never happen
+            throw new Error('Tile does not intersect with image, this should never happen');
+        }
 
-        // intersection of tile extent and image extent, in pixel coordinates
-        const tileImageExtent: Extent = {
-            minX: Math.max(0, position.x - tilePixelX),
-            minY: Math.max(0, position.y - tilePixelY),
-
-            // todo: verify this math
-            maxX: Math.min(tilePixelX + tileSize.width, position.x + image.width),
-            maxY: Math.min(tilePixelY + tileSize.height, position.y + image.height),
-        };
+        const tileImageExtent = rectToExtent(tileImageRect);
 
         const tileImageData = ImageTools.cropToArea(image, tileImageExtent);
         const borderResultPromise = ImageTools.findTransparentBorder(tileImageData);
 
         croppedTilesPromises.push(
             borderResultPromise.then((borderResult) => ({
-                position: {
-                    x: tilePixelX,
-                    y: tilePixelY,
-                },
-                imageExtent: tileImageExtent,
                 imageData: tileImageData,
+                imageRect: tileImageRect,
                 borderResult,
             })),
         );
@@ -115,42 +96,36 @@ async function coveredTilesToCroppedTiles(
 }
 
 interface RawTile {
-    position: Point;
     image: ImageData;
+    imageRect: PixelRect;
 }
 
 function croppedTileToRawTile(croppedTile: CroppedTile): RawTile | null {
-    const { position, imageExtent, imageData, borderResult } = croppedTile;
+    const { imageRect, imageData, borderResult } = croppedTile;
     if (borderResult === 'fullyTransparent') {
         // skip fully transparent tiles, we don't need to store them at all
         return null;
     } else if (borderResult === 'noTransparentBorder') {
         return {
-            position: {
-                x: position.x + imageExtent.minX,
-                y: position.y + imageExtent.minY,
-            },
+            imageRect,
             image: imageData,
         };
     } else {
         const croppedTileImageData = ImageTools.cropToArea(imageData, borderResult);
         return {
-            position: {
-                x: position.x + imageExtent.minX + borderResult.minX,
-                y: position.y + imageExtent.minY + borderResult.minY,
-            },
             image: croppedTileImageData,
+            imageRect: extentToRect(borderResult),
         };
     }
 }
 
 export async function optimizeTemplate(
     image: ImageData,
-    position: Point,
-    tileSize: Dimensions,
+    position: PixelCoordinates,
+    tileSize: PixelDimensions,
     palette: readonly PixelColor[],
 ): Promise<OptimizedTemplateData> {
-    const coveredTiles = getCoveredTiles(position, tileSize, { width: image.width, height: image.height });
+    const coveredTiles = getCoveredTiles({ ...position, width: image.width, height: image.height }, tileSize);
 
     const croppedTiles = await coveredTilesToCroppedTiles(coveredTiles, position, tileSize, image);
 

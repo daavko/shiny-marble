@@ -1,7 +1,7 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
 import type { HTMLElementChild } from '../core/dom/html';
 import type { EffectContext } from '../core/effects';
-import type { Dimensions } from '../util/geometry';
+import type { PixelDimensions } from '../util/geometry';
 
 export interface PixelColor {
     name: string;
@@ -11,8 +11,8 @@ export interface PixelColor {
 
 export interface CanvasPlatform {
     readonly colors: readonly PixelColor[];
-    readonly canvasSizePixels: Dimensions;
-    readonly tileDimensions: Dimensions;
+    readonly canvasSizePixels: PixelDimensions;
+    readonly tileDimensions: PixelDimensions;
 
     initialize(): Promise<void> | void;
     addMapInstanceHook(resolveMapInstance: (mapInstance: MapLibreInstance) => void): Promise<void>;

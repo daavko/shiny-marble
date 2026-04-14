@@ -1,9 +1,9 @@
-import type { Point } from '../../util/geometry';
+import type { PixelCoordinates } from '../../util/geometry';
 
 export interface TemplateParseSuccess {
     success: true;
     name: string;
-    position: Point;
+    position: PixelCoordinates;
     image: ImageData;
 }
 

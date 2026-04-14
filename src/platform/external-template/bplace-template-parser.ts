@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { pixelCoordinates } from '../../util/geometry';
 import { handleBlobFromParsedTemplate } from './common';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
 
@@ -47,5 +48,11 @@ export async function parseBplaceTemplate(json: unknown): Promise<BplaceTemplate
     }
 
     const imageBlob = await fetch(template.imageData).then((res) => res.blob());
-    return handleBlobFromParsedTemplate(imageBlob, template.name, template.position, template.width, template.height);
+    return handleBlobFromParsedTemplate(
+        imageBlob,
+        template.name,
+        pixelCoordinates(template.position),
+        template.width,
+        template.height,
+    );
 }

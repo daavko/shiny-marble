@@ -1,5 +1,6 @@
 import type { PixelColor } from '../platform/types';
 import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
+import { pixelExtent } from '../util/geometry';
 
 function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): boolean {
     const uint32View = new Uint32Array(image.data.buffer);
@@ -133,7 +134,7 @@ function findTransparentBorder(image: ImageData): FindTransparentBorderResult {
         return 'noTransparentBorder';
     }
 
-    return { minX, minY, maxX, maxY };
+    return pixelExtent({ minX, minY, maxX, maxY });
 }
 
 function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Uint8Array {

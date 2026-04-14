@@ -2,7 +2,7 @@ import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../core/const';
 import { debug, debugDetailed } from '../core/debug';
 import type { PixelColor } from '../platform/types';
 import { assertCanvasCtx } from '../util/canvas';
-import type { Extent } from '../util/geometry';
+import type { PixelExtent } from '../util/geometry';
 import {
     assertTaskResultType,
     type FindTransparentBorderResult,
@@ -275,7 +275,7 @@ async function findTransparentBorder(image: ImageData): Promise<FindTransparentB
     }
 }
 
-function cropToArea(image: ImageData, area: Extent): ImageData {
+function cropToExtent(image: ImageData, area: PixelExtent): ImageData {
     const { minX, minY, maxX, maxY } = area;
     const width = maxX - minX + 1;
     const height = maxY - minY + 1;
@@ -294,7 +294,7 @@ async function cropToNonTransparentArea(image: ImageData): Promise<ImageData> {
     if (border === 'fullyTransparent' || border === 'noTransparentBorder') {
         return image;
     } else {
-        return cropToArea(image, border);
+        return cropToExtent(image, border);
     }
 }
 
@@ -325,7 +325,7 @@ export const ImageTools = {
     imageToBlob,
     detemplatizeBlueMarbleTile,
     findTransparentBorder,
-    cropToArea,
+    cropToArea: cropToExtent,
     cropToNonTransparentArea,
     imageToPaletteIndexBuffer,
 };

@@ -1,7 +1,15 @@
 import * as v from 'valibot';
 import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
 import { assertCanvasCtx } from '../../util/canvas';
-import type { Dimensions, Point } from '../../util/geometry';
+import {
+    coordsWithNewOrigin,
+    enlargeExtentToContainRectMut,
+    extentSize,
+    type PixelCoordinates,
+    pixelExtent,
+    tileCoordinates,
+    tileToPixelCoordinates,
+} from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { WplacePlatform } from '../wplace/platform';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
@@ -90,10 +98,14 @@ type BlueMarbleTemplateErrorCode =
     | 'tilesDontMatch';
 export type BlueMarbleTemplateParseResult = TemplateParseResult<BlueMarbleTemplateErrorCode>;
 
-function blueMarbleTileCoordsToPixelCoords(coords: BlueMarbleTileCoords): Point {
-    const pixelX = coords.tileX * WplacePlatform.tileDimensions.width + coords.x;
-    const pixelY = coords.tileY * WplacePlatform.tileDimensions.height + coords.y;
-    return { x: pixelX, y: pixelY };
+function blueMarbleTileCoordsToPixelCoords(coords: BlueMarbleTileCoords): PixelCoordinates {
+    const tilePixelCoords = tileToPixelCoordinates(
+        tileCoordinates({ x: coords.tileX, y: coords.tileY }),
+        WplacePlatform.tileDimensions,
+    );
+    tilePixelCoords.x += coords.x;
+    tilePixelCoords.y += coords.y;
+    return tilePixelCoords;
 }
 
 export async function parseBlueMarbleTemplateBlob(blob: Blob): Promise<BlueMarbleTemplateParseResult> {
@@ -138,12 +150,9 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
         };
     });
 
-    const totalDimensions: Dimensions = {
-        width: 0,
-        height: 0,
-    };
+    const totalExtent = pixelExtent({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
     const detemplatizedTiles: {
-        position: Point;
+        position: PixelCoordinates;
         tile: ImageData;
     }[] = [];
     for (const tile of tiles) {
@@ -170,28 +179,30 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
         const drawnImageData = tileCtx.getImageData(0, 0, tileCanvas.width, tileCanvas.height);
         const detemplatizedTile = await ImageTools.detemplatizeBlueMarbleTile(drawnImageData);
 
-        totalDimensions.width = Math.max(totalDimensions.width, tile.coords.x + detemplatizedTile.width);
-        totalDimensions.height = Math.max(totalDimensions.height, tile.coords.y + detemplatizedTile.height);
+        const templateRelativeTileCoords = coordsWithNewOrigin(tile.coords, templateCoords);
 
-        if (
-            totalDimensions.width > MAX_TEMPLATE_CANVAS_DIMENSION ||
-            totalDimensions.height > MAX_TEMPLATE_CANVAS_DIMENSION
-        ) {
+        enlargeExtentToContainRectMut(totalExtent, {
+            ...templateRelativeTileCoords,
+            width: detemplatizedTile.width,
+            height: detemplatizedTile.height,
+        });
+
+        const { width: totalWidth, height: totalHeight } = extentSize(totalExtent);
+
+        if (totalWidth > MAX_TEMPLATE_CANVAS_DIMENSION || totalHeight > MAX_TEMPLATE_CANVAS_DIMENSION) {
             bitmap.close();
             return { success: false, errorCode: 'imageTooLarge' };
         }
 
         // todo: handle wrapping at world edges
         detemplatizedTiles.push({
-            position: {
-                x: tile.coords.x - templateCoords.x,
-                y: tile.coords.y - templateCoords.y,
-            },
+            position: templateRelativeTileCoords,
             tile: detemplatizedTile,
         });
     }
 
-    const canvas = new OffscreenCanvas(totalDimensions.width, totalDimensions.height);
+    const { width: totalWidth, height: totalHeight } = extentSize(totalExtent);
+    const canvas = new OffscreenCanvas(totalWidth, totalHeight);
     const ctx = canvas.getContext('2d');
     assertCanvasCtx(ctx, 'Could not get 2D context from canvas');
 

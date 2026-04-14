@@ -2,6 +2,7 @@ import type { Map as MapLibreInstance } from 'maplibre-gl';
 import { debug } from '../../core/debug';
 import { addStyle } from '../../core/dom/styles';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
+import { pixelDimensions } from '../../util/geometry';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
 import type { CanvasPlatform } from '../types';
@@ -10,8 +11,8 @@ import wplacePlatformStyle from './platform.css';
 
 export const WplacePlatform: CanvasPlatform = {
     colors: WPLACE_COLORS,
-    canvasSizePixels: { width: 2048000, height: 2048000 },
-    tileDimensions: { width: 1000, height: 1000 },
+    canvasSizePixels: pixelDimensions({ width: 2048000, height: 2048000 }),
+    tileDimensions: pixelDimensions({ width: 1000, height: 1000 }),
     initialize(): void {
         addStyle(wplacePlatformStyle);
     },

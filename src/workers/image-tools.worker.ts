@@ -107,27 +107,61 @@ function findTransparentBorder(image: ImageData): FindTransparentBorderResult {
     const { width, height } = image;
     const uint32View = new Uint32Array(image.data.buffer);
 
-    let minX = width;
-    let maxX = -1;
-    let minY = height;
-    let maxY = -1;
+    // optimized for the case where either there's no border or there is a thin border
+    // fully transparent image will be worst case but still with a single pass, which is fine
 
-    for (let y = 0; y < height; y++) {
-        const rowStart = y * width;
+    let minY = 0;
+    outerLoop: while (minY < height) {
+        const rowStart = minY * width;
         for (let x = 0; x < width; x++) {
             const pixelValue = uint32View[rowStart + x];
-            if ((pixelValue & 0xff000000) === 0) {
-                // transparent pixel
-                minX = Math.min(minX, x);
-                maxX = Math.max(maxX, x);
-                minY = Math.min(minY, y);
-                maxY = Math.max(maxY, y);
+            if (pixelValue > 0) {
+                break outerLoop;
             }
         }
+
+        minY++;
     }
 
-    if (maxX === -1) {
+    if (minY === height) {
         return 'fullyTransparent';
+    }
+
+    let maxY = height - 1;
+    outerLoop: while (maxY >= 0) {
+        const rowStart = maxY * width;
+        for (let x = 0; x < width; x++) {
+            const pixelValue = uint32View[rowStart + x];
+            if (pixelValue > 0) {
+                break outerLoop;
+            }
+        }
+
+        maxY--;
+    }
+
+    let minX = 0;
+    outerLoop: while (minX < width) {
+        for (let y = minY; y <= maxY; y++) {
+            const pixelValue = uint32View[y * width + minX];
+            if (pixelValue > 0) {
+                break outerLoop;
+            }
+        }
+
+        minX++;
+    }
+
+    let maxX = width - 1;
+    outerLoop: while (maxX >= 0) {
+        for (let y = minY; y <= maxY; y++) {
+            const pixelValue = uint32View[y * width + maxX];
+            if (pixelValue > 0) {
+                break outerLoop;
+            }
+        }
+
+        maxX--;
     }
 
     if (minX === 0 && maxX === width - 1 && minY === 0 && maxY === height - 1) {
@@ -137,7 +171,7 @@ function findTransparentBorder(image: ImageData): FindTransparentBorderResult {
     return pixelExtent({ minX, minY, maxX, maxY });
 }
 
-function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Uint8Array {
+function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Uint8Array<ArrayBuffer> {
     const uint32View = new Uint32Array(image.data.buffer);
     const buffer = new Uint8Array(image.width * image.height);
 

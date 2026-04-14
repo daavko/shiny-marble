@@ -1,6 +1,9 @@
 export type CompressionType = 'gzip' | 'deflate';
 
-export async function compressData(data: ArrayBuffer, compressionType: CompressionType): Promise<ArrayBuffer> {
+export async function compressData(
+    data: ArrayBuffer | ArrayBufferView<ArrayBuffer>,
+    compressionType: CompressionType,
+): Promise<ArrayBuffer> {
     const blob = new Blob([data], { type: 'application/octet-stream' });
     const compressionStream = new CompressionStream(compressionType);
     const compressedStream = blob.stream().pipeThrough(compressionStream);
@@ -8,7 +11,7 @@ export async function compressData(data: ArrayBuffer, compressionType: Compressi
 }
 
 export async function decompressData(
-    compressedData: ArrayBuffer,
+    compressedData: ArrayBuffer | ArrayBufferView<ArrayBuffer>,
     compressionType: CompressionType,
 ): Promise<ArrayBuffer> {
     const blob = new Blob([compressedData], { type: 'application/octet-stream' });

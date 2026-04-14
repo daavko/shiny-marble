@@ -283,7 +283,7 @@ function cropToExtent(image: ImageData, area: PixelExtent): ImageData {
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext('2d');
     assertCanvasCtx(ctx, 'Failed to obtain 2D context for OffscreenCanvas in cropToArea');
-    ctx.putImageData(image, -minX, -minY);
+    ctx.putImageData(image, -minX, -minY, minX, minY, width, height);
 
     return ctx.getImageData(0, 0, width, height);
 }
@@ -298,7 +298,10 @@ async function cropToNonTransparentArea(image: ImageData): Promise<ImageData> {
     }
 }
 
-async function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<Uint8Array> {
+async function imageToPaletteIndexBuffer(
+    image: ImageData,
+    palette: readonly PixelColor[],
+): Promise<Uint8Array<ArrayBuffer>> {
     const taskId = crypto.randomUUID();
 
     debugDetailed('Posting imageToPaletteIndexBuffer task', image, palette);

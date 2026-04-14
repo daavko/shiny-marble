@@ -128,7 +128,7 @@ export type FindTransparentBorderTaskResult =
 
 export interface ImageToPaletteIndexBufferTaskSuccessResult extends BaseImageToolsTaskResult<ImageToPaletteIndexBufferTaskName> {
     success: true;
-    buffer: Uint8Array;
+    buffer: Uint8Array<ArrayBuffer>;
 }
 
 export interface ImageToPaletteIndexBufferTaskErrorResult extends BaseImageToolsTaskResult<ImageToPaletteIndexBufferTaskName> {

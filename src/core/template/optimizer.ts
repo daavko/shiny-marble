@@ -7,28 +7,24 @@ import {
     type PixelDimensions,
     type PixelRect,
     rectToExtent,
+    tileCoordinates,
     type TileCoordinates,
     type TileRect,
     tileToPixelRect,
 } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
-import type { FindTransparentBorderResult } from '../../workers/image-tools-types';
+import { compressData } from '../../util/compression';
 
 export interface OptimizedTemplateTile {
     /**
-     * tile position in tile coordinates
+     * tile position
      */
-    tile: TileCoordinates;
+    tilePosition: TileCoordinates;
 
     /**
-     * position within the tile in pixel coordinates
+     * position and dimensions within the tile
      */
-    position: PixelCoordinates;
-
-    /**
-     * dimensions of the compressed data in pixel coordinates
-     */
-    dimensions: PixelDimensions;
+    imageRect: PixelRect;
 
     /**
      * compressed binary data containing color indexes
@@ -42,8 +38,8 @@ export interface OptimizedTemplateData {
     hash: string;
 
     /**
-     * position of the optimized data in pixel coordinates, if the template moves then this can be used to determine
-     * whether it needs to be re-optimized and re-saved
+     * position of the original template image, if the template moves then this can be used to determine whether it
+     * needs to be re-optimized and re-saved
      */
     position: PixelCoordinates;
 
@@ -58,65 +54,29 @@ export interface OptimizedTemplateData {
     tiles: OptimizedTemplateTile[];
 }
 
-interface CroppedTile {
-    imageData: ImageData;
-    imageRect: PixelRect;
-    borderResult: FindTransparentBorderResult;
-}
+async function optimizeTile(
+    tileRect: TileRect,
+    imageData: ImageData,
+    imageRect: PixelRect,
+    palette: readonly PixelColor[],
+): Promise<OptimizedTemplateTile | null> {
+    const borderResult = await ImageTools.findTransparentBorder(imageData);
 
-async function coveredTilesToCroppedTiles(
-    coveredTiles: TileRect[],
-    position: PixelCoordinates,
-    tileSize: PixelDimensions,
-    image: ImageData,
-): Promise<CroppedTile[]> {
-    const croppedTilesPromises: Promise<CroppedTile>[] = [];
-    for (const tile of coveredTiles) {
-        const pixelTile = tileToPixelRect(tile, tileSize);
-        const tileImageRect = intersection(pixelTile, { ...position, width: image.width, height: image.height });
-        if (!tileImageRect) {
-            // this should never happen
-            throw new Error('Tile does not intersect with image, this should never happen');
-        }
-
-        const tileImageExtent = rectToExtent(tileImageRect);
-
-        const tileImageData = ImageTools.cropToArea(image, tileImageExtent);
-        const borderResultPromise = ImageTools.findTransparentBorder(tileImageData);
-
-        croppedTilesPromises.push(
-            borderResultPromise.then((borderResult) => ({
-                imageData: tileImageData,
-                imageRect: tileImageRect,
-                borderResult,
-            })),
-        );
-    }
-    return Promise.all(croppedTilesPromises);
-}
-
-interface RawTile {
-    image: ImageData;
-    imageRect: PixelRect;
-}
-
-function croppedTileToRawTile(croppedTile: CroppedTile): RawTile | null {
-    const { imageRect, imageData, borderResult } = croppedTile;
     if (borderResult === 'fullyTransparent') {
-        // skip fully transparent tiles, we don't need to store them at all
         return null;
-    } else if (borderResult === 'noTransparentBorder') {
-        return {
-            imageRect,
-            image: imageData,
-        };
-    } else {
-        const croppedTileImageData = ImageTools.cropToArea(imageData, borderResult);
-        return {
-            image: croppedTileImageData,
-            imageRect: extentToRect(borderResult),
-        };
+    } else if (borderResult !== 'noTransparentBorder') {
+        imageData = ImageTools.cropToArea(imageData, borderResult);
+        imageRect = extentToRect(borderResult);
     }
+
+    const paletteIndexBuffer = await ImageTools.imageToPaletteIndexBuffer(imageData, palette);
+    const compressedData = await compressData(paletteIndexBuffer.buffer, 'gzip');
+
+    return {
+        tilePosition: tileCoordinates({ x: tileRect.x, y: tileRect.y }),
+        imageRect,
+        compressedData,
+    };
 }
 
 export async function optimizeTemplate(
@@ -127,9 +87,25 @@ export async function optimizeTemplate(
 ): Promise<OptimizedTemplateData> {
     const coveredTiles = getCoveredTiles({ ...position, width: image.width, height: image.height }, tileSize);
 
-    const croppedTiles = await coveredTilesToCroppedTiles(coveredTiles, position, tileSize, image);
+    const optimizedTilesPromises = coveredTiles.map((tile) => {
+        const tilePixelRect = tileToPixelRect(tile, tileSize);
+        const tileImageRect = intersection(tilePixelRect, { ...position, width: image.width, height: image.height });
+        if (!tileImageRect) {
+            // this should never happen
+            throw new Error('Tile does not intersect with image, this should never happen');
+        }
 
-    const rawTiles = croppedTiles.map((tile) => croppedTileToRawTile(tile)).filter((tile) => tile !== null);
+        const tileImageData = ImageTools.cropToArea(image, rectToExtent(tileImageRect));
 
-    // todo: finish this
+        return optimizeTile(tile, tileImageData, tileImageRect, palette);
+    });
+
+    const optimizedTiles = await Promise.all(optimizedTilesPromises);
+
+    return {
+        hash: await ImageTools.computeImageHash(image),
+        position,
+        tileSize,
+        tiles: optimizedTiles.filter((tile) => tile != null),
+    };
 }

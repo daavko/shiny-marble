@@ -10,6 +10,7 @@ import { WPLACE_COLORS } from './colors';
 import wplacePlatformStyle from './platform.css';
 
 export const WplacePlatform: CanvasPlatform = {
+    id: 'wplace',
     colors: WPLACE_COLORS,
     colorsVersion: 1,
     canvasPixelDimensions: pixelDimensions({ width: 2048000, height: 2048000 }),

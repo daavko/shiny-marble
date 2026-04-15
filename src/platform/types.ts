@@ -10,6 +10,7 @@ export interface PixelColor {
 }
 
 export interface CanvasPlatform {
+    readonly id: string;
     readonly colors: readonly PixelColor[];
     readonly colorsVersion: number;
     readonly canvasPixelDimensions: PixelDimensions;

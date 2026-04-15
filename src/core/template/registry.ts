@@ -17,8 +17,8 @@ export type TileId = `${number}_${number}`;
 export interface LiveTemplate {
     id: string;
     name: string;
-    position: PixelCoordinates;
-    imageSize: PixelDimensions;
+    coordinates: PixelCoordinates;
+    dimensions: PixelDimensions;
     hash: string;
     thumbnail: Blob;
     thumbnailUrl: string;
@@ -97,8 +97,8 @@ function storedTemplateToLiveTemplate(template: StoredTemplate): LiveTemplate {
     return {
         id: template.id,
         name: template.name,
-        position: template.position,
-        imageSize: template.imageSize,
+        coordinates: template.coordinates,
+        dimensions: template.dimensions,
         hash: template.hash,
         thumbnail: template.thumbnail,
         thumbnailUrl: URL.createObjectURL(template.thumbnail),
@@ -111,8 +111,8 @@ function liveTemplateToStoredTemplate(template: LiveTemplate): StoredTemplate {
     return {
         id: template.id,
         name: template.name,
-        position: template.position,
-        imageSize: template.imageSize,
+        coordinates: template.coordinates,
+        dimensions: template.dimensions,
         hash: template.hash,
         thumbnail: template.thumbnail,
     };
@@ -163,11 +163,11 @@ export const TemplateRegistry = {
         const newTemplate: LiveTemplate = {
             id,
             name: template.name,
-            position: pixelCoordinates({
+            coordinates: pixelCoordinates({
                 x: viewportCenter.x - template.image.width / 2,
                 y: viewportCenter.y - template.image.height / 2,
             }),
-            imageSize: pixelDimensions({ width, height }),
+            dimensions: pixelDimensions({ width, height }),
             hash,
             thumbnail,
             thumbnailUrl: URL.createObjectURL(thumbnail),
@@ -220,7 +220,7 @@ export const TemplateRegistry = {
         // Update template with new image info
         knownTemplateHashes.delete(template.hash);
         template.hash = newHash;
-        template.imageSize = pixelDimensions({ width: newImage.width, height: newImage.height });
+        template.dimensions = pixelDimensions({ width: newImage.width, height: newImage.height });
         URL.revokeObjectURL(template.thumbnailUrl);
         template.thumbnail = newThumbnail;
         template.thumbnailUrl = URL.createObjectURL(newThumbnail);

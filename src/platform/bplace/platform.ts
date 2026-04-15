@@ -65,6 +65,7 @@ const bplaceSettings = createSettings('bplace-platform', 1, {
 });
 
 export const BplacePlatform: CanvasPlatform = {
+    id: 'bplace',
     colors: BPLACE_COLORS,
     colorsVersion: 1,
     canvasPixelDimensions: pixelDimensions({ width: 1335834, height: 1335834 }),

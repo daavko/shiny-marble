@@ -47,6 +47,10 @@ export const PlatformSettings = createSettings('platform', 1, {
 });
 
 export const Platform = {
+    get id(): string {
+        return activePlatform.id;
+    },
+
     get colors(): readonly PixelColor[] {
         return activePlatform.colors;
     },

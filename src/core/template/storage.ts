@@ -7,8 +7,8 @@ import { debug } from '../debug';
 export interface StoredTemplate {
     id: string;
     name: string;
-    position: PixelCoordinates;
-    imageSize: PixelDimensions;
+    coordinates: PixelCoordinates;
+    dimensions: PixelDimensions;
     hash: string;
     /**
      * image/png Blob

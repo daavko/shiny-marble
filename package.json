@@ -21,7 +21,7 @@
         "@turf/turf": "^7.3.4",
         "@zip.js/zip.js": "^2.8.26",
         "idb": "^8.0.3",
-        "maplibre-gl": "^5.22.0",
+        "maplibre-gl": "^5.23.0",
         "picomatch": "^4.0.4",
         "pretty-bytes": "^7.1.0",
         "rxjs": "^7.8.2",
@@ -34,10 +34,10 @@
         "esbuild": "^0.28.0",
         "eslint": "^10.2.0",
         "eslint-config-prettier": "^10.1.8",
-        "globals": "^17.4.0",
-        "prettier": "^3.8.1",
+        "globals": "^17.5.0",
+        "prettier": "^3.8.3",
         "prettier-plugin-organize-imports": "^4.3.0",
         "typescript": "~6.0.2",
-        "typescript-eslint": "^8.58.0"
+        "typescript-eslint": "^8.58.2"
     }
 }

@@ -11,6 +11,7 @@ export interface PixelColor {
 
 export interface CanvasPlatform {
     readonly colors: readonly PixelColor[];
+    readonly colorsVersion: number;
     readonly canvasSizePixels: PixelDimensions;
     readonly tileDimensions: PixelDimensions;
 

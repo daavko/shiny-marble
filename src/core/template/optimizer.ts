@@ -1,4 +1,5 @@
 import type { PixelColor } from '../../platform/types';
+import { compressData } from '../../util/compression';
 import {
     extentToRect,
     getCoveredTiles,
@@ -13,7 +14,6 @@ import {
     tileToPixelRect,
 } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
-import { compressData } from '../../util/compression';
 
 export interface OptimizedTemplateTile {
     /**
@@ -35,7 +35,16 @@ export interface OptimizedTemplateTile {
 }
 
 export interface OptimizedTemplateData {
+    /**
+     * hash of the original image, used as a key
+     */
     hash: string;
+
+    /**
+     * version of the palette this was optimized with, used to determine whether the template needs to be re-optimized
+     * and re-saved
+     */
+    paletteVersion: number;
 
     /**
      * position of the original template image, if the template moves then this can be used to determine whether it
@@ -84,6 +93,7 @@ export async function optimizeTemplate(
     position: PixelCoordinates,
     tileSize: PixelDimensions,
     palette: readonly PixelColor[],
+    paletteVersion: number,
 ): Promise<OptimizedTemplateData> {
     const coveredTiles = getCoveredTiles({ ...position, width: image.width, height: image.height }, tileSize);
 
@@ -104,6 +114,7 @@ export async function optimizeTemplate(
 
     return {
         hash: await ImageTools.computeImageHash(image),
+        paletteVersion,
         position,
         tileSize,
         tiles: optimizedTiles.filter((tile) => tile != null),

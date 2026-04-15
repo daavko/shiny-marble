@@ -66,6 +66,7 @@ const bplaceSettings = createSettings('bplace-platform', 1, {
 
 export const BplacePlatform: CanvasPlatform = {
     colors: BPLACE_COLORS,
+    colorsVersion: 1,
     canvasSizePixels: pixelDimensions({ width: 1335834, height: 1335834 }),
     tileDimensions: pixelDimensions({ width: 512, height: 512 }),
     async initialize() {

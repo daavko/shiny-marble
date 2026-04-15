@@ -1,6 +1,6 @@
 import type { PixelColor } from '../platform/types';
-import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 import { pixelExtent } from '../util/geometry';
+import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 
 function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): boolean {
     const uint32View = new Uint32Array(image.data.buffer);

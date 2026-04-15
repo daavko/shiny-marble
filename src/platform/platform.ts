@@ -17,7 +17,7 @@ import { appViewStyle } from '../ui/components/app-view';
 import { templateImagePickerStyle } from '../ui/components/template-image-picker';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { templateListDialogStyle } from '../ui/dialogs/template-list-dialog';
-import { pixelCoordinates, type PixelCoordinates } from '../util/geometry';
+import { pixelCoordinates, type PixelCoordinates, type PixelDimensions } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
 import platformStyle from './platform.css';
 import { createSetting, createSettings } from './settings';
@@ -49,6 +49,18 @@ export const PlatformSettings = createSettings('platform', 1, {
 export const Platform = {
     get colors(): readonly PixelColor[] {
         return activePlatform.colors;
+    },
+
+    get colorsVersion(): number {
+        return activePlatform.colorsVersion;
+    },
+
+    get canvasPixelDimensions(): PixelDimensions {
+        return activePlatform.canvasPixelDimensions;
+    },
+
+    get tileDimensions(): PixelDimensions {
+        return activePlatform.tileDimensions;
     },
 
     async initPlatform(): Promise<void> {
@@ -126,8 +138,8 @@ export const Platform = {
 
     latLonToPixel(mapPosition: LngLatLike, adjust: 'floor' | 'round' | 'ceil' = 'round'): PixelCoordinates {
         const mercatorCoord = MercatorCoordinate.fromLngLat(mapPosition);
-        const rawX = mercatorCoord.x * activePlatform.canvasSizePixels.width;
-        const rawY = mercatorCoord.y * activePlatform.canvasSizePixels.height;
+        const rawX = mercatorCoord.x * activePlatform.canvasPixelDimensions.width;
+        const rawY = mercatorCoord.y * activePlatform.canvasPixelDimensions.height;
         switch (adjust) {
             case 'floor':
                 return pixelCoordinates({ x: Math.floor(rawX), y: Math.floor(rawY) });

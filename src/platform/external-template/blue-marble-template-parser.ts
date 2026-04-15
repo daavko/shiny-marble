@@ -9,9 +9,10 @@ import {
     pixelExtent,
     tileCoordinates,
     tileToPixelCoordinates,
+    worldWrapPixelCoordinates,
 } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
-import { WplacePlatform } from '../wplace/platform';
+import { Platform } from '../platform';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
 
 interface BlueMarbleTileCoords {
@@ -101,7 +102,7 @@ export type BlueMarbleTemplateParseResult = TemplateParseResult<BlueMarbleTempla
 function blueMarbleTileCoordsToPixelCoords(coords: BlueMarbleTileCoords): PixelCoordinates {
     const tilePixelCoords = tileToPixelCoordinates(
         tileCoordinates({ x: coords.tileX, y: coords.tileY }),
-        WplacePlatform.tileDimensions,
+        Platform.tileDimensions,
     );
     tilePixelCoords.x += coords.x;
     tilePixelCoords.y += coords.y;
@@ -163,10 +164,7 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
             return { success: false, errorCode: 'invalidImageData', cause: e };
         }
 
-        if (
-            bitmap.width / 3 > WplacePlatform.tileDimensions.width ||
-            bitmap.height / 3 > WplacePlatform.tileDimensions.height
-        ) {
+        if (bitmap.width / 3 > Platform.tileDimensions.width || bitmap.height / 3 > Platform.tileDimensions.height) {
             bitmap.close();
             return { success: false, errorCode: 'tileTooLarge' };
         }
@@ -179,7 +177,10 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
         const drawnImageData = tileCtx.getImageData(0, 0, tileCanvas.width, tileCanvas.height);
         const detemplatizedTile = await ImageTools.detemplatizeBlueMarbleTile(drawnImageData);
 
-        const templateRelativeTileCoords = coordsWithNewOrigin(tile.coords, templateCoords);
+        const templateRelativeTileCoords = worldWrapPixelCoordinates(
+            coordsWithNewOrigin(tile.coords, templateCoords),
+            Platform.canvasPixelDimensions,
+        );
 
         enlargeExtentToContainRectMut(totalExtent, {
             ...templateRelativeTileCoords,
@@ -194,7 +195,6 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
             return { success: false, errorCode: 'imageTooLarge' };
         }
 
-        // todo: handle wrapping at world edges
         detemplatizedTiles.push({
             position: templateRelativeTileCoords,
             tile: detemplatizedTile,

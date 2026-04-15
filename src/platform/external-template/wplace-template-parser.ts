@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { coordsWithNewOrigin, worldWrapPixelCoordinates } from '../../util/geometry';
 import { Platform } from '../platform';
 import { handleBlobFromParsedTemplate } from './common';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
@@ -41,11 +42,13 @@ export async function parseWplaceTemplate(json: unknown): Promise<WplaceTemplate
 
     // todo: verify that this actually works correctly and that bounds will result in correct pixel coords
     const topLeftPixel = Platform.latLonToPixel({ lat: bounds.north, lon: bounds.west }, 'floor');
-    const bottomRightPixel = Platform.latLonToPixel({ lat: bounds.south, lon: bounds.east }, 'floor');
+    const bottomRightPixel = worldWrapPixelCoordinates(
+        coordsWithNewOrigin(Platform.latLonToPixel({ lat: bounds.south, lon: bounds.east }, 'floor'), topLeftPixel),
+        Platform.canvasPixelDimensions,
+    );
 
-    // todo: handle wrapping at world edges
-    const expectedWidth = bottomRightPixel.x - topLeftPixel.x;
-    const expectedHeight = bottomRightPixel.y - topLeftPixel.y;
+    const expectedWidth = bottomRightPixel.x;
+    const expectedHeight = bottomRightPixel.y;
 
     const imageBlob = await fetch(image.dataUrl).then((res) => res.blob());
     return handleBlobFromParsedTemplate(imageBlob, name, topLeftPixel, expectedWidth, expectedHeight);

@@ -171,8 +171,10 @@ export function intersection<T>(rect1: Brand<Rect, T>, rect2: Brand<Rect, T>): B
     }
 }
 
+/**
+ * IGNORES WORLD WRAPPING, results need to be world-wrapped if necessary
+ */
 export function getCoveredTiles(rect: PixelRect, tileSize: PixelDimensions): TileRect[] {
-    // todo: figure out world wrapping
     const topLeftTile = pixelToTileCoordinates(rect, tileSize);
     const bottomRightTile = pixelToTileCoordinates(
         pixelCoordinates({ x: rect.x + rect.width, y: rect.y + rect.height }),
@@ -186,6 +188,17 @@ export function getCoveredTiles(rect: PixelRect, tileSize: PixelDimensions): Til
         }
     }
     return coveredTiles;
+}
+
+export function worldWrapTileCoordinates(coords: TileCoordinates, worldSize: PixelDimensions): TileCoordinates {
+    const tileSize = tileToPixelDimensions(tileDimensions({ width: 1, height: 1 }), worldSize);
+    const wrappedX = (((coords.x * tileSize.width) % worldSize.width) + worldSize.width) % worldSize.width;
+    return tileCoordinates({ x: Math.floor(wrappedX / tileSize.width), y: coords.y });
+}
+
+export function worldWrapPixelCoordinates(coords: PixelCoordinates, worldSize: PixelDimensions): PixelCoordinates {
+    const wrappedX = ((coords.x % worldSize.width) + worldSize.width) % worldSize.width;
+    return pixelCoordinates({ x: wrappedX, y: coords.y });
 }
 
 export function coordsWithNewOrigin<T>(

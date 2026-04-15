@@ -1,3 +1,4 @@
+import { Platform } from '../../platform/platform';
 import type { PixelColor } from '../../platform/types';
 import { compressData } from '../../util/compression';
 import {
@@ -12,6 +13,7 @@ import {
     type TileCoordinates,
     type TileRect,
     tileToPixelRect,
+    worldWrapTileCoordinates,
 } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 
@@ -88,17 +90,14 @@ async function optimizeTile(
     };
 }
 
-export async function optimizeTemplate(
-    image: ImageData,
-    position: PixelCoordinates,
-    tileSize: PixelDimensions,
-    palette: readonly PixelColor[],
-    paletteVersion: number,
-): Promise<OptimizedTemplateData> {
-    const coveredTiles = getCoveredTiles({ ...position, width: image.width, height: image.height }, tileSize);
+export async function optimizeTemplate(image: ImageData, position: PixelCoordinates): Promise<OptimizedTemplateData> {
+    const coveredTiles = getCoveredTiles(
+        { ...position, width: image.width, height: image.height },
+        Platform.tileDimensions,
+    );
 
     const optimizedTilesPromises = coveredTiles.map((tile) => {
-        const tilePixelRect = tileToPixelRect(tile, tileSize);
+        const tilePixelRect = tileToPixelRect(tile, Platform.tileDimensions);
         const tileImageRect = intersection(tilePixelRect, { ...position, width: image.width, height: image.height });
         if (!tileImageRect) {
             // this should never happen
@@ -107,16 +106,21 @@ export async function optimizeTemplate(
 
         const tileImageData = ImageTools.cropToArea(image, rectToExtent(tileImageRect));
 
-        return optimizeTile(tile, tileImageData, tileImageRect, palette);
+        return optimizeTile(tile, tileImageData, tileImageRect, Platform.colors);
     });
 
     const optimizedTiles = await Promise.all(optimizedTilesPromises);
 
     return {
         hash: await ImageTools.computeImageHash(image),
-        paletteVersion,
+        paletteVersion: Platform.colorsVersion,
         position,
-        tileSize,
-        tiles: optimizedTiles.filter((tile) => tile != null),
+        tileSize: { ...Platform.tileDimensions },
+        tiles: optimizedTiles
+            .filter((tile) => tile != null)
+            .map((tile) => ({
+                ...tile,
+                tilePosition: worldWrapTileCoordinates(tile.tilePosition, Platform.canvasPixelDimensions),
+            })),
     };
 }

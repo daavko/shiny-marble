@@ -12,7 +12,7 @@ import wplacePlatformStyle from './platform.css';
 export const WplacePlatform: CanvasPlatform = {
     colors: WPLACE_COLORS,
     colorsVersion: 1,
-    canvasSizePixels: pixelDimensions({ width: 2048000, height: 2048000 }),
+    canvasPixelDimensions: pixelDimensions({ width: 2048000, height: 2048000 }),
     tileDimensions: pixelDimensions({ width: 1000, height: 1000 }),
     initialize(): void {
         addStyle(wplacePlatformStyle);

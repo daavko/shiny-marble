@@ -4,9 +4,13 @@ import type { EffectContext } from '../core/effects';
 import type { PixelDimensions } from '../util/geometry';
 
 export interface PixelColor {
-    name: string;
-    hex: string;
-    rgba: number;
+    readonly name: string;
+    readonly hex: string;
+    readonly rgba: number;
+    readonly red: number;
+    readonly green: number;
+    readonly blue: number;
+    readonly alpha: number;
 }
 
 export interface CanvasPlatform {

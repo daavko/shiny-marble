@@ -1,4 +1,4 @@
-import { rgbaRawToHexWithAlpha } from '../../util/color';
+import { simpleNamedColorToPixelColor } from '../../util/color';
 import type { PixelColor } from '../types';
 
 export const BPLACE_COLORS: PixelColor[] = [
@@ -94,4 +94,4 @@ export const BPLACE_COLORS: PixelColor[] = [
     { name: 'Silver', rgba: 0xff7f7f7f },
     { name: 'Holographic', rgba: 0xffffaecf },
     { name: 'Dark Holographic', rgba: 0xff261019 },
-].map(({ name, rgba }) => ({ name, rgba, hex: rgbaRawToHexWithAlpha(rgba) }));
+].map(({ name, rgba }) => simpleNamedColorToPixelColor(name, rgba));

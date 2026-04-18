@@ -3,8 +3,10 @@ import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../
 import { debug, debugDetailed } from '../../core/debug';
 import { el } from '../../core/dom/html';
 import { createEffectContext, type EffectContext } from '../../core/effects';
+import { getPngImageSize, isPngFile } from '../../core/png/png-tools';
 import { signal } from '../../core/signals';
 import { TemplateRegistry } from '../../core/template/registry';
+import { getLosslessWebpImageSize, isLosslessWebpFile } from '../../core/webp/webp-tools';
 import { Platform } from '../../platform/platform';
 import { assertCanvasCtx } from '../../util/canvas';
 import { downloadBlob } from '../../util/file';
@@ -77,15 +79,42 @@ export function createTemplateImagePicker(
     }
 
     async function handleFileSelected(file: File): Promise<void> {
-        if (!file.type.startsWith('image/')) {
-            errorMessage.value = 'Unsupported file type. Please select an image file.';
-            debug(`Unsupported file type selected: ${file.type}`);
+        if (file.size === 0) {
+            errorMessage.value = 'The selected file is empty. Please select a valid image file.';
+            debug('Selected file is empty');
             return;
         }
 
         if (file.size > MAX_INPUT_TEMPLATE_FILE_SIZE) {
             errorMessage.value = `The selected file is too large. Maximum allowed file size is ${prettyBytes(MAX_INPUT_TEMPLATE_FILE_SIZE, { binary: true })}.`;
             debug(`Selected file size (${file.size} bytes) exceeds maximum allowed size`);
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            errorMessage.value = 'Unsupported file type. Please select an image file.';
+            debug(`Unsupported file type selected: ${file.type}`);
+            return;
+        }
+
+        const imageTooLargeErrorMessage = `The image is too large. Maximum allowed dimensions are ${MAX_TEMPLATE_CANVAS_DIMENSION}x${MAX_TEMPLATE_CANVAS_DIMENSION} pixels.`;
+        if (await isPngFile(file)) {
+            const { width, height } = await getPngImageSize(file);
+            if (width > MAX_TEMPLATE_CANVAS_DIMENSION || height > MAX_TEMPLATE_CANVAS_DIMENSION) {
+                errorMessage.value = imageTooLargeErrorMessage;
+                debug(`Selected PNG image dimensions (${width}x${height}) exceed maximum allowed size`);
+                return;
+            }
+        } else if (await isLosslessWebpFile(file)) {
+            const { width, height } = await getLosslessWebpImageSize(file);
+            if (width > MAX_TEMPLATE_CANVAS_DIMENSION || height > MAX_TEMPLATE_CANVAS_DIMENSION) {
+                errorMessage.value = imageTooLargeErrorMessage;
+                debug(`Selected WebP image dimensions (${width}x${height}) exceed maximum allowed size`);
+                return;
+            }
+        } else {
+            errorMessage.value = 'Unsupported image format. Please select a valid PNG or lossless WebP image.';
+            debug(`File is not a valid PNG or lossless WebP image: ${file.name}`);
             return;
         }
 
@@ -102,16 +131,9 @@ export function createTemplateImagePicker(
             return;
         }
 
-        if (imageBitmap.width > MAX_TEMPLATE_CANVAS_DIMENSION || imageBitmap.height > MAX_TEMPLATE_CANVAS_DIMENSION) {
-            errorMessage.value = `The image is too large. Maximum allowed dimensions are ${MAX_TEMPLATE_CANVAS_DIMENSION}x${MAX_TEMPLATE_CANVAS_DIMENSION} pixels.`;
-            debug(`New template dimensions (${imageBitmap.width}x${imageBitmap.height}) exceed maximum allowed size`);
-            imageBitmap.close();
-            return;
-        }
-
         const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
         const ctx = canvas.getContext('2d');
-        assertCanvasCtx(ctx, 'Could not create canvas context');
+        assertCanvasCtx(ctx);
         ctx.drawImage(imageBitmap, 0, 0);
         imageBitmap.close();
         const image = ctx.getImageData(0, 0, canvas.width, canvas.height);

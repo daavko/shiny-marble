@@ -1,10 +1,10 @@
 import { BlobReader, BlobWriter, TextReader, ZipWriter } from '@zip.js/zip.js';
 import { Platform } from '../../platform/platform';
 import {
-    TEMPLATE_EXPORT_CURRENT_VERSION,
-    TEMPLATE_EXPORT_MARKER_FILENAME,
-    type TemplateExportMetadata,
-    type TemplateExportTemplateMetadata,
+    TEMPLATE_ZIP_CURRENT_VERSION,
+    TEMPLATE_ZIP_METADATA_FILENAME,
+    type TemplateArchiveMetadata,
+    type TemplateArchiveTemplateMetadata,
 } from './common';
 import type { LiveTemplate } from './registry';
 
@@ -20,17 +20,17 @@ function createWritingInstances(): [BlobWriter, ZipWriter<Blob>] {
 }
 
 async function writeMarkerFile(writer: ZipWriter<Blob>): Promise<void> {
-    const metadata: TemplateExportMetadata = {
-        version: TEMPLATE_EXPORT_CURRENT_VERSION,
+    const metadata: TemplateArchiveMetadata = {
+        version: TEMPLATE_ZIP_CURRENT_VERSION,
         platform: Platform.id,
         paletteVersion: Platform.colorsVersion,
     };
     const contentReader = new TextReader(JSON.stringify(metadata, null, 2));
-    await writer.add(TEMPLATE_EXPORT_MARKER_FILENAME, contentReader);
+    await writer.add(TEMPLATE_ZIP_METADATA_FILENAME, contentReader);
 }
 
 async function writeSingleTemplate(writer: ZipWriter<Blob>, { template, image }: ExportableTemplate): Promise<void> {
-    const metadata: TemplateExportTemplateMetadata = {
+    const metadata: TemplateArchiveTemplateMetadata = {
         id: template.id,
         name: template.name,
         coordinates: template.coordinates,

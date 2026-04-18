@@ -171,7 +171,7 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
 
         const tileCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
         const tileCtx = tileCanvas.getContext('2d');
-        assertCanvasCtx(tileCtx, 'Could not get 2D context from tile canvas');
+        assertCanvasCtx(tileCtx);
         tileCtx.drawImage(bitmap, 0, 0);
         bitmap.close();
         const drawnImageData = tileCtx.getImageData(0, 0, tileCanvas.width, tileCanvas.height);
@@ -204,7 +204,7 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
     const { width: totalWidth, height: totalHeight } = extentSize(totalExtent);
     const canvas = new OffscreenCanvas(totalWidth, totalHeight);
     const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx, 'Could not get 2D context from canvas');
+    assertCanvasCtx(ctx);
 
     for (const tile of detemplatizedTiles) {
         ctx.putImageData(tile.tile, tile.position.x, tile.position.y);

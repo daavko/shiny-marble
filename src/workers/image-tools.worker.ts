@@ -1,8 +1,11 @@
+import { encodeIndexedPngBlob, encodeIndexedPngData } from '../core/png/indexed-png-writer';
 import type { PixelColor } from '../platform/types';
+import { createPixelColorIndexLut } from '../util/color';
 import { pixelExtent } from '../util/geometry';
 import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 
 function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): boolean {
+    const paletteLut = createPixelColorIndexLut(palette);
     const uint32View = new Uint32Array(image.data.buffer);
     for (const pixelValue of uint32View) {
         if ((pixelValue & 0xff000000) === 0) {
@@ -10,7 +13,7 @@ function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColo
             continue;
         }
 
-        if (!palette.some((color) => color.rgba === pixelValue)) {
+        if (paletteLut[pixelValue] === undefined) {
             return false;
         }
     }
@@ -24,6 +27,7 @@ function highlightNonMatchingPixels(
     darkenPercentage: number,
     highlightColorRgba: number,
 ): ImageData {
+    const paletteLut = createPixelColorIndexLut(palette);
     const uint32View = new Uint32Array(image.data.buffer);
     const result = new ImageData(image.width, image.height);
     const resultView = new Uint32Array(result.data.buffer);
@@ -36,7 +40,7 @@ function highlightNonMatchingPixels(
             continue;
         }
 
-        if (palette.some((color) => color.rgba === pixelValue)) {
+        if (paletteLut[pixelValue] !== undefined) {
             const r = Math.round((pixelValue & 0xff) * (1 - darkenPercentage));
             const g = Math.round(((pixelValue >> 8) & 0xff) * (1 - darkenPercentage));
             const b = Math.round(((pixelValue >> 16) & 0xff) * (1 - darkenPercentage));
@@ -61,10 +65,9 @@ function detectCanvasFingerprintingProtection(): boolean {
     const writtenImage = new ImageData(FINGERPRINT_CANVAS_SIZE, FINGERPRINT_CANVAS_SIZE);
     const writtenImageInt32View = new Uint32Array(writtenImage.data.buffer);
     for (let i = 0; i < writtenImageInt32View.length; i++) {
-        const r = Math.floor(Math.random() * 256);
-        const g = Math.floor(Math.random() * 256);
-        const b = Math.floor(Math.random() * 256);
-        writtenImageInt32View[i] = (255 << 24) | (b << 16) | (g << 8) | r;
+        // a single random 24-bit number
+        const colorValue = Math.floor(Math.random() * 256 * 256 * 256);
+        writtenImageInt32View[i] = (255 << 24) | colorValue;
     }
     ctx.putImageData(writtenImage, 0, 0);
     const readImage = ctx.getImageData(0, 0, FINGERPRINT_CANVAS_SIZE, FINGERPRINT_CANVAS_SIZE);
@@ -171,29 +174,39 @@ function findTransparentBorder(image: ImageData): FindTransparentBorderResult {
     return pixelExtent({ minX, minY, maxX, maxY });
 }
 
-function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Uint8Array<ArrayBuffer> {
+function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): ArrayBuffer {
+    const paletteLut = createPixelColorIndexLut(palette);
     const uint32View = new Uint32Array(image.data.buffer);
-    const buffer = new Uint8Array(image.width * image.height);
+    const buffer = new ArrayBuffer(image.width * image.height);
+    const bufferView = new Uint8Array(buffer);
 
     for (let i = 0; i < uint32View.length; i++) {
         const pixelValue = uint32View[i];
 
-        const paletteIndex = palette.findIndex((color) => color.rgba === pixelValue);
-        if (paletteIndex === -1) {
+        const paletteIndex = paletteLut[pixelValue];
+        if (paletteIndex === undefined) {
             throw new Error(`Pixel value ${pixelValue} at index ${i} not found in palette`);
         }
 
-        buffer[i] = paletteIndex;
+        bufferView[i] = paletteIndex;
     }
 
     return buffer;
+}
+
+async function writeIndexedPngBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
+    return encodeIndexedPngData(image, palette);
+}
+
+async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColor[]): Promise<Blob> {
+    return encodeIndexedPngBlob(image, palette);
 }
 
 function postTaskResult(data: ImageToolsTaskResult, transfer?: Transferable[]): void {
     globalThis.postMessage(data, { transfer });
 }
 
-function handleTaskRequest(request: ImageToolsTaskRequest): void {
+async function handleTaskRequest(request: ImageToolsTaskRequest): Promise<void> {
     switch (request.task) {
         case 'verifyImageMatchesPalette': {
             const { taskId, image, palette } = request;
@@ -286,7 +299,7 @@ function handleTaskRequest(request: ImageToolsTaskRequest): void {
                         success: true,
                         buffer,
                     },
-                    [buffer.buffer],
+                    [buffer],
                 );
             } catch (error) {
                 postTaskResult({ task: 'imageToPaletteIndexBuffer', taskId, success: false, error });
@@ -295,9 +308,51 @@ function handleTaskRequest(request: ImageToolsTaskRequest): void {
 
             break;
         }
+        case 'writeIndexedPngBuffer': {
+            const { taskId, image, palette } = request;
+            try {
+                const buffer = await writeIndexedPngBuffer(image, palette);
+                postTaskResult(
+                    {
+                        task: 'writeIndexedPngBuffer',
+                        taskId,
+                        success: true,
+                        buffer,
+                    },
+                    [buffer],
+                );
+            } catch (error) {
+                postTaskResult({ task: 'writeIndexedPngBuffer', taskId, success: false, error });
+                return;
+            }
+
+            break;
+        }
+        case 'writeIndexedPngBlob': {
+            const { taskId, image, palette } = request;
+            try {
+                const blob = await writeIndexedPngBlob(image, palette);
+                postTaskResult(
+                    {
+                        task: 'writeIndexedPngBlob',
+                        taskId,
+                        success: true,
+                        blob,
+                    },
+                    [blob],
+                );
+            } catch (error) {
+                postTaskResult({ task: 'writeIndexedPngBlob', taskId, success: false, error });
+                return;
+            }
+
+            break;
+        }
     }
 }
 
-globalThis.addEventListener('message', (event: MessageEvent<ImageToolsTaskRequest>) => handleTaskRequest(event.data));
+globalThis.addEventListener('message', (event: MessageEvent<ImageToolsTaskRequest>) => {
+    void handleTaskRequest(event.data);
+});
 
 export default WORKER_FAKE_EXPORT;

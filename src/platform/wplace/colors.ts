@@ -1,4 +1,4 @@
-import { rgbaRawToHexWithAlpha } from '../../util/color';
+import { simpleNamedColorToPixelColor } from '../../util/color';
 import type { PixelColor } from '../types';
 
 export const WPLACE_COLORS: PixelColor[] = [
@@ -66,4 +66,4 @@ export const WPLACE_COLORS: PixelColor[] = [
     { name: 'Dark Stone', rgba: 0xff3f646d },
     { name: 'Stone', rgba: 0xff6b8c94 },
     { name: 'Light Stone', rgba: 0xff9ec5cd },
-].map(({ name, rgba }) => ({ name, rgba, hex: rgbaRawToHexWithAlpha(rgba) }));
+].map(({ name, rgba }) => simpleNamedColorToPixelColor(name, rgba));

@@ -1,3 +1,18 @@
+import type { PixelColor } from '../platform/types';
+
+export function simpleNamedColorToPixelColor(name: string, rgba: number): PixelColor {
+    const red = rgba & 0xff;
+    const green = (rgba >> 8) & 0xff;
+    const blue = (rgba >> 16) & 0xff;
+    const alpha = (rgba >> 24) & 0xff;
+    const hex = `#${padHex(red)}${padHex(green)}${padHex(blue)}${padHex(alpha)}`;
+    return { name, hex, rgba, red, green, blue, alpha };
+}
+
+export function createPixelColorIndexLut(colors: readonly PixelColor[]): Record<number, number | undefined> {
+    return Object.fromEntries(colors.map((color) => [color.rgba, color.rgba]));
+}
+
 export function rgbToRgbaRaw(r: number, g: number, b: number): number {
     const a = 255;
     return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
@@ -18,12 +33,4 @@ export function rgbBackgroundStyleToRgbaRaw(backgroundStyle: string): number | n
 
 function padHex(value: number): string {
     return value.toString(16).padStart(2, '0');
-}
-
-export function rgbaRawToHexWithAlpha(rgba: number): string {
-    const r = rgba & 0xff;
-    const g = (rgba >> 8) & 0xff;
-    const b = (rgba >> 16) & 0xff;
-    const a = (rgba >> 24) & 0xff;
-    return `#${padHex(r)}${padHex(g)}${padHex(b)}${padHex(a)}`;
 }

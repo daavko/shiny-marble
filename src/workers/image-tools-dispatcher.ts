@@ -1,14 +1,9 @@
 import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../core/const';
-import { debug, debugDetailed } from '../core/debug';
+import { debugDetailed } from '../core/debug';
 import type { PixelColor } from '../platform/types';
 import { assertCanvasCtx } from '../util/canvas';
 import type { PixelExtent } from '../util/geometry';
-import {
-    assertTaskResultType,
-    type FindTransparentBorderResult,
-    type ImageToolsTaskRequest,
-    type ImageToolsTaskResult,
-} from './image-tools-types';
+import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 import imageToolsWorkerCode from './image-tools.worker';
 import { createWorker } from './worker';
 
@@ -74,13 +69,29 @@ function postTaskToWorkerPool(task: ImageToolsTaskRequest): void {
     }
 }
 
-async function waitForTaskResult(taskId: string): Promise<ImageToolsTaskResult> {
-    const { promise, resolve } = Promise.withResolvers<ImageToolsTaskResult>();
+async function doTaskInWorkerPool<T extends ImageToolsTaskResult['task']>(
+    taskRequest: Extract<ImageToolsTaskRequest, { task: T }>,
+): Promise<Extract<ImageToolsTaskResult, { task: T }>> {
+    const taskId = taskRequest.taskId;
+
+    debugDetailed(`Posting ${taskRequest.task} task to worker pool`, taskRequest);
+    postTaskToWorkerPool(taskRequest);
+
+    const { promise, resolve, reject } = Promise.withResolvers<Extract<ImageToolsTaskResult, { task: T }>>();
 
     const listener = (event: MessageEvent<ImageToolsTaskResult>): void => {
         if (event.data.taskId === taskId) {
             TaskResultEvents.removeEventListener('taskresult', listener);
-            resolve(event.data);
+
+            if (event.data.task === taskRequest.task) {
+                debugDetailed(`Received result for ${taskRequest.task} task`, event.data);
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
+                resolve(event.data as Extract<ImageToolsTaskResult, { task: T }>);
+            } else {
+                const errorMessage = `Received result for unexpected task. Expected: ${taskRequest.task}, Received: ${event.data.task}`;
+                debugDetailed(errorMessage, event.data);
+                reject(new Error(errorMessage));
+            }
         }
     };
 
@@ -89,24 +100,24 @@ async function waitForTaskResult(taskId: string): Promise<ImageToolsTaskResult> 
     return promise;
 }
 
-async function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): Promise<boolean> {
-    const taskId = crypto.randomUUID();
-
-    console.time(`verifyImageMatchesPalette-${taskId}`);
-    debugDetailed('Posting verifyImageMatchesPalette task', image, palette);
-    postTaskToWorkerPool({ taskId, task: 'verifyImageMatchesPalette', image, palette });
-
-    const result = await waitForTaskResult(taskId);
-    assertTaskResultType(result, 'verifyImageMatchesPalette');
-    console.timeEnd(`verifyImageMatchesPalette-${taskId}`);
-
-    if (result.success) {
-        debugDetailed('Received result from verifyImageMatchesPalette task', result.matches);
-        return result.matches;
-    } else {
-        debugDetailed('Error in verifyImageMatchesPalette task', result.error);
+function assertTaskResultSuccess<T extends ImageToolsTaskResult['task']>(
+    result: Extract<ImageToolsTaskResult, { task: T }>,
+): asserts result is Extract<Extract<ImageToolsTaskResult, { task: T }>, { success: true }> {
+    if (!result.success) {
+        debugDetailed(`Task ${result.task} failed with error`, result.error);
         throw result.error;
     }
+}
+
+async function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): Promise<boolean> {
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
+        task: 'verifyImageMatchesPalette',
+        image,
+        palette,
+    });
+    assertTaskResultSuccess(result);
+    return result.matches;
 }
 
 async function highlightNonMatchingPixels(
@@ -115,28 +126,16 @@ async function highlightNonMatchingPixels(
     darkenPercentage: number,
     highlightColorRgba: number,
 ): Promise<ImageData> {
-    const taskId = crypto.randomUUID();
-
-    debugDetailed('Posting highlightNonMatchingPixels task', image, palette, darkenPercentage, highlightColorRgba);
-    postTaskToWorkerPool({
-        taskId,
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
         task: 'highlightNonMatchingPixels',
         image,
         palette,
         darkenPercentage,
         highlightColorRgba,
     });
-
-    const result = await waitForTaskResult(taskId);
-    assertTaskResultType(result, 'highlightNonMatchingPixels');
-
-    if (result.success) {
-        debugDetailed('Received result from highlightNonMatchingPixels task', result.image);
-        return result.image;
-    } else {
-        debugDetailed('Error in highlightNonMatchingPixels task', result.error);
-        throw result.error;
-    }
+    assertTaskResultSuccess(result);
+    return result.image;
 }
 
 async function upscalePixelArt(image: ImageData, scale: number): Promise<ImageData> {
@@ -148,7 +147,7 @@ async function upscalePixelArt(image: ImageData, scale: number): Promise<ImageDa
 
     const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx, 'Failed to obtain 2D context for destination OffscreenCanvas');
+    assertCanvasCtx(ctx);
 
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(bitmap, 0, 0, srcWidth, srcHeight, 0, 0, canvasWidth, canvasHeight);
@@ -193,7 +192,7 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
 
     const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx, 'Failed to obtain 2D context for destination OffscreenCanvas');
+    assertCanvasCtx(ctx);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -208,27 +207,18 @@ async function createThumbnail(image: ImageData, maxWidth: number, maxHeight: nu
 }
 
 async function detectCanvasFingerprintingProtection(): Promise<boolean> {
-    const taskId = crypto.randomUUID();
-
-    debug('Posting detectCanvasFingerprintingProtection task');
-    postTaskToWorkerPool({ taskId, task: 'detectCanvasFingerprintingProtection' });
-
-    const result = await waitForTaskResult(taskId);
-    assertTaskResultType(result, 'detectCanvasFingerprintingProtection');
-
-    if (result.success) {
-        debug('Received result from detectCanvasFingerprintingProtection task', result.protectionDetected);
-        return result.protectionDetected;
-    } else {
-        debugDetailed('Error in detectCanvasFingerprintingProtection task', result.error);
-        throw result.error;
-    }
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
+        task: 'detectCanvasFingerprintingProtection',
+    });
+    assertTaskResultSuccess(result);
+    return result.protectionDetected;
 }
 
 async function imageToBlob(image: ImageData): Promise<Blob> {
     const canvas = new OffscreenCanvas(image.width, image.height);
     const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx, 'Failed to obtain 2D context for OffscreenCanvas in imageToBlob');
+    assertCanvasCtx(ctx);
     ctx.putImageData(image, 0, 0);
     return canvas.convertToBlob({ type: 'image/png' });
 }
@@ -240,39 +230,23 @@ async function computeImageHash(image: ImageData): Promise<string> {
 }
 
 async function detemplatizeBlueMarbleTile(tile: ImageData): Promise<ImageData> {
-    const taskId = crypto.randomUUID();
-
-    debugDetailed('Posting detemplatizeBlueMarbleTile task', tile);
-    postTaskToWorkerPool({ taskId, task: 'detemplatizeBlueMarbleTile', image: tile });
-
-    const result = await waitForTaskResult(taskId);
-    assertTaskResultType(result, 'detemplatizeBlueMarbleTile');
-
-    if (result.success) {
-        debugDetailed('Received result from detemplatizeBlueMarbleTile task', result.image);
-        return result.image;
-    } else {
-        debugDetailed('Error in detemplatizeBlueMarbleTile task', result.error);
-        throw result.error;
-    }
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
+        task: 'detemplatizeBlueMarbleTile',
+        image: tile,
+    });
+    assertTaskResultSuccess(result);
+    return result.image;
 }
 
 async function findTransparentBorder(image: ImageData): Promise<FindTransparentBorderResult> {
-    const taskId = crypto.randomUUID();
-
-    debugDetailed('Posting findTransparentBorder task', image);
-    postTaskToWorkerPool({ taskId, task: 'findTransparentBorder', image });
-
-    const result = await waitForTaskResult(taskId);
-    assertTaskResultType(result, 'findTransparentBorder');
-
-    if (result.success) {
-        debugDetailed('Received result from findTransparentBorder task', result.border);
-        return result.border;
-    } else {
-        debugDetailed('Error in findTransparentBorder task', result.error);
-        throw result.error;
-    }
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
+        task: 'findTransparentBorder',
+        image,
+    });
+    assertTaskResultSuccess(result);
+    return result.border;
 }
 
 function cropToExtent(image: ImageData, area: PixelExtent): ImageData {
@@ -282,7 +256,7 @@ function cropToExtent(image: ImageData, area: PixelExtent): ImageData {
 
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx, 'Failed to obtain 2D context for OffscreenCanvas in cropToArea');
+    assertCanvasCtx(ctx);
     ctx.putImageData(image, -minX, -minY, minX, minY, width, height);
 
     return ctx.getImageData(0, 0, width, height);
@@ -298,25 +272,37 @@ async function cropToNonTransparentArea(image: ImageData): Promise<ImageData> {
     }
 }
 
-async function imageToPaletteIndexBuffer(
-    image: ImageData,
-    palette: readonly PixelColor[],
-): Promise<Uint8Array<ArrayBuffer>> {
-    const taskId = crypto.randomUUID();
+async function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
+        task: 'imageToPaletteIndexBuffer',
+        image,
+        palette,
+    });
+    assertTaskResultSuccess(result);
+    return result.buffer;
+}
 
-    debugDetailed('Posting imageToPaletteIndexBuffer task', image, palette);
-    postTaskToWorkerPool({ taskId, task: 'imageToPaletteIndexBuffer', image, palette });
+async function writeIndexedPngBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
+        task: 'writeIndexedPngBuffer',
+        image,
+        palette,
+    });
+    assertTaskResultSuccess(result);
+    return result.buffer;
+}
 
-    const result = await waitForTaskResult(taskId);
-    assertTaskResultType(result, 'imageToPaletteIndexBuffer');
-
-    if (result.success) {
-        debugDetailed('Received result from imageToPaletteIndexBuffer task', result.buffer);
-        return result.buffer;
-    } else {
-        debugDetailed('Error in imageToPaletteIndexBuffer task', result.error);
-        throw result.error;
-    }
+async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColor[]): Promise<Blob> {
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
+        task: 'writeIndexedPngBlob',
+        image,
+        palette,
+    });
+    assertTaskResultSuccess(result);
+    return result.blob;
 }
 
 export const ImageTools = {
@@ -328,7 +314,9 @@ export const ImageTools = {
     imageToBlob,
     detemplatizeBlueMarbleTile,
     findTransparentBorder,
-    cropToArea: cropToExtent,
+    cropToExtent,
     cropToNonTransparentArea,
     imageToPaletteIndexBuffer,
+    writeIndexedPngBuffer,
+    writeIndexedPngBlob,
 };

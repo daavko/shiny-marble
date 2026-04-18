@@ -12,6 +12,8 @@ type DetectCanvasFingerprintingProtectionTaskName = 'detectCanvasFingerprintingP
 type DetemplatizeBlueMarbleTileTaskName = 'detemplatizeBlueMarbleTile';
 type FindTransparentBorderTaskName = 'findTransparentBorder';
 type ImageToPaletteIndexBufferTaskName = 'imageToPaletteIndexBuffer';
+type WriteIndexedPngBufferTaskName = 'writeIndexedPngBuffer';
+type WriteIndexedPngBlobTaskName = 'writeIndexedPngBlob';
 
 export interface VerifyImageMatchesPaletteTaskRequest extends BaseImageToolsTask<VerifyImageMachesPaletteTaskName> {
     image: ImageData;
@@ -41,13 +43,25 @@ export interface ImageToPaletteIndexBufferTaskRequest extends BaseImageToolsTask
     palette: readonly PixelColor[];
 }
 
+export interface WriteIndexedPngBufferTaskRequest extends BaseImageToolsTask<WriteIndexedPngBufferTaskName> {
+    image: ImageData;
+    palette: readonly PixelColor[];
+}
+
+export interface WriteIndexedPngBlobTaskRequest extends BaseImageToolsTask<WriteIndexedPngBlobTaskName> {
+    image: ImageData;
+    palette: readonly PixelColor[];
+}
+
 export type ImageToolsTaskRequest =
     | VerifyImageMatchesPaletteTaskRequest
     | HighlightNonMatchingPixelsTaskRequest
     | DetectCanvasFingerprintingProtectionTaskRequest
     | DetemplatizeBlueMarbleTileTaskRequest
     | FindTransparentBorderTaskRequest
-    | ImageToPaletteIndexBufferTaskRequest;
+    | ImageToPaletteIndexBufferTaskRequest
+    | WriteIndexedPngBufferTaskRequest
+    | WriteIndexedPngBlobTaskRequest;
 
 interface BaseImageToolsTaskResult<T extends string> {
     task: T;
@@ -128,7 +142,7 @@ export type FindTransparentBorderTaskResult =
 
 export interface ImageToPaletteIndexBufferTaskSuccessResult extends BaseImageToolsTaskResult<ImageToPaletteIndexBufferTaskName> {
     success: true;
-    buffer: Uint8Array<ArrayBuffer>;
+    buffer: ArrayBuffer;
 }
 
 export interface ImageToPaletteIndexBufferTaskErrorResult extends BaseImageToolsTaskResult<ImageToPaletteIndexBufferTaskName> {
@@ -140,13 +154,41 @@ export type ImageToPaletteIndexBufferTaskResult =
     | ImageToPaletteIndexBufferTaskSuccessResult
     | ImageToPaletteIndexBufferTaskErrorResult;
 
+export interface WriteIndexedPngBufferTaskSuccessResult extends BaseImageToolsTaskResult<WriteIndexedPngBufferTaskName> {
+    success: true;
+    buffer: ArrayBuffer;
+}
+
+export interface WriteIndexedPngBufferTaskErrorResult extends BaseImageToolsTaskResult<WriteIndexedPngBufferTaskName> {
+    success: false;
+    error: unknown;
+}
+
+export type WriteIndexedPngBufferTaskResult =
+    | WriteIndexedPngBufferTaskSuccessResult
+    | WriteIndexedPngBufferTaskErrorResult;
+
+export interface WriteIndexedPngBlobTaskSuccessResult extends BaseImageToolsTaskResult<WriteIndexedPngBlobTaskName> {
+    success: true;
+    blob: Blob;
+}
+
+export interface WriteIndexedPngBlobTaskErrorResult extends BaseImageToolsTaskResult<WriteIndexedPngBlobTaskName> {
+    success: false;
+    error: unknown;
+}
+
+export type WriteIndexedPngBlobTaskResult = WriteIndexedPngBlobTaskSuccessResult | WriteIndexedPngBlobTaskErrorResult;
+
 export type ImageToolsTaskResult =
     | VerifyImageMatchesPaletteTaskResult
     | HighlightNonMatchingPixelsTaskResult
     | DetectCanvasFingerprintingProtectionTaskResult
     | DetemplatizeBlueMarbleTileTaskResult
     | FindTransparentBorderTaskResult
-    | ImageToPaletteIndexBufferTaskResult;
+    | ImageToPaletteIndexBufferTaskResult
+    | WriteIndexedPngBufferTaskResult
+    | WriteIndexedPngBlobTaskResult;
 
 export function assertTaskResultType<T extends ImageToolsTaskResult['task']>(
     result: ImageToolsTaskResult,

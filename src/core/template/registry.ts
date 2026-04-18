@@ -9,7 +9,8 @@ import {
     type TileCoordinates,
 } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
-import { debug, debugDetailed } from '../debug';
+import { debug, debugDetailed, debugTime } from '../debug';
+import { encodeIndexedPngBlob } from '../png/indexed-png-writer';
 import { type StoredTemplate, TemplateStorage } from './storage';
 
 export type TileId = `${number}_${number}`;
@@ -90,7 +91,6 @@ const knownTemplateHashes = new Set<string>();
 interface TemplateInit {
     name: string;
     image: ImageData;
-    imageBlob?: Blob;
 }
 
 function storedTemplateToLiveTemplate(template: StoredTemplate): LiveTemplate {
@@ -158,7 +158,9 @@ export const TemplateRegistry = {
         const hash = await ImageTools.computeImageHash(template.image);
         const viewportCenter = Platform.getViewportCenterPixel();
         const { width, height } = template.image;
-        const imageBlob = template.imageBlob ?? (await ImageTools.imageToBlob(template.image));
+        const pngEncodeDebugTimer = debugTime(`Encoding template image to indexed PNG`);
+        const imageBlob = await encodeIndexedPngBlob(template.image, Platform.colors);
+        pngEncodeDebugTimer?.stop();
 
         const newTemplate: LiveTemplate = {
             id,
@@ -201,7 +203,7 @@ export const TemplateRegistry = {
         debug(`Renamed template with id ${id} from "${oldName}" to "${newName}"`);
     },
 
-    async replaceTemplateImage(id: string, newImage: ImageData, newImageBlob?: Blob): Promise<boolean> {
+    async replaceTemplateImage(id: string, newImage: ImageData): Promise<boolean> {
         const template = availableTemplates.get(id);
         if (!template) {
             debug(`Cannot replace image of template with id ${id} - template not found`);
@@ -215,7 +217,9 @@ export const TemplateRegistry = {
         }
 
         const newThumbnail = await ImageTools.createThumbnail(newImage, 100, 100);
-        newImageBlob ??= await ImageTools.imageToBlob(newImage);
+        const pngEncodeDebugTimer = debugTime(`Encoding new template image to indexed PNG`);
+        const newImageBlob = await encodeIndexedPngBlob(newImage, Platform.colors);
+        pngEncodeDebugTimer?.stop();
 
         // Update template with new image info
         knownTemplateHashes.delete(template.hash);

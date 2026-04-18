@@ -4,8 +4,8 @@ import { showInfoAlert } from '../components/alerts-container';
 import { createTemplateImagePicker } from '../components/template-image-picker';
 
 export function showReplaceTemplateImageDialog(templateId: string): void {
-    const { element: dropArea, context: dropAreaContext } = createTemplateImagePicker(async (image, file) => {
-        await TemplateRegistry.replaceTemplateImage(templateId, image, file);
+    const { element: dropArea, context: dropAreaContext } = createTemplateImagePicker(async (image) => {
+        await TemplateRegistry.replaceTemplateImage(templateId, image);
         dialog.close();
         showInfoAlert(`Template image replaced successfully`, 2000);
     });

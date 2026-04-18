@@ -76,12 +76,12 @@ async function optimizeTile(
     if (borderResult === 'fullyTransparent') {
         return null;
     } else if (borderResult !== 'noTransparentBorder') {
-        imageData = ImageTools.cropToArea(imageData, borderResult);
+        imageData = ImageTools.cropToExtent(imageData, borderResult);
         imageRect = extentToRect(borderResult);
     }
 
     const paletteIndexBuffer = await ImageTools.imageToPaletteIndexBuffer(imageData, palette);
-    const compressedData = await compressData(paletteIndexBuffer.buffer, 'gzip');
+    const compressedData = await compressData(paletteIndexBuffer, 'gzip');
 
     return {
         tilePosition: tileCoordinates({ x: tileRect.x, y: tileRect.y }),
@@ -104,7 +104,7 @@ export async function optimizeTemplate(image: ImageData, position: PixelCoordina
             throw new Error('Tile does not intersect with image, this should never happen');
         }
 
-        const tileImageData = ImageTools.cropToArea(image, rectToExtent(tileImageRect));
+        const tileImageData = ImageTools.cropToExtent(image, rectToExtent(tileImageRect));
 
         return optimizeTile(tile, tileImageData, tileImageRect, Platform.colors);
     });

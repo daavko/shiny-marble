@@ -42,16 +42,17 @@ export interface DebugTimer {
 
 export function debugTime(timerName: string): DebugTimer | null {
     const timerNameWithId = `${timerName} (${window.crypto.randomUUID()})`;
-    const fullTimingName = `[SM] ${timerNameWithId}`;
     if (debugEnabled()) {
         debug(`${timerNameWithId} timer started`);
-        console.time(fullTimingName);
+        const startTime = performance.now();
         return {
             stop: (): void => {
-                console.timeEnd(fullTimingName);
+                const duration = performance.now() - startTime;
+                debug(`${timerNameWithId} timer stopped; duration: ${duration.toFixed(2)} ms`);
             },
             mark: (msg): void => {
-                console.timeLog(fullTimingName, msg);
+                const elapsedTime = performance.now() - startTime;
+                debug(`${timerNameWithId} timer mark; elapsed time: ${elapsedTime.toFixed(2)} ms; message: ${msg}`);
             },
         };
     } else {

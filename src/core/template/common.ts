@@ -4,7 +4,7 @@ import type { PixelCoordinates } from '../../util/geometry';
 Shiny Marble export format, v1:
 
 contains the following:
-- a .smtemplate file containing the following metadata:
+- a .smtemplate.json file containing the following metadata:
     - a version number of the format
     - platform identifier (cross-platform compatibility is not a thing)
     - palette version (in case the platform palette changes in some way)
@@ -19,16 +19,20 @@ this format is reasonably simple to read and write programatically and since it'
 open it and inspect/extract/modify the contents if they want
  */
 
-export const TEMPLATE_EXPORT_MARKER_FILENAME = '.smtemplate';
-export const TEMPLATE_EXPORT_CURRENT_VERSION = '1';
+export const TEMPLATE_ZIP_METADATA_FILENAME = '.smtemplate.json';
+export const TEMPLATE_ZIP_CURRENT_VERSION = 1;
 
-export interface TemplateExportMetadata {
-    version: string;
+export const TEMPLATE_ZIP_IMPORT_MAX_SIZE = 100 * 1024 * 1024; // 100MiB
+export const TEMPLATE_ZIP_IMPORT_WARN_TEMPLATE_COUNT = 10;
+export const TEMPLATE_ZIP_IMPORT_MAX_TEMPLATE_COUNT = 1000;
+
+export interface TemplateArchiveMetadata {
+    version: number;
     platform: string;
     paletteVersion: number;
 }
 
-export interface TemplateExportTemplateMetadata {
+export interface TemplateArchiveTemplateMetadata {
     id: string;
     name: string;
     coordinates: PixelCoordinates;

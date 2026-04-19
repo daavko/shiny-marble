@@ -93,11 +93,11 @@ async function optimizeTile(
 export async function optimizeTemplate(image: ImageData, position: PixelCoordinates): Promise<OptimizedTemplateData> {
     const coveredTiles = getCoveredTiles(
         { ...position, width: image.width, height: image.height },
-        Platform.tileDimensions,
+        Platform.tilePixelDimensions,
     );
 
     const optimizedTilesPromises = coveredTiles.map((tile) => {
-        const tilePixelRect = tileToPixelRect(tile, Platform.tileDimensions);
+        const tilePixelRect = tileToPixelRect(tile, Platform.tilePixelDimensions);
         const tileImageRect = intersection(tilePixelRect, { ...position, width: image.width, height: image.height });
         if (!tileImageRect) {
             // this should never happen
@@ -115,12 +115,16 @@ export async function optimizeTemplate(image: ImageData, position: PixelCoordina
         hash: await ImageTools.computeImageHash(image),
         paletteVersion: Platform.colorsVersion,
         position,
-        tileSize: { ...Platform.tileDimensions },
+        tileSize: { ...Platform.tilePixelDimensions },
         tiles: optimizedTiles
             .filter((tile) => tile != null)
             .map((tile) => ({
                 ...tile,
-                tilePosition: worldWrapTileCoordinates(tile.tilePosition, Platform.canvasPixelDimensions),
+                tilePosition: worldWrapTileCoordinates(
+                    tile.tilePosition,
+                    Platform.tilePixelDimensions,
+                    Platform.canvasPixelDimensions,
+                ),
             })),
     };
 }

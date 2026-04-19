@@ -295,6 +295,8 @@ function stringifyArbitraryValue(value: unknown, depth: number): string {
                 return `Blob [type: ${value.type}; size: ${value.size} bytes]`;
             } else if (value instanceof ImageData) {
                 return `ImageData [width: ${value.width}; height: ${value.height}]`;
+            } else if (value instanceof ImageBitmap) {
+                return `ImageBitmap [width: ${value.width}; height: ${value.height}]`;
             } else {
                 return stringifyObject(value, depth - 1);
             }

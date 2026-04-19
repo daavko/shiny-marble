@@ -1,5 +1,6 @@
 import picomatch, { type Matcher } from 'picomatch/posix';
 import { debug } from './debug';
+import { originalFetch } from './fetch';
 
 interface SimpleMatcher {
     hostname: string;
@@ -87,7 +88,6 @@ function createMatchFn(
 
 export const NetworkInterceptor = {
     init(): void {
-        const originalFetch = window.fetch;
         window.fetch = async (...args: Parameters<typeof originalFetch>): Promise<Response> => {
             let request = new Request(...args);
             const interceptors = Array.from(activeFetchInterceptors.values()).filter((interceptor) =>

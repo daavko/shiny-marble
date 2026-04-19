@@ -1,6 +1,7 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
 import { debug } from '../../core/debug';
 import { addStyle } from '../../core/dom/styles';
+import { originalFetch } from '../../core/fetch';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { pixelDimensions } from '../../util/geometry';
 import { gatherModuleHrefs } from '../../util/modules';
@@ -14,7 +15,7 @@ export const WplacePlatform: CanvasPlatform = {
     colors: WPLACE_COLORS,
     colorsVersion: 1,
     canvasPixelDimensions: pixelDimensions({ width: 2048000, height: 2048000 }),
-    tileDimensions: pixelDimensions({ width: 1000, height: 1000 }),
+    tilePixelDimensions: pixelDimensions({ width: 1000, height: 1000 }),
     initialize(): void {
         addStyle(wplacePlatformStyle);
     },
@@ -104,5 +105,17 @@ export const WplacePlatform: CanvasPlatform = {
     },
     renderPlatformSpecificSettingsContent() {
         return null;
+    },
+    async fetchTileImage(tileCoords) {
+        // https://backend.wplace.live/files/s0/tiles/X/Y.png
+        // always returns a tile, even if it's transparent
+        const url = `https://backend.wplace.live/files/s0/tiles/${tileCoords.x}/${tileCoords.y}.png`;
+        const response = await originalFetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch tile image: ${response.status} ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        return await createImageBitmap(blob);
     },
 };

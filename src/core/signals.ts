@@ -40,14 +40,15 @@ function scheduleSignalCallbacks(sig: ReadonlyInternalSignal<unknown>): void {
     if (!signalCallbackMicrotaskScheduled) {
         signalCallbackMicrotaskScheduled = true;
         queueMicrotask(() => {
-            flushScheduledSignalCallbacks();
             signalCallbackMicrotaskScheduled = false;
+            flushScheduledSignalCallbacks();
         });
     }
 }
 
 function flushScheduledSignalCallbacks(): void {
     const signalsWithValues = Array.from(scheduledSignalCallbacks).map((s) => [s, s.value] as const);
+    scheduledSignalCallbacks.clear();
     for (const [sig, value] of signalsWithValues) {
         for (const callback of sig.subscribers) {
             try {
@@ -57,8 +58,6 @@ function flushScheduledSignalCallbacks(): void {
             }
         }
     }
-
-    scheduledSignalCallbacks.clear();
 }
 
 abstract class SignalImplBase<T> implements ReadonlyInternalSignal<T> {

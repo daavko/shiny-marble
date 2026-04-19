@@ -1,0 +1,14 @@
+.sm-active-tool-panel-container {
+    pointer-events: none;
+    display: flex;
+}
+
+.sm-active-tool-panel {
+    margin: 0 auto;
+    pointer-events: auto;
+    background: var(--sm-background-color);
+    border: 1px solid var(--sm-soft-border-color);
+    border-radius: var(--sm-card-border-radius);
+    box-shadow: var(--sm-small-box-shadow);
+    padding: 12px;
+}

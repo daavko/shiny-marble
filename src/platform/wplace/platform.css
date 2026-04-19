@@ -21,3 +21,10 @@
     top: 12px;
     right: 64px;
 }
+
+.sm-active-tool-panel-container {
+    position: fixed;
+    bottom: 76px;
+    left: 0;
+    right: 0;
+}

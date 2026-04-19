@@ -22,7 +22,7 @@ export async function parseBinaryTileBlob(blob: ArrayBuffer): Promise<BplaceBina
 }
 
 function parseTileData(tileData: ArrayBuffer): BplaceBinaryTile {
-    const pixelsPerTile = BplacePlatform.tileDimensions.width * BplacePlatform.tileDimensions.height;
+    const pixelsPerTile = BplacePlatform.tilePixelDimensions.width * BplacePlatform.tilePixelDimensions.height;
     let dataView: DataView;
     let bytesPerPixel: number;
     if (tileData.byteLength === pixelsPerTile * 5) {
@@ -54,7 +54,11 @@ function parseTileData(tileData: ArrayBuffer): BplaceBinaryTile {
     }
 
     const imageBuffer = new Uint8ClampedArray(colorBuffer.buffer);
-    const image = new ImageData(imageBuffer, BplacePlatform.tileDimensions.width, BplacePlatform.tileDimensions.height);
+    const image = new ImageData(
+        imageBuffer,
+        BplacePlatform.tilePixelDimensions.width,
+        BplacePlatform.tilePixelDimensions.height,
+    );
 
     return { image, playerShortIds };
 }

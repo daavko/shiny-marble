@@ -21,6 +21,7 @@
         "@turf/turf": "^7.3.4",
         "@zip.js/zip.js": "^2.8.26",
         "idb": "^8.0.3",
+        "luxon": "^3.7.2",
         "maplibre-gl": "^5.23.0",
         "picomatch": "^4.0.4",
         "pretty-bytes": "^7.1.0",
@@ -30,6 +31,8 @@
     "devDependencies": {
         "@eslint-community/eslint-plugin-eslint-comments": "^4.7.1",
         "@eslint/js": "^10.0.1",
+        "@types/geojson": "^7946.0.16",
+        "@types/luxon": "^3.7.1",
         "@types/picomatch": "^4.0.3",
         "esbuild": "^0.28.0",
         "eslint": "^10.2.0",

@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { originalFetch } from '../../core/fetch';
 import { coordsWithNewOrigin, worldWrapPixelCoordinates } from '../../util/geometry';
 import { Platform } from '../platform';
 import { handleBlobFromParsedTemplate } from './common';
@@ -50,6 +51,6 @@ export async function parseWplaceTemplate(json: unknown): Promise<WplaceTemplate
     const expectedWidth = bottomRightPixel.x;
     const expectedHeight = bottomRightPixel.y;
 
-    const imageBlob = await fetch(image.dataUrl).then((res) => res.blob());
+    const imageBlob = await originalFetch(image.dataUrl).then((res) => res.blob());
     return handleBlobFromParsedTemplate(imageBlob, name, topLeftPixel, expectedWidth, expectedHeight);
 }

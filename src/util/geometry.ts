@@ -99,6 +99,13 @@ export function tileToPixelCoordinates(coords: TileCoordinates, tileSize: PixelD
     });
 }
 
+export function pixelToTileDimensions(dimensions: PixelDimensions, tileSize: PixelDimensions): TileDimensions {
+    return tileDimensions({
+        width: Math.ceil(dimensions.width / tileSize.width),
+        height: Math.ceil(dimensions.height / tileSize.height),
+    });
+}
+
 export function tileToPixelDimensions(dimensions: TileDimensions, tileSize: PixelDimensions): PixelDimensions {
     return pixelDimensions({
         width: dimensions.width * tileSize.width,
@@ -129,6 +136,29 @@ export function extentToRect<T>(extent: Brand<Extent, T>): Brand<Rect, T> {
         width: extent.maxX - extent.minX,
         height: extent.maxY - extent.minY,
     });
+}
+
+export function coordsToExtent<T>(coordsArray: Brand<Coordinates, T>[]): Brand<Extent, T> {
+    if (coordsArray.length === 0) {
+        return brand({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
+    }
+
+    const result: Extent = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    for (const coords of coordsArray) {
+        if (coords.x < result.minX) {
+            result.minX = coords.x;
+        }
+        if (coords.y < result.minY) {
+            result.minY = coords.y;
+        }
+        if (coords.x > result.maxX) {
+            result.maxX = coords.x;
+        }
+        if (coords.y > result.maxY) {
+            result.maxY = coords.y;
+        }
+    }
+    return brand(result);
 }
 
 export function extentSize<T>(extent: Brand<Extent, T>): Brand<Dimensions, T> {
@@ -190,10 +220,14 @@ export function getCoveredTiles(rect: PixelRect, tileSize: PixelDimensions): Til
     return coveredTiles;
 }
 
-export function worldWrapTileCoordinates(coords: TileCoordinates, worldSize: PixelDimensions): TileCoordinates {
-    const tileSize = tileToPixelDimensions(tileDimensions({ width: 1, height: 1 }), worldSize);
-    const wrappedX = (((coords.x * tileSize.width) % worldSize.width) + worldSize.width) % worldSize.width;
-    return tileCoordinates({ x: Math.floor(wrappedX / tileSize.width), y: coords.y });
+export function worldWrapTileCoordinates(
+    coords: TileCoordinates,
+    tileSize: PixelDimensions,
+    worldSize: PixelDimensions,
+): TileCoordinates {
+    const worldSizeInTiles = pixelToTileDimensions(worldSize, tileSize);
+    const wrappedX = ((coords.x % worldSizeInTiles.width) + worldSizeInTiles.width) % worldSizeInTiles.width;
+    return tileCoordinates({ x: wrappedX, y: coords.y });
 }
 
 export function worldWrapPixelCoordinates(coords: PixelCoordinates, worldSize: PixelDimensions): PixelCoordinates {
@@ -209,4 +243,55 @@ export function coordsWithNewOrigin<T>(
         x: coordinates.x - origin.x,
         y: coordinates.y - origin.y,
     });
+}
+
+export function coordsEqualityFn<T>(
+    coords1: Brand<Coordinates, T> | null | undefined,
+    coords2: Brand<Coordinates, T> | null | undefined,
+): boolean {
+    if (coords1 == null || coords2 == null) {
+        return coords1 === coords2;
+    } else {
+        return coords1.x === coords2.x && coords1.y === coords2.y;
+    }
+}
+
+export function dimensionsEqualityFn<T>(
+    dimensions1: Brand<Dimensions, T> | null | undefined,
+    dimensions2: Brand<Dimensions, T> | null | undefined,
+): boolean {
+    if (dimensions1 == null || dimensions2 == null) {
+        return dimensions1 === dimensions2;
+    } else {
+        return dimensions1.width === dimensions2.width && dimensions1.height === dimensions2.height;
+    }
+}
+
+export function rectsEqualityFn<T>(
+    rect1: Brand<Rect, T> | null | undefined,
+    rect2: Brand<Rect, T> | null | undefined,
+): boolean {
+    if (rect1 == null || rect2 == null) {
+        return rect1 === rect2;
+    } else {
+        return (
+            rect1.x === rect2.x && rect1.y === rect2.y && rect1.width === rect2.width && rect1.height === rect2.height
+        );
+    }
+}
+
+export function extentsEqualityFn<T>(
+    extent1: Brand<Extent, T> | null | undefined,
+    extent2: Brand<Extent, T> | null | undefined,
+): boolean {
+    if (extent1 == null || extent2 == null) {
+        return extent1 === extent2;
+    } else {
+        return (
+            extent1.minX === extent2.minX &&
+            extent1.minY === extent2.minY &&
+            extent1.maxX === extent2.maxX &&
+            extent1.maxY === extent2.maxY
+        );
+    }
 }

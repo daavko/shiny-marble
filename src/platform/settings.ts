@@ -107,14 +107,9 @@ class SettingSignal<TValue> extends SignalImpl<TValue> implements SettingInterna
 
         this.subscribe(() => {
             if (!this.internalCallbacksEnabled) {
-                console.log(
-                    'Internal callbacks are currently disabled, skipping callbacks for setting value update',
-                    this.value,
-                );
                 return;
             }
 
-            console.log('Setting value updated, running internal callbacks', this.value, this.internalCallbacks);
             for (const callback of this.internalCallbacks) {
                 callback(this.value);
             }

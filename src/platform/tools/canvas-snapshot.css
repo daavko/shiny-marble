@@ -1,0 +1,10 @@
+.sm-canvas-snapshot-tool-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .sm-canvas-snapshot-tool__buttons {
+        display: flex;
+        gap: 8px;
+    }
+}

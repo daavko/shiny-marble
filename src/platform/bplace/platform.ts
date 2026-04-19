@@ -1,7 +1,9 @@
 import { Map as MapLibreInstance } from 'maplibre-gl';
+import * as v from 'valibot';
 import { debug } from '../../core/debug';
 import { el } from '../../core/dom/html';
 import { addStyle, addStyles, removeStyle } from '../../core/dom/styles';
+import { originalFetch } from '../../core/fetch';
 import { renderBlockButton } from '../../ui/builtin/button';
 import { createBooleanSetting, createNumberRangeSetting } from '../../ui/builtin/settings-ui';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
@@ -64,12 +66,16 @@ const bplaceSettings = createSettings('bplace-platform', 1, {
     fakeBetaTester: createSetting(false, [(newValue): void => toggleBplaceFakeBeta(newValue)]),
 });
 
+const bplaceTileNotFoundResponse = v.object({
+    statusCode: v.literal('404'),
+});
+
 export const BplacePlatform: CanvasPlatform = {
     id: 'bplace',
     colors: BPLACE_COLORS,
     colorsVersion: 1,
     canvasPixelDimensions: pixelDimensions({ width: 1335834, height: 1335834 }),
-    tileDimensions: pixelDimensions({ width: 512, height: 512 }),
+    tilePixelDimensions: pixelDimensions({ width: 512, height: 512 }),
     async initialize() {
         await bplaceSettings.init();
 
@@ -302,5 +308,30 @@ export const BplacePlatform: CanvasPlatform = {
                 ),
             ]),
         ];
+    },
+    async fetchTileImage(tileCoords) {
+        // https://tiles.bplace.art/tile-images/X_Y.png
+        // returns a 400 with a json error if the tile doesn't exist
+        const url = `https://tiles.bplace.art/tile-images/${tileCoords.x}_${tileCoords.y}.png`;
+        const response = await originalFetch(url);
+        if (!response.ok) {
+            if (response.status === 400) {
+                try {
+                    const errorData: unknown = await response.json();
+                    const parseResult = v.safeParse(bplaceTileNotFoundResponse, errorData);
+                    if (parseResult.success) {
+                        return null;
+                    }
+                } catch {
+                    throw new Error(
+                        `Failed to parse error response for tile image: ${response.status} ${response.statusText}`,
+                    );
+                }
+            }
+            throw new Error(`Failed to fetch tile image: ${response.status} ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        return await createImageBitmap(blob);
     },
 };

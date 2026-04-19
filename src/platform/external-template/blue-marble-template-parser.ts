@@ -102,7 +102,7 @@ export type BlueMarbleTemplateParseResult = TemplateParseResult<BlueMarbleTempla
 function blueMarbleTileCoordsToPixelCoords(coords: BlueMarbleTileCoords): PixelCoordinates {
     const tilePixelCoords = tileToPixelCoordinates(
         tileCoordinates({ x: coords.tileX, y: coords.tileY }),
-        Platform.tileDimensions,
+        Platform.tilePixelDimensions,
     );
     tilePixelCoords.x += coords.x;
     tilePixelCoords.y += coords.y;
@@ -164,7 +164,10 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
             return { success: false, errorCode: 'invalidImageData', cause: e };
         }
 
-        if (bitmap.width / 3 > Platform.tileDimensions.width || bitmap.height / 3 > Platform.tileDimensions.height) {
+        if (
+            bitmap.width / 3 > Platform.tilePixelDimensions.width ||
+            bitmap.height / 3 > Platform.tilePixelDimensions.height
+        ) {
             bitmap.close();
             return { success: false, errorCode: 'tileTooLarge' };
         }

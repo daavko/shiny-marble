@@ -1,6 +1,7 @@
 import { mdiClose, mdiCog, mdiStarFourPointsCircleOutline } from '@mdi/js';
 import { el } from '../../core/dom/html';
 import { Platform } from '../../platform/platform';
+import { CanvasSnapshotTool } from '../../platform/tools/canvas-snapshot';
 import { renderBlockButton, renderIconButton } from '../builtin/button';
 import { renderMdiIcon } from '../builtin/mdi-icon';
 import { showImportTemplateDialog } from '../dialogs/import-template-dialog';
@@ -36,7 +37,9 @@ export function renderAppView(): void {
             el('h2', { class: 'sm-app-view__section-heading' }, ['Utilities']),
             el('div', { class: ['sm-row', 'sm-row--center'] }, [
                 renderBlockButton('Take 1:1 snapshot', () => {
-                    // todo
+                    const snapshotTool = new CanvasSnapshotTool();
+                    void Platform.requestToolActivation(snapshotTool);
+                    toggleAppView();
                 }),
             ]),
         ]),

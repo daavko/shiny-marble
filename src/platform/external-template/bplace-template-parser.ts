@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { originalFetch } from '../../core/fetch';
 import { pixelCoordinates } from '../../util/geometry';
 import { handleBlobFromParsedTemplate } from './common';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
@@ -47,7 +48,7 @@ export async function parseBplaceTemplate(json: unknown): Promise<BplaceTemplate
         return { success: false, errorCode: 'badRotation' };
     }
 
-    const imageBlob = await fetch(template.imageData).then((res) => res.blob());
+    const imageBlob = await originalFetch(template.imageData).then((res) => res.blob());
     return handleBlobFromParsedTemplate(
         imageBlob,
         template.name,

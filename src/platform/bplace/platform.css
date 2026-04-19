@@ -24,3 +24,11 @@
     right: 72px;
     z-index: 10;
 }
+
+.sm-active-tool-panel-container {
+    position: fixed;
+    bottom: 119px;
+    left: 0;
+    right: 0;
+    z-index: 10;
+}

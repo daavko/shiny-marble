@@ -1,8 +1,10 @@
 import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
 import { showErrorAlert } from '../../ui/components/alerts-container';
-import type { PixelCoordinates, PixelDimensions } from '../../util/geometry';
+import type { PixelCoordinates, PixelDimensions, PixelRect, TileCoordinates } from '../../util/geometry';
 import { waitForDataAndTransaction } from '../../util/idb';
 import { debug } from '../debug';
+import type { TileId } from './common';
+import type { OptimizedTemplateData } from './optimizer';
 
 export interface StoredTemplate {
     id: string;
@@ -24,6 +26,62 @@ export interface StoredTemplateImage {
     image: Blob;
 }
 
+export interface StoredOptimizedTemplateTile {
+    /**
+     * id of the template
+     */
+    templateId: string;
+
+    /**
+     * tile position
+     */
+    tilePosition: TileCoordinates;
+
+    /**
+     * position and dimensions within the tile
+     */
+    imageRect: PixelRect;
+
+    /**
+     * compressed binary data containing color indexes
+     *
+     * uses gzip compression
+     */
+    compressedData: ArrayBuffer;
+}
+
+export interface StoredOptimizedTemplateMetadata {
+    /**
+     * id of the template, used as a key
+     */
+    id: string;
+
+    /**
+     * version of the palette this was optimized with, used to determine whether the template needs to be re-optimized
+     * and re-saved
+     */
+    paletteVersion: number;
+
+    /**
+     * position of the original template image, if the template moves then this can be used to determine whether it
+     * needs to be re-optimized and re-saved
+     */
+    position: PixelCoordinates;
+
+    /**
+     * tile size this was stored with, in case the canvas changes tile sizes for some reason...
+     *
+     * bplace has done this once already so it's better to be safe here, worst case this just causes the template to be
+     * re-optimized and re-saved with new tile size
+     */
+    tileSize: PixelDimensions;
+
+    /**
+     * list of tiles this template occupies, used for fast lookup
+     */
+    tiles: TileId[];
+}
+
 interface TemplateStorageDBSchema extends DBSchema {
     templates: {
         key: string;
@@ -33,13 +91,21 @@ interface TemplateStorageDBSchema extends DBSchema {
         key: string;
         value: StoredTemplateImage;
     };
+    optimizedTemplateMetadata: {
+        key: string;
+        value: StoredOptimizedTemplateMetadata;
+    };
+    optimizedTemplateTiles: {
+        key: [string, string, string]; // [templateId, tilePosition.x, tilePosition.y]
+        value: StoredOptimizedTemplateTile;
+    };
 }
 
 type TemplateStorageDB = IDBPDatabase<TemplateStorageDBSchema>;
 
 let indexedDbInstance: TemplateStorageDB | null = null;
 
-const CURRENT_DB_VERSION = 1;
+const CURRENT_DB_VERSION = 2;
 
 interface TemplateStorageEventMap {
     storageterminated: Event;
@@ -69,6 +135,13 @@ async function getStorage(): Promise<TemplateStorageDB> {
                 // never opened before, create object store
                 db.createObjectStore('templates', { keyPath: 'id' });
                 db.createObjectStore('templateImages', { keyPath: 'hash' });
+            }
+            if (oldVersion < 2) {
+                // v2 adds optimized template images store
+                db.createObjectStore('optimizedTemplateMetadata', { keyPath: 'id' });
+                db.createObjectStore('optimizedTemplateTiles', {
+                    keyPath: ['templateId', 'tilePosition.x', 'tilePosition.y'],
+                });
             }
         },
         blocked: (currentVersion, blockedVersion, event) => {
@@ -123,7 +196,9 @@ export const TemplateStorage = {
     async deleteTemplate(id: string): Promise<void> {
         const db = await getStorage();
         await db.delete('templates', id);
+        await TemplateStorage.deleteOptimizedTemplateData(id);
     },
+
     async saveTemplateImage(image: StoredTemplateImage): Promise<void> {
         const db = await getStorage();
         await db.put('templateImages', image);
@@ -158,5 +233,18 @@ export const TemplateStorage = {
                 tx,
             );
         }
+    },
+
+    async saveOptimizedTemplateData(image: OptimizedTemplateData): Promise<void> {
+        const db = await getStorage();
+        await db.put('optimizedTemplateData', image);
+    },
+    async getOptimizedTemplateData(id: string): Promise<OptimizedTemplateData | undefined> {
+        const db = await getStorage();
+        return await db.get('optimizedTemplateData', id);
+    },
+    async deleteOptimizedTemplateData(id: string): Promise<void> {
+        const db = await getStorage();
+        await db.delete('optimizedTemplateData', id);
     },
 };

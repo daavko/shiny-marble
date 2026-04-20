@@ -172,12 +172,8 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
             return { success: false, errorCode: 'tileTooLarge' };
         }
 
-        const tileCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-        const tileCtx = tileCanvas.getContext('2d');
-        assertCanvasCtx(tileCtx);
-        tileCtx.drawImage(bitmap, 0, 0);
+        const drawnImageData = ImageTools.imageBitmapToImageData(bitmap);
         bitmap.close();
-        const drawnImageData = tileCtx.getImageData(0, 0, tileCanvas.width, tileCanvas.height);
         const detemplatizedTile = await ImageTools.detemplatizeBlueMarbleTile(drawnImageData);
 
         const templateRelativeTileCoords = worldWrapPixelCoordinates(
@@ -194,7 +190,6 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
         const { width: totalWidth, height: totalHeight } = extentSize(totalExtent);
 
         if (totalWidth > MAX_TEMPLATE_CANVAS_DIMENSION || totalHeight > MAX_TEMPLATE_CANVAS_DIMENSION) {
-            bitmap.close();
             return { success: false, errorCode: 'imageTooLarge' };
         }
 

@@ -1,5 +1,7 @@
 import type { PixelCoordinates } from '../../util/geometry';
 
+export type TileId = `${number}_${number}`;
+
 /*
 Shiny Marble export format, v1:
 

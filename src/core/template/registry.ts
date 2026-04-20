@@ -11,9 +11,9 @@ import {
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { debug, debugDetailed, debugTime } from '../debug';
 import { encodeIndexedPngBlob } from '../png/indexed-png-writer';
+import type { TileId } from './common';
+import { type OptimizedTemplateData, optimizeTemplate } from './optimizer';
 import { type StoredTemplate, TemplateStorage } from './storage';
-
-export type TileId = `${number}_${number}`;
 
 export interface LiveTemplate {
     id: string;
@@ -25,14 +25,15 @@ export interface LiveTemplate {
     thumbnailUrl: string;
 
     /**
-     * Set of `${x}_${y}` strings representing tiles where this template has at least one visible pixel.
-     */
-    occupiedTileIds: Set<TileId>;
-
-    /**
      * Map of tile IDs to maps of pixel colors to the number of pixels of that color in that tile.
+     *
+     * Tile IDs are a set of `${x}_${y}` strings representing tiles where this template has at least one visible pixel.
+     * Must be properly world-wrapped.
+     *
+     * Only present for optimized templates, since this is only used for templates that can be visible on the canvas
+     * and only optimized templates can ever be shown (since that's how the renderer works)
      */
-    filledColorStats: Map<TileId, Map<PixelColor, number>>;
+    filledColorStats?: Map<TileId, Map<PixelColor, number>>;
 }
 
 export class TemplateAddedEvent extends Event {
@@ -53,10 +54,24 @@ export class TemplateDeletedEvent extends Event {
     }
 }
 
+export class TemplateOptimizedEvent extends Event {
+    constructor(readonly template: LiveTemplate) {
+        super('templateoptimized');
+    }
+}
+
+export class TemplateDeoptimizedEvent extends Event {
+    constructor(readonly template: LiveTemplate) {
+        super('templatedeoptimized');
+    }
+}
+
 interface TemplateRegistryEventMap {
     templateadded: TemplateAddedEvent;
     templatechanged: TemplateChangedEvent;
     templatedeleted: TemplateDeletedEvent;
+    templateoptimized: TemplateOptimizedEvent;
+    templatedeoptimized: TemplateDeoptimizedEvent;
 }
 
 interface TemplateRegistryEventTarget extends EventTarget {
@@ -87,13 +102,27 @@ export const TemplateRegistryEvents: TemplateRegistryEventTarget = new EventTarg
 
 const availableTemplates = new Map<string, LiveTemplate>();
 const knownTemplateHashes = new Set<string>();
+const tileIdTemplateMap = new Map<TileId, Set<string>>();
 
 interface TemplateInit {
     name: string;
     image: ImageData;
 }
 
-function storedTemplateToLiveTemplate(template: StoredTemplate): LiveTemplate {
+function tileId(tilePosition: TileCoordinates): TileId {
+    return `${tilePosition.x}_${tilePosition.y}`;
+}
+
+function optimizedTemplateDataToFilledColorStats(
+    optimizedData: OptimizedTemplateData,
+): Map<TileId, Map<PixelColor, number>> {
+    return new Map(optimizedData.tiles.map((tile) => [tileId(tile.tilePosition), new Map<PixelColor, number>()]));
+}
+
+function storedTemplateToLiveTemplate(
+    template: StoredTemplate,
+    optimizedTemplateData?: OptimizedTemplateData,
+): LiveTemplate {
     return {
         id: template.id,
         name: template.name,
@@ -102,8 +131,9 @@ function storedTemplateToLiveTemplate(template: StoredTemplate): LiveTemplate {
         hash: template.hash,
         thumbnail: template.thumbnail,
         thumbnailUrl: URL.createObjectURL(template.thumbnail),
-        occupiedTileIds: new Set(),
-        filledColorStats: new Map(),
+        filledColorStats: optimizedTemplateData
+            ? optimizedTemplateDataToFilledColorStats(optimizedTemplateData)
+            : undefined,
     };
 }
 
@@ -121,6 +151,9 @@ function liveTemplateToStoredTemplate(template: LiveTemplate): StoredTemplate {
 function addTemplateInternal(template: LiveTemplate): void {
     availableTemplates.set(template.id, template);
     knownTemplateHashes.add(template.hash);
+    if (template.filledColorStats) {
+        addTemplateTilesToMap(template.id, template.filledColorStats);
+    }
 }
 
 function deleteTemplateInternal(templateId: string): void {
@@ -128,7 +161,28 @@ function deleteTemplateInternal(templateId: string): void {
     if (template) {
         availableTemplates.delete(templateId);
         knownTemplateHashes.delete(template.hash);
+        if (template.filledColorStats) {
+            removeTemplateTilesFromMap(template.id, template.filledColorStats);
+        }
         URL.revokeObjectURL(template.thumbnailUrl);
+    }
+}
+
+function addTemplateTilesToMap(templateId: string, filledColorStats: Map<TileId, Map<PixelColor, number>>): void {
+    for (const tile of filledColorStats.keys()) {
+        tileIdTemplateMap.getOrInsertComputed(tile, () => new Set<string>()).add(templateId);
+    }
+}
+
+function removeTemplateTilesFromMap(templateId: string, filledColorStats: Map<TileId, Map<PixelColor, number>>): void {
+    for (const tile of filledColorStats.keys()) {
+        const templatesForTile = tileIdTemplateMap.get(tile);
+        if (templatesForTile) {
+            templatesForTile.delete(templateId);
+            if (templatesForTile.size === 0) {
+                tileIdTemplateMap.delete(tile);
+            }
+        }
     }
 }
 
@@ -141,15 +195,18 @@ export const TemplateRegistry = {
         const templates = await TemplateStorage.getAllTemplates();
         debugDetailed('Initializing template registry with templates', templates);
         for (const template of templates) {
-            addTemplateInternal(storedTemplateToLiveTemplate(template));
+            let optimizedTemplateData = await TemplateStorage.getOptimizedTemplateData(template.id);
+            if (optimizedTemplateData && optimizedTemplateData.paletteVersion !== Platform.colorsVersion) {
+                debug(
+                    `Template ${template.id} was optimized with palette v${optimizedTemplateData.paletteVersion}, current is v${Platform.colorsVersion}, deoptimizing...`,
+                );
+                await TemplateStorage.deleteOptimizedTemplateData(template.id);
+                optimizedTemplateData = undefined;
+            }
+            addTemplateInternal(storedTemplateToLiveTemplate(template, optimizedTemplateData));
         }
 
         await TemplateStorage.cleanupUnusedTemplateImages(knownTemplateHashes);
-    },
-
-    async hasTemplate(template: ImageData): Promise<boolean> {
-        const hash = await ImageTools.computeImageHash(template);
-        return knownTemplateHashes.has(hash);
     },
 
     async addTemplate(template: TemplateInit): Promise<void> {
@@ -162,31 +219,82 @@ export const TemplateRegistry = {
         const imageBlob = await encodeIndexedPngBlob(template.image, Platform.colors);
         pngEncodeDebugTimer?.stop();
 
+        const coordinates = pixelCoordinates({
+            x: viewportCenter.x - template.image.width / 2,
+            y: viewportCenter.y - template.image.height / 2,
+        });
+        const dimensions = pixelDimensions({ width, height });
         const newTemplate: LiveTemplate = {
             id,
             name: template.name,
-            coordinates: pixelCoordinates({
-                x: viewportCenter.x - template.image.width / 2,
-                y: viewportCenter.y - template.image.height / 2,
-            }),
-            dimensions: pixelDimensions({ width, height }),
+            coordinates,
+            dimensions,
             hash,
             thumbnail,
             thumbnailUrl: URL.createObjectURL(thumbnail),
-            occupiedTileIds: new Set(),
-            filledColorStats: new Map(),
+            filledColorStats: undefined,
         };
         await TemplateStorage.saveTemplate(liveTemplateToStoredTemplate(newTemplate));
         await TemplateStorage.saveTemplateImage({ hash, image: imageBlob });
         addTemplateInternal(newTemplate);
         TemplateRegistryEvents.dispatchEvent(new TemplateAddedEvent(newTemplate));
         debugDetailed('Added new template', newTemplate);
-        // todo: compute occupied tiles
-        // todo: compute filled color stats
+    },
+
+    async optimizeTemplate(id: string): Promise<void> {
+        const template = availableTemplates.get(id);
+        if (!template) {
+            debug(`Cannot optimize template with id ${id} - template not found`);
+            return;
+        }
+
+        const storedTemplateImage = await TemplateStorage.getTemplateImage(template.hash);
+        if (!storedTemplateImage) {
+            debug(`Cannot optimize template with id ${id} - template image not found in storage`);
+            return;
+        }
+
+        const imageBitmap = await createImageBitmap(storedTemplateImage.image);
+        const imageData = ImageTools.imageBitmapToImageData(imageBitmap);
+        const optimizedData = await optimizeTemplate(id, imageData, template.coordinates);
+        await TemplateStorage.saveOptimizedTemplateData(optimizedData);
+        template.filledColorStats = optimizedTemplateDataToFilledColorStats(optimizedData);
+        addTemplateTilesToMap(template.id, template.filledColorStats);
+        TemplateRegistryEvents.dispatchEvent(new TemplateOptimizedEvent(template));
+        debug(`Optimized template with id ${id}`);
+    },
+
+    async deoptimizeTemplate(id: string): Promise<void> {
+        const template = availableTemplates.get(id);
+        if (!template) {
+            debug(`Cannot deoptimize template with id ${id} - template not found`);
+            return;
+        }
+
+        if (template.filledColorStats) {
+            removeTemplateTilesFromMap(template.id, template.filledColorStats);
+        }
+        template.filledColorStats = undefined;
+        await TemplateStorage.deleteOptimizedTemplateData(template.hash);
+        TemplateRegistryEvents.dispatchEvent(new TemplateDeoptimizedEvent(template));
+        debug(`Deoptimized template with id ${id}`);
     },
 
     async moveTemplate(id: string, amount: PixelVector): Promise<void> {
-        // todo
+        const template = availableTemplates.get(id);
+        if (!template) {
+            debug(`Cannot move template with id ${id} - template not found`);
+            return;
+        }
+
+        template.coordinates = pixelCoordinates({
+            x: template.coordinates.x + amount.x,
+            y: template.coordinates.y + amount.y,
+        });
+        await TemplateStorage.saveTemplate(liveTemplateToStoredTemplate(template));
+        TemplateRegistryEvents.dispatchEvent(new TemplateChangedEvent(template));
+        debug(`Moved template with id ${id} by (${amount.x}, ${amount.y})`);
+        await TemplateRegistry.deoptimizeTemplate(id);
     },
 
     async renameTemplate(id: string, newName: string): Promise<void> {
@@ -234,6 +342,7 @@ export const TemplateRegistry = {
         await TemplateStorage.saveTemplateImage({ hash: newHash, image: newImageBlob });
         await TemplateStorage.cleanupUnusedTemplateImages(knownTemplateHashes);
         TemplateRegistryEvents.dispatchEvent(new TemplateChangedEvent(template));
+        await TemplateRegistry.deoptimizeTemplate(id);
         debug(`Replaced image of template with id ${id}`);
         return true;
     },

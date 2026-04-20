@@ -1,6 +1,5 @@
 import { Platform } from '../../platform/platform';
 import type { PixelColor } from '../../platform/types';
-import { compressData } from '../../util/compression';
 import {
     extentToRect,
     getCoveredTiles,
@@ -29,18 +28,18 @@ export interface OptimizedTemplateTile {
     imageRect: PixelRect;
 
     /**
-     * compressed binary data containing color indexes
+     * binary data containing color indexes
      *
      * this assumes the palette never changes
      */
-    compressedData: ArrayBuffer;
+    data: ArrayBuffer;
 }
 
 export interface OptimizedTemplateData {
     /**
-     * hash of the original image, used as a key
+     * id of the template, used as a key
      */
-    hash: string;
+    id: string;
 
     /**
      * version of the palette this was optimized with, used to determine whether the template needs to be re-optimized
@@ -81,16 +80,19 @@ async function optimizeTile(
     }
 
     const paletteIndexBuffer = await ImageTools.imageToPaletteIndexBuffer(imageData, palette);
-    const compressedData = await compressData(paletteIndexBuffer, 'gzip');
 
     return {
         tilePosition: tileCoordinates({ x: tileRect.x, y: tileRect.y }),
         imageRect,
-        compressedData,
+        data: paletteIndexBuffer,
     };
 }
 
-export async function optimizeTemplate(image: ImageData, position: PixelCoordinates): Promise<OptimizedTemplateData> {
+export async function optimizeTemplate(
+    templateId: string,
+    image: ImageData,
+    position: PixelCoordinates,
+): Promise<OptimizedTemplateData> {
     const coveredTiles = getCoveredTiles(
         { ...position, width: image.width, height: image.height },
         Platform.tilePixelDimensions,
@@ -112,7 +114,7 @@ export async function optimizeTemplate(image: ImageData, position: PixelCoordina
     const optimizedTiles = await Promise.all(optimizedTilesPromises);
 
     return {
-        hash: await ImageTools.computeImageHash(image),
+        id: templateId,
         paletteVersion: Platform.colorsVersion,
         position,
         tileSize: { ...Platform.tilePixelDimensions },

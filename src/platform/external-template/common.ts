@@ -1,6 +1,6 @@
 import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
-import { assertCanvasCtx } from '../../util/canvas';
 import type { PixelCoordinates } from '../../util/geometry';
+import { ImageTools } from '../../workers/image-tools-dispatcher';
 import type { BaseTemplateParseResult } from './types';
 
 export async function handleBlobFromParsedTemplate(
@@ -25,11 +25,7 @@ export async function handleBlobFromParsedTemplate(
         return { success: false, errorCode: 'imageTooLarge' };
     }
 
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx);
-    ctx.drawImage(bitmap, 0, 0);
-    const imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+    const imageData = ImageTools.imageBitmapToImageData(bitmap);
     bitmap.close();
 
     return {

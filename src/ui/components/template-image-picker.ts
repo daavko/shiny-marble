@@ -5,10 +5,8 @@ import { el } from '../../core/dom/html';
 import { createEffectContext, type EffectContext } from '../../core/effects';
 import { getPngImageSize, isPngFile } from '../../core/png/png-tools';
 import { signal } from '../../core/signals';
-import { TemplateRegistry } from '../../core/template/registry';
 import { getLosslessWebpImageSize, isLosslessWebpFile } from '../../core/webp/webp-tools';
 import { Platform } from '../../platform/platform';
-import { assertCanvasCtx } from '../../util/canvas';
 import { downloadBlob } from '../../util/file';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { renderBlockButton } from '../builtin/button';
@@ -131,23 +129,13 @@ export function createTemplateImagePicker(
             return;
         }
 
-        const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
-        const ctx = canvas.getContext('2d');
-        assertCanvasCtx(ctx);
-        ctx.drawImage(imageBitmap, 0, 0);
+        const image = ImageTools.imageBitmapToImageData(imageBitmap);
         imageBitmap.close();
-        const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
         const matches = await ImageTools.verifyImageMatchesPalette(image, Platform.colors);
 
         if (!matches) {
             imageDiff.value = await ImageTools.highlightNonMatchingPixels(image, Platform.colors, 0.75, 0xff0000ff);
-            return;
-        }
-
-        if (await TemplateRegistry.hasTemplate(image)) {
-            errorMessage.value = 'A template with the same image already exists.';
-            debug('Template image already exists in registry');
             return;
         }
 

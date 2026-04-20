@@ -2,7 +2,6 @@ import { BlobReader, BlobWriter, ZipReader } from '@zip.js/zip.js';
 import type { SafeParseResult } from 'valibot';
 import * as v from 'valibot';
 import { Platform } from '../../platform/platform';
-import { assertCanvasCtx } from '../../util/canvas';
 import { pixelCoordinates } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../const';
@@ -63,12 +62,8 @@ async function readTemplateImage(file: Blob): Promise<ArrayBuffer | null> {
         if (bitmap.width > MAX_TEMPLATE_CANVAS_DIMENSION || bitmap.height > MAX_TEMPLATE_CANVAS_DIMENSION) {
             return null;
         }
-
-        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-        const ctx = canvas.getContext('2d');
-        assertCanvasCtx(ctx);
-        ctx.drawImage(bitmap, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const imageData = ImageTools.imageBitmapToImageData(bitmap);
+        bitmap.close();
 
         const matchesColors = await ImageTools.verifyImageMatchesPalette(imageData, Platform.colors);
         if (!matchesColors) {

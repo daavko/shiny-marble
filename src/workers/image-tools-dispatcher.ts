@@ -223,6 +223,14 @@ async function imageToBlob(image: ImageData): Promise<Blob> {
     return canvas.convertToBlob({ type: 'image/png' });
 }
 
+function imageBitmapToImageData(bitmap: ImageBitmap): ImageData {
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d');
+    assertCanvasCtx(ctx);
+    ctx.drawImage(bitmap, 0, 0);
+    return ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+}
+
 async function computeImageHash(image: ImageData): Promise<string> {
     const buffer = image.data.buffer;
     const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
@@ -305,6 +313,10 @@ async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColo
     return result.blob;
 }
 
+async function calculateTileColorStats(tileImage: ImageData): Promise<void> {
+
+}
+
 export const ImageTools = {
     verifyImageMatchesPalette,
     highlightNonMatchingPixels,
@@ -312,6 +324,7 @@ export const ImageTools = {
     detectCanvasFingerprintingProtection,
     computeImageHash,
     imageToBlob,
+    imageBitmapToImageData,
     detemplatizeBlueMarbleTile,
     findTransparentBorder,
     cropToExtent,

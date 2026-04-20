@@ -8,6 +8,7 @@ import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../const';
 import { debug } from '../debug';
 import {
+    TEMPLATE_ZIP_IMPORT_MAX_SIZE,
     TEMPLATE_ZIP_IMPORT_MAX_TEMPLATE_COUNT,
     TEMPLATE_ZIP_METADATA_FILENAME,
     type TemplateArchiveMetadata,
@@ -161,6 +162,7 @@ export async function* createTemplatesGenerator(
 }
 
 type TemplateCollectionImportInfoErrorType =
+    | 'zipTooLarge'
     | 'missingMarkerFile'
     | 'invalidMarkerFile'
     | 'unsupportedVersion'
@@ -183,6 +185,10 @@ export type TemplateCollectionImportInfoResult =
     | TemplateCollectionImportInfoError;
 
 export async function collectTemplatesInfo(zipFile: Blob): Promise<TemplateCollectionImportInfoResult> {
+    if (zipFile.size > TEMPLATE_ZIP_IMPORT_MAX_SIZE) {
+        return { success: false, error: 'zipTooLarge' };
+    }
+
     const zipReader = new ZipReader(new BlobReader(zipFile));
     let metadataFile: Blob | null = null;
     const foundTemplateMetadata = new Map<string, Blob>();

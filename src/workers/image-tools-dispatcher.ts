@@ -7,7 +7,7 @@ import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTask
 import imageToolsWorkerCode from './image-tools.worker';
 import { createWorker } from './worker';
 
-const maxWorkerConcurrency = Math.floor(navigator.hardwareConcurrency / 2);
+const maxWorkerConcurrency = Math.max(1, Math.floor(hardwareConcurrency / 2));
 const activeWorkers = new Set<Worker>();
 
 const pendingTasks: ImageToolsTaskRequest[] = [];
@@ -258,6 +258,7 @@ async function findTransparentBorder(image: ImageData): Promise<FindTransparentB
 }
 
 function cropToExtent(image: ImageData, area: PixelExtent): ImageData {
+    // todo: consider replacing this with raw buffer operations
     const { minX, minY, maxX, maxY } = area;
     const width = maxX - minX + 1;
     const height = maxY - minY + 1;
@@ -313,8 +314,21 @@ async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColo
     return result.blob;
 }
 
-async function calculateTileColorStats(tileImage: ImageData): Promise<void> {
+async function calculateTileColorStats(tileImage: ImageData): Promise<void> {}
 
+async function loadIndexedImage(
+    bitmap: ImageBitmap,
+    palette: readonly PixelColor[],
+    onNonMatching: 'null',
+): Promise<{ success: true; image: ImageData } | { success: false }>;
+async function loadIndexedImage(
+    bitmap: ImageBitmap,
+    palette: readonly PixelColor[],
+    onNonMatching: 'diff',
+): Promise<{ success: true; image: ImageData } | { success: false; diff: ImageData }>;
+async function loadIndexedImage(bitmap: ImageBitmap, palette: readonly PixelColor[]): Promise<ImageData | null> {
+    // todo: this will be a replacement for verifyImageMatchesPalette + imageToPaletteIndexBuffer in a single step
+    // within a worker
 }
 
 export const ImageTools = {

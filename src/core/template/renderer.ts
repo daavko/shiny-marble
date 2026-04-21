@@ -9,17 +9,19 @@ export class TemplateRenderer implements CustomLayerInterface {
 
     onAdd(map: Map, gl: WebGLRenderingContext | WebGL2RenderingContext): void {
         this.map = map;
+        // todo add event listeners to load template tiles when map moves, keep a cache of last N template tiles in memory
     }
 
     onRemove(map: Map, gl: WebGLRenderingContext | WebGL2RenderingContext): void {
         this.map = null;
+        // todo remove events
     }
 
     prerender(gl: WebGLRenderingContext | WebGL2RenderingContext, options: CustomRenderMethodInput): void {
-        // todo
+        // todo quite possibly remove, we might not need a pre-render pass
     }
 
     render(gl: WebGLRenderingContext | WebGL2RenderingContext, options: CustomRenderMethodInput): void {
-        // todo
+        // todo render tiles that are in the viewport
     }
 }

@@ -10,7 +10,7 @@ export function simpleNamedColorToPixelColor(name: string, rgba: number): PixelC
 }
 
 export function createPixelColorIndexLut(colors: readonly PixelColor[]): Record<number, number | undefined> {
-    return Object.fromEntries(colors.map((color) => [color.rgba, color.rgba]));
+    return Object.fromEntries(colors.map((color, index) => [color.rgba, index]));
 }
 
 export function rgbToRgbaRaw(r: number, g: number, b: number): number {

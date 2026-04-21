@@ -3,15 +3,32 @@ import { showErrorAlert } from '../../ui/components/alerts-container';
 import type { PixelCoordinates, PixelDimensions, PixelRect, TileCoordinates } from '../../util/geometry';
 import { waitForDataAndTransaction } from '../../util/idb';
 import { debug } from '../debug';
-import type { TileId } from './common';
-import type { OptimizedTemplateData } from './optimizer';
 
 export interface StoredTemplate {
     id: string;
     name: string;
     coordinates: PixelCoordinates;
     dimensions: PixelDimensions;
+
+    /**
+     * hash of the ImageData of the template image
+     */
     hash: string;
+
+    /**
+     * version of the palette this was optimized with, used to determine whether the template needs to be re-optimized
+     * and re-saved
+     */
+    paletteVersion: number;
+
+    /**
+     * tile size this was stored with, in case the canvas changes tile sizes for some reason...
+     *
+     * bplace has done this once already so it's better to be safe here, worst case this just causes the template to be
+     * re-optimized and re-saved with new tile size
+     */
+    tileSize: PixelDimensions;
+
     /**
      * image/png Blob
      */
@@ -19,7 +36,11 @@ export interface StoredTemplate {
 }
 
 export interface StoredTemplateImage {
+    /**
+     * hash of the ImageData of the template image, used as a key
+     */
     hash: string;
+
     /**
      * image/png Blob
      */
@@ -27,14 +48,7 @@ export interface StoredTemplateImage {
 }
 
 export interface StoredOptimizedTemplateTile {
-    /**
-     * id of the template
-     */
     templateId: string;
-
-    /**
-     * tile position
-     */
     tilePosition: TileCoordinates;
 
     /**
@@ -50,38 +64,6 @@ export interface StoredOptimizedTemplateTile {
     compressedData: ArrayBuffer;
 }
 
-export interface StoredOptimizedTemplateMetadata {
-    /**
-     * id of the template, used as a key
-     */
-    id: string;
-
-    /**
-     * version of the palette this was optimized with, used to determine whether the template needs to be re-optimized
-     * and re-saved
-     */
-    paletteVersion: number;
-
-    /**
-     * position of the original template image, if the template moves then this can be used to determine whether it
-     * needs to be re-optimized and re-saved
-     */
-    position: PixelCoordinates;
-
-    /**
-     * tile size this was stored with, in case the canvas changes tile sizes for some reason...
-     *
-     * bplace has done this once already so it's better to be safe here, worst case this just causes the template to be
-     * re-optimized and re-saved with new tile size
-     */
-    tileSize: PixelDimensions;
-
-    /**
-     * list of tiles this template occupies, used for fast lookup
-     */
-    tiles: TileId[];
-}
-
 interface TemplateStorageDBSchema extends DBSchema {
     templates: {
         key: string;
@@ -91,13 +73,13 @@ interface TemplateStorageDBSchema extends DBSchema {
         key: string;
         value: StoredTemplateImage;
     };
-    optimizedTemplateMetadata: {
-        key: string;
-        value: StoredOptimizedTemplateMetadata;
-    };
     optimizedTemplateTiles: {
-        key: [string, string, string]; // [templateId, tilePosition.x, tilePosition.y]
+        key: [string, number, number]; // [templateId, tilePosition.x, tilePosition.y]
         value: StoredOptimizedTemplateTile;
+        indexes: {
+            templateId: string;
+            tilePosition: [number, number]; // [tilePosition.x, tilePosition.y]
+        };
     };
 }
 
@@ -138,10 +120,11 @@ async function getStorage(): Promise<TemplateStorageDB> {
             }
             if (oldVersion < 2) {
                 // v2 adds optimized template images store
-                db.createObjectStore('optimizedTemplateMetadata', { keyPath: 'id' });
-                db.createObjectStore('optimizedTemplateTiles', {
+                const tilesObjectStore = db.createObjectStore('optimizedTemplateTiles', {
                     keyPath: ['templateId', 'tilePosition.x', 'tilePosition.y'],
                 });
+                tilesObjectStore.createIndex('templateId', 'templateId');
+                tilesObjectStore.createIndex('tilePosition', ['tilePosition.x', 'tilePosition.y']);
             }
         },
         blocked: (currentVersion, blockedVersion, event) => {
@@ -195,8 +178,14 @@ export const TemplateStorage = {
     },
     async deleteTemplate(id: string): Promise<void> {
         const db = await getStorage();
-        await db.delete('templates', id);
-        await TemplateStorage.deleteOptimizedTemplateData(id);
+        const tx = db.transaction(['templates', 'optimizedTemplateTiles'], 'readwrite');
+        const store = tx.objectStore('templates');
+        const tilesStore = tx.objectStore('optimizedTemplateTiles');
+        const index = tilesStore.index('templateId');
+
+        const tileKeys = await index.getAllKeys(id);
+
+        await Promise.all([store.delete(id), ...tileKeys.map((key) => tilesStore.delete(key)), tx.done]);
     },
 
     async saveTemplateImage(image: StoredTemplateImage): Promise<void> {
@@ -228,23 +217,20 @@ export const TemplateStorage = {
         const allImageHashes = new Set(await store.getAllKeys());
         const hashesToDelete = Array.from(allImageHashes.difference(usedHashes));
         if (hashesToDelete.length > 0) {
-            await waitForDataAndTransaction(
-                hashesToDelete.map((hash) => store.delete(hash)),
-                tx,
-            );
+            await Promise.all([...hashesToDelete.map((hash) => store.delete(hash)), tx.done]);
         }
     },
-
-    async saveOptimizedTemplateData(image: OptimizedTemplateData): Promise<void> {
+    async getOptimizedTemplateTiles(templateId: string): Promise<StoredOptimizedTemplateTile[]> {
         const db = await getStorage();
-        await db.put('optimizedTemplateData', image);
+        return await db.getAllFromIndex('optimizedTemplateTiles', 'templateId', templateId);
     },
-    async getOptimizedTemplateData(id: string): Promise<OptimizedTemplateData | undefined> {
+    async getTemplatesCoveringTile(tilePosition: TileCoordinates): Promise<string[]> {
         const db = await getStorage();
-        return await db.get('optimizedTemplateData', id);
-    },
-    async deleteOptimizedTemplateData(id: string): Promise<void> {
-        const db = await getStorage();
-        await db.delete('optimizedTemplateData', id);
+        const tiles = await db.getAllKeysFromIndex('optimizedTemplateTiles', 'tilePosition', [
+            tilePosition.x,
+            tilePosition.y,
+        ]);
+        const templateIds = tiles.map((key) => key[0]);
+        return Array.from(new Set(templateIds));
     },
 };

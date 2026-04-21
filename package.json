@@ -18,7 +18,7 @@
     },
     "dependencies": {
         "@mdi/js": "^7.4.47",
-        "@turf/turf": "^7.3.4",
+        "@turf/turf": "^7.3.5",
         "@zip.js/zip.js": "^2.8.26",
         "idb": "^8.0.3",
         "luxon": "^3.7.2",
@@ -35,12 +35,12 @@
         "@types/luxon": "^3.7.1",
         "@types/picomatch": "^4.0.3",
         "esbuild": "^0.28.0",
-        "eslint": "^10.2.0",
+        "eslint": "^10.2.1",
         "eslint-config-prettier": "^10.1.8",
         "globals": "^17.5.0",
         "prettier": "^3.8.3",
         "prettier-plugin-organize-imports": "^4.3.0",
         "typescript": "~6.0.2",
-        "typescript-eslint": "^8.58.2"
+        "typescript-eslint": "^8.59.0"
     }
 }

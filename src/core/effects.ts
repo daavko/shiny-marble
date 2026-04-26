@@ -8,6 +8,8 @@ export interface EffectContext {
     adopt(subcontext: EffectContext): void;
     unadopt(subcontext: EffectContext): void;
 
+    createSubcontext(): EffectContext;
+
     destroy(): void;
 
     watch<const TInputs extends ReadonlySignal<unknown>[]>(
@@ -52,6 +54,11 @@ export function createEffectContext(): EffectContext {
         },
         unadopt(subcontext: EffectContext): void {
             adoptedContexts.delete(subcontext);
+        },
+        createSubcontext(): EffectContext {
+            const subctx = createEffectContext();
+            ctx.adopt(subctx);
+            return subctx;
         },
         destroy(): void {
             for (const subcontext of adoptedContexts) {

@@ -40,12 +40,22 @@ function parseTileData(tileData: ArrayBuffer): BplaceBinaryTile {
         throw new Error("Can't determine version of binary tile");
     }
 
+    // transparent gets sorted as the first color, most likely for best compression
+    const sortedColors = BplacePlatform.colors.toSorted((a, b) => {
+        if (a.rgba === 0) {
+            return -1;
+        } else if (b.rgba === 0) {
+            return 1;
+        } else {
+            return 0;
+        }
+    });
     const colorBuffer = new Uint32Array(pixelsPerTile);
     const playerShortIds = new Uint32Array(pixelsPerTile);
     for (let i = 0; i < pixelsPerTile; i++) {
         const colorIndex = dataView.getUint8(i * bytesPerPixel);
         const playerShortId = dataView.getUint32(i * bytesPerPixel + 1, true);
-        const color = BplacePlatform.colors.at(colorIndex);
+        const color = sortedColors.at(colorIndex);
         if (!color) {
             throw new Error(`Invalid color index ${colorIndex} at pixel ${i}`);
         }

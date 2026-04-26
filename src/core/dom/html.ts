@@ -1,8 +1,10 @@
-type StringProperties<T> = { [K in keyof T as T[K] extends string ? (K extends number ? never : K) : never]: T[K] };
+export type StringProperties<T> = {
+    [K in keyof T as T[K] extends string ? (K extends number ? never : K) : never]: T[K];
+};
 
-type CssKeys = keyof StringProperties<CSSStyleDeclaration>;
+export type CssKeys = keyof StringProperties<CSSStyleDeclaration>;
 
-type AttributesRecord = Record<string, string | number | boolean | null | undefined>;
+export type AttributesRecord = Record<string, string | number | boolean | null | undefined>;
 
 export interface ElementOptions {
     class?: string | string[];
@@ -21,7 +23,7 @@ export interface SVGElementOptions extends ElementOptions {
 }
 
 interface AnyElementOptions extends ElementOptions {
-    events?: AnyEventListenerMap;
+    events?: AnyElementEventListenerMap;
 }
 
 export type HTMLEventListenerFn<K extends keyof HTMLElementEventMap> = (evt: HTMLElementEventMap[K]) => void;
@@ -64,7 +66,7 @@ function isEventListenerWithOptions(
     );
 }
 
-type AnyEventListenerMap = Record<
+export type AnyElementEventListenerMap = Record<
     string,
     AnyEventListenerFn | AnyEventListenerWithOptions | (AnyEventListenerFn | AnyEventListenerWithOptions)[]
 >;
@@ -118,7 +120,7 @@ export function svgEl<T extends keyof SVGElementTagNameMap>(
     return element;
 }
 
-function setCommonPropsAndChildren(
+export function setCommonPropsAndChildren(
     element: HTMLElement | SVGElement,
     options?: AnyElementOptions,
     children?: HTMLElementChild[],
@@ -127,14 +129,15 @@ function setCommonPropsAndChildren(
         element.id = options.id;
     }
     if (options?.class != null && options.class !== '') {
-        if (Array.isArray(options.class)) {
-            element.classList.add(...options.class.filter((cls) => cls !== ''));
-        } else {
-            element.classList.add(options.class);
-        }
+        // if (Array.isArray(options.class)) {
+        //     element.classList.add(...options.class.filter((cls) => cls !== ''));
+        // } else {
+        //     element.classList.add(options.class);
+        // }
+        setElementClasses(element, options.class);
     }
     if (options?.style != null) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe, Object.entries isn't typed correctly
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe, Object.entries isn't typed well enough for this
         for (const [key, value] of Object.entries(options.style) as [CssKeys, string | undefined][]) {
             if (value != null) {
                 element.style[key] = value;
@@ -148,33 +151,54 @@ function setCommonPropsAndChildren(
     }
     if (options?.attributes != null) {
         for (const [key, value] of Object.entries(options.attributes)) {
-            if (typeof value === 'boolean' && value) {
-                element.setAttribute(key, '');
-            } else if (typeof value === 'string') {
-                element.setAttribute(key, value);
-            } else if (typeof value === 'number') {
-                element.setAttribute(key, value.toString());
+            const coercedValue = coerceAttributeValue(value);
+            if (coercedValue != null) {
+                element.setAttribute(key, coercedValue);
             }
         }
     }
     if (options?.events != null) {
-        for (const [eventName, listenerOrListeners] of Object.entries(options.events)) {
-            if (typeof listenerOrListeners === 'function') {
-                element.addEventListener(eventName, listenerOrListeners);
-            } else if (isEventListenerWithOptions(listenerOrListeners)) {
-                element.addEventListener(eventName, listenerOrListeners[0], listenerOrListeners[1]);
-            } else {
-                for (const listener of listenerOrListeners) {
-                    if (typeof listener === 'function') {
-                        element.addEventListener(eventName, listener);
-                    } else if (isEventListenerWithOptions(listener)) {
-                        element.addEventListener(eventName, listener[0], listener[1]);
-                    }
-                }
-            }
-        }
+        bindElementEvents(element, options.events);
     }
     if (children) {
         element.append(...children);
+    }
+}
+
+export function coerceAttributeValue(value: string | number | boolean | null | undefined): string | null {
+    if (typeof value === 'boolean') {
+        return value ? '' : null;
+    } else if (typeof value === 'string') {
+        return value;
+    } else if (typeof value === 'number') {
+        return value.toString();
+    } else {
+        return null;
+    }
+}
+
+export function setElementClasses(element: HTMLElement | SVGElement, classes: string | string[]): void {
+    if (Array.isArray(classes)) {
+        element.classList.add(...classes.filter((cls) => cls !== ''));
+    } else {
+        element.classList.add(classes);
+    }
+}
+
+export function bindElementEvents(element: HTMLElement | SVGElement, events: AnyElementEventListenerMap): void {
+    for (const [eventName, listenerOrListeners] of Object.entries(events)) {
+        if (typeof listenerOrListeners === 'function') {
+            element.addEventListener(eventName, listenerOrListeners);
+        } else if (isEventListenerWithOptions(listenerOrListeners)) {
+            element.addEventListener(eventName, listenerOrListeners[0], listenerOrListeners[1]);
+        } else {
+            for (const listener of listenerOrListeners) {
+                if (typeof listener === 'function') {
+                    element.addEventListener(eventName, listener);
+                } else if (isEventListenerWithOptions(listener)) {
+                    element.addEventListener(eventName, listener[0], listener[1]);
+                }
+            }
+        }
     }
 }

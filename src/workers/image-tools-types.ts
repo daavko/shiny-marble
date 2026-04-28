@@ -6,8 +6,6 @@ interface BaseImageToolsTask<T extends string> {
     taskId: string;
 }
 
-type VerifyImageMachesPaletteTaskName = 'verifyImageMatchesPalette';
-type HighlightNonMatchingPixelsTaskName = 'highlightNonMatchingPixels';
 type DetectCanvasFingerprintingProtectionTaskName = 'detectCanvasFingerprintingProtection';
 type DetemplatizeBlueMarbleTileTaskName = 'detemplatizeBlueMarbleTile';
 type FindTransparentBorderTaskName = 'findTransparentBorder';
@@ -15,24 +13,14 @@ type ImageToPaletteIndexBufferTaskName = 'imageToPaletteIndexBuffer';
 type WriteIndexedPngBufferTaskName = 'writeIndexedPngBuffer';
 type WriteIndexedPngBlobTaskName = 'writeIndexedPngBlob';
 type CropToExtentTaskName = 'cropToExtent';
-
-export interface VerifyImageMatchesPaletteTaskRequest extends BaseImageToolsTask<VerifyImageMachesPaletteTaskName> {
-    image: ImageData;
-    palette: readonly PixelColor[];
-}
-
-export interface HighlightNonMatchingPixelsTaskRequest extends BaseImageToolsTask<HighlightNonMatchingPixelsTaskName> {
-    image: ImageData;
-    palette: readonly PixelColor[];
-    darkenPercentage: number;
-    highlightColorRgba: number;
-}
+type LoadIndexedImageTaskName = 'loadIndexedImage';
+type LoadIndexedImageWithDiffTaskName = 'loadIndexedImageWithDiff';
 
 export type DetectCanvasFingerprintingProtectionTaskRequest =
     BaseImageToolsTask<DetectCanvasFingerprintingProtectionTaskName>;
 
 export interface DetemplatizeBlueMarbleTileTaskRequest extends BaseImageToolsTask<DetemplatizeBlueMarbleTileTaskName> {
-    image: ImageData;
+    bitmap: ImageBitmap;
 }
 
 export interface FindTransparentBorderTaskRequest extends BaseImageToolsTask<FindTransparentBorderTaskName> {
@@ -63,9 +51,19 @@ export type CropToNonTransparentAreaTaskRequest = BaseImageToolsTask<'cropToNonT
     image: ImageData;
 };
 
+export type LoadIndexedImageTaskRequest = BaseImageToolsTask<LoadIndexedImageTaskName> & {
+    bitmap: ImageBitmap;
+    palette: readonly PixelColor[];
+};
+
+export type LoadIndexedImageWithDiffTaskRequest = BaseImageToolsTask<LoadIndexedImageWithDiffTaskName> & {
+    bitmap: ImageBitmap;
+    palette: readonly PixelColor[];
+    darkenPercentage: number;
+    highlightColorRgba: number;
+};
+
 export type ImageToolsTaskRequest =
-    | VerifyImageMatchesPaletteTaskRequest
-    | HighlightNonMatchingPixelsTaskRequest
     | DetectCanvasFingerprintingProtectionTaskRequest
     | DetemplatizeBlueMarbleTileTaskRequest
     | FindTransparentBorderTaskRequest
@@ -73,40 +71,14 @@ export type ImageToolsTaskRequest =
     | WriteIndexedPngBufferTaskRequest
     | WriteIndexedPngBlobTaskRequest
     | CropToExtentTaskRequest
-    | CropToNonTransparentAreaTaskRequest;
+    | CropToNonTransparentAreaTaskRequest
+    | LoadIndexedImageTaskRequest
+    | LoadIndexedImageWithDiffTaskRequest;
 
 interface BaseImageToolsTaskResult<T extends string> {
     task: T;
     taskId: string;
 }
-
-export interface VerifyImageMatchesPaletteTaskSuccessResult extends BaseImageToolsTaskResult<VerifyImageMachesPaletteTaskName> {
-    success: true;
-    matches: boolean;
-}
-
-export interface VerifyImageMatchesPaletteTaskErrorResult extends BaseImageToolsTaskResult<VerifyImageMachesPaletteTaskName> {
-    success: false;
-    error: unknown;
-}
-
-export type VerifyImageMatchesPaletteTaskResult =
-    | VerifyImageMatchesPaletteTaskSuccessResult
-    | VerifyImageMatchesPaletteTaskErrorResult;
-
-export interface HighlightNonMatchingPixelsTaskSuccessResult extends BaseImageToolsTaskResult<HighlightNonMatchingPixelsTaskName> {
-    success: true;
-    image: ImageData;
-}
-
-export interface HighlightNonMatchingPixelsTaskErrorResult extends BaseImageToolsTaskResult<HighlightNonMatchingPixelsTaskName> {
-    success: false;
-    error: unknown;
-}
-
-export type HighlightNonMatchingPixelsTaskResult =
-    | HighlightNonMatchingPixelsTaskSuccessResult
-    | HighlightNonMatchingPixelsTaskErrorResult;
 
 export interface DetectCanvasFingerprintingProtectionTaskSuccessResult extends BaseImageToolsTaskResult<DetectCanvasFingerprintingProtectionTaskName> {
     success: true;
@@ -218,9 +190,34 @@ export type CropToNonTransparentAreaTaskResult =
     | CropToNonTransparentAreaTaskSuccessResult
     | CropToNonTransparentAreaTaskErrorResult;
 
+export interface LoadIndexedImageTaskSuccessResult extends BaseImageToolsTaskResult<LoadIndexedImageTaskName> {
+    success: true;
+    image: ImageData | null;
+}
+
+export interface LoadIndexedImageTaskErrorResult extends BaseImageToolsTaskResult<LoadIndexedImageTaskName> {
+    success: false;
+    error: unknown;
+}
+
+export type LoadIndexedImageTaskResult = LoadIndexedImageTaskSuccessResult | LoadIndexedImageTaskErrorResult;
+
+export interface LoadIndexedImageWithDiffTaskSuccessResult extends BaseImageToolsTaskResult<LoadIndexedImageWithDiffTaskName> {
+    success: true;
+    matches: boolean;
+    image: ImageData;
+}
+
+export interface LoadIndexedImageWithDiffTaskErrorResult extends BaseImageToolsTaskResult<LoadIndexedImageWithDiffTaskName> {
+    success: false;
+    error: unknown;
+}
+
+export type LoadIndexedImageWithDiffTaskResult =
+    | LoadIndexedImageWithDiffTaskSuccessResult
+    | LoadIndexedImageWithDiffTaskErrorResult;
+
 export type ImageToolsTaskResult =
-    | VerifyImageMatchesPaletteTaskResult
-    | HighlightNonMatchingPixelsTaskResult
     | DetectCanvasFingerprintingProtectionTaskResult
     | DetemplatizeBlueMarbleTileTaskResult
     | FindTransparentBorderTaskResult
@@ -228,4 +225,6 @@ export type ImageToolsTaskResult =
     | WriteIndexedPngBufferTaskResult
     | WriteIndexedPngBlobTaskResult
     | CropToExtentTaskResult
-    | CropToNonTransparentAreaTaskResult;
+    | CropToNonTransparentAreaTaskResult
+    | LoadIndexedImageTaskResult
+    | LoadIndexedImageWithDiffTaskResult;

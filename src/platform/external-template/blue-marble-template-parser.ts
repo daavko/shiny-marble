@@ -172,9 +172,7 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
             return { success: false, errorCode: 'tileTooLarge' };
         }
 
-        const drawnImageData = ImageTools.imageBitmapToImageData(bitmap);
-        bitmap.close();
-        const detemplatizedTile = await ImageTools.detemplatizeBlueMarbleTile(drawnImageData);
+        const detemplatizedTile = await ImageTools.detemplatizeBlueMarbleTile(bitmap);
 
         const templateRelativeTileCoords = worldWrapPixelCoordinates(
             coordsWithNewOrigin(tile.coords, templateCoords),

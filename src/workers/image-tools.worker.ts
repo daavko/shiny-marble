@@ -3,6 +3,7 @@ import type { PixelColor } from '../platform/types';
 import { createPixelColorIndexLut } from '../util/color';
 import { extentToRect, type PixelExtent, pixelExtent } from '../util/geometry';
 import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
+import { imageBitmapToImageData } from '../util/image';
 
 function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): boolean {
     const paletteLut = createPixelColorIndexLut(palette);
@@ -81,7 +82,8 @@ function detectCanvasFingerprintingProtection(): boolean {
     return false;
 }
 
-function detemplatizeBlueMarbleTile(image: ImageData): ImageData {
+function detemplatizeBlueMarbleTile(bitmap: ImageBitmap): ImageData {
+    const image = imageBitmapToImageData(bitmap, true);
     const { width, height } = image;
     if (width % 3 !== 0 || height % 3 !== 0) {
         throw new Error('Input dimensions must be multiples of 3 for detemplatizeBlueMarbleTile');
@@ -194,11 +196,21 @@ function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColo
     return buffer;
 }
 
+async function writeIndexedPngBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
+    return encodeIndexedPngData(image, palette);
+}
+
+async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColor[]): Promise<Blob> {
+    return encodeIndexedPngBlob(image, palette);
+}
+
 function cropToExtent(image: ImageData, extent: PixelExtent): ImageData {
     const rect = extentToRect(extent);
     const srcView = new Uint32Array(image.data.buffer);
     const dest = new ImageData(rect.width, rect.height);
     const destView = new Uint32Array(dest.data.buffer);
+
+    // todo: protect against out of bounds extent by just changing the extent to never be out of bounds
 
     for (let y = 0; y < rect.height; y++) {
         const srcRowStart = (rect.y + y) * image.width + rect.x;
@@ -219,12 +231,28 @@ function cropToNonTransparentArea(image: ImageData): ImageData {
     }
 }
 
-async function writeIndexedPngBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
-    return encodeIndexedPngData(image, palette);
+function loadIndexedImage(bitmap: ImageBitmap, palette: readonly PixelColor[]): ImageData | null {
+    const imageData = imageBitmapToImageData(bitmap, true);
+    if (verifyImageMatchesPalette(imageData, palette)) {
+        return imageData;
+    } else {
+        return null;
+    }
 }
 
-async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColor[]): Promise<Blob> {
-    return encodeIndexedPngBlob(image, palette);
+function loadIndexedImageWithDiff(
+    bitmap: ImageBitmap,
+    palette: readonly PixelColor[],
+    darkenPercentage: number,
+    highlightColorRgba: number,
+): { matches: boolean; image: ImageData } {
+    const imageData = imageBitmapToImageData(bitmap, true);
+    if (verifyImageMatchesPalette(imageData, palette)) {
+        return { matches: true, image: imageData };
+    } else {
+        const highlightedImage = highlightNonMatchingPixels(imageData, palette, darkenPercentage, highlightColorRgba);
+        return { matches: false, image: highlightedImage };
+    }
 }
 
 function postTaskResult(data: ImageToolsTaskResult, transfer?: Transferable[]): void {
@@ -252,20 +280,6 @@ async function handleAsyncTask<T extends ImageToolsTaskRequest>(
 
 async function handleTaskRequest(request: ImageToolsTaskRequest): Promise<void> {
     switch (request.task) {
-        case 'verifyImageMatchesPalette':
-            handleTask(request, ({ taskId, image, palette }) => {
-                const matches = verifyImageMatchesPalette(image, palette);
-                postTaskResult({ task: 'verifyImageMatchesPalette', taskId, success: true, matches });
-            });
-            break;
-        case 'highlightNonMatchingPixels':
-            handleTask(request, ({ taskId, image, palette, darkenPercentage, highlightColorRgba }) => {
-                const resultImage = highlightNonMatchingPixels(image, palette, darkenPercentage, highlightColorRgba);
-                postTaskResult({ task: 'highlightNonMatchingPixels', taskId, success: true, image: resultImage }, [
-                    resultImage.data.buffer,
-                ]);
-            });
-            break;
         case 'detectCanvasFingerprintingProtection':
             handleTask(request, ({ taskId }) => {
                 const protectionDetected = detectCanvasFingerprintingProtection();
@@ -278,8 +292,8 @@ async function handleTaskRequest(request: ImageToolsTaskRequest): Promise<void> 
             });
             break;
         case 'detemplatizeBlueMarbleTile':
-            handleTask(request, ({ taskId, image }) => {
-                const resultImage = detemplatizeBlueMarbleTile(image);
+            handleTask(request, ({ taskId, bitmap }) => {
+                const resultImage = detemplatizeBlueMarbleTile(bitmap);
                 postTaskResult({ task: 'detemplatizeBlueMarbleTile', taskId, success: true, image: resultImage }, [
                     resultImage.data.buffer,
                 ]);
@@ -309,6 +323,14 @@ async function handleTaskRequest(request: ImageToolsTaskRequest): Promise<void> 
                 postTaskResult({ task: 'writeIndexedPngBlob', taskId, success: true, blob }, [blob]);
             });
             break;
+        case 'cropToExtent':
+            handleTask(request, ({ taskId, image, extent }) => {
+                const resultImage = cropToExtent(image, extent);
+                postTaskResult({ task: 'cropToExtent', taskId, success: true, image: resultImage }, [
+                    resultImage.data.buffer,
+                ]);
+            });
+            break;
         case 'cropToNonTransparentArea':
             handleTask(request, ({ taskId, image }) => {
                 const resultImage = cropToNonTransparentArea(image);
@@ -317,11 +339,25 @@ async function handleTaskRequest(request: ImageToolsTaskRequest): Promise<void> 
                 ]);
             });
             break;
-        case 'cropToExtent':
-            handleTask(request, ({ taskId, image, extent }) => {
-                const resultImage = cropToExtent(image, extent);
-                postTaskResult({ task: 'cropToExtent', taskId, success: true, image: resultImage }, [
-                    resultImage.data.buffer,
+        case 'loadIndexedImage':
+            handleTask(request, ({ taskId, bitmap, palette }) => {
+                const image = loadIndexedImage(bitmap, palette);
+                postTaskResult(
+                    { task: 'loadIndexedImage', taskId, success: true, image },
+                    image ? [image.data.buffer] : undefined,
+                );
+            });
+            break;
+        case 'loadIndexedImageWithDiff':
+            handleTask(request, ({ taskId, bitmap, palette, darkenPercentage, highlightColorRgba }) => {
+                const { matches, image } = loadIndexedImageWithDiff(
+                    bitmap,
+                    palette,
+                    darkenPercentage,
+                    highlightColorRgba,
+                );
+                postTaskResult({ task: 'loadIndexedImageWithDiff', taskId, success: true, matches, image }, [
+                    image.data.buffer,
                 ]);
             });
             break;

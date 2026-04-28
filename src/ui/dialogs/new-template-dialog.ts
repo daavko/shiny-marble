@@ -15,7 +15,7 @@ export function showNewTemplateDialog(): void {
                 return;
             }
 
-            const croppedImage = await ImageTools.cropToNonTransparentArea(image);
+            const croppedImage = await ImageTools.cropToNonTransparentArea(image, true);
 
             await TemplateRegistry.addTemplate({ name, image: croppedImage });
             dialog.close();

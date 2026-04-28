@@ -124,17 +124,13 @@ export function createTemplateImagePicker(
             return;
         }
 
-        const image = ImageTools.imageBitmapToImageData(imageBitmap);
-        imageBitmap.close();
+        const result = await ImageTools.loadIndexedImageWithDiff(imageBitmap, Platform.colors, 0.75, 0xff0000ff);
 
-        const matches = await ImageTools.verifyImageMatchesPalette(image, Platform.colors);
-
-        if (!matches) {
-            imageDiff.value = await ImageTools.highlightNonMatchingPixels(image, Platform.colors, 0.75, 0xff0000ff);
-            return;
+        if (result.success) {
+            await imagePickedCallback(result.image, file);
+        } else {
+            imageDiff.value = result.diff;
         }
-
-        await imagePickedCallback(image, file);
     }
 
     function renderPaletteDiffContainer(diffImage: ImageData): HTMLElement {

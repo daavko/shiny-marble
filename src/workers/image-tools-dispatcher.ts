@@ -115,35 +115,6 @@ function assertTaskResultSuccess<T extends ImageToolsTaskResult['task']>(
     }
 }
 
-async function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): Promise<boolean> {
-    const result = await doTaskInWorkerPool({
-        taskId: crypto.randomUUID(),
-        task: 'verifyImageMatchesPalette',
-        image,
-        palette,
-    });
-    assertTaskResultSuccess(result);
-    return result.matches;
-}
-
-async function highlightNonMatchingPixels(
-    image: ImageData,
-    palette: readonly PixelColor[],
-    darkenPercentage: number,
-    highlightColorRgba: number,
-): Promise<ImageData> {
-    const result = await doTaskInWorkerPool({
-        taskId: crypto.randomUUID(),
-        task: 'highlightNonMatchingPixels',
-        image,
-        palette,
-        darkenPercentage,
-        highlightColorRgba,
-    });
-    assertTaskResultSuccess(result);
-    return result.image;
-}
-
 async function upscalePixelArt(image: ImageData, scale: number): Promise<ImageData> {
     const { width: srcWidth, height: srcHeight } = image;
     const bitmap = await createImageBitmap(image);
@@ -221,34 +192,15 @@ async function detectCanvasFingerprintingProtection(): Promise<boolean> {
     return result.protectionDetected;
 }
 
-async function imageToBlob(image: ImageData): Promise<Blob> {
-    const canvas = new OffscreenCanvas(image.width, image.height);
-    const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx);
-    ctx.putImageData(image, 0, 0);
-    return canvas.convertToBlob({ type: 'image/png' });
-}
-
-function imageBitmapToImageData(bitmap: ImageBitmap): ImageData {
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx);
-    ctx.drawImage(bitmap, 0, 0);
-    return ctx.getImageData(0, 0, bitmap.width, bitmap.height);
-}
-
-async function computeImageHash(image: ImageData): Promise<string> {
-    const buffer = image.data.buffer;
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    return new Uint8Array(hashBuffer).toHex();
-}
-
-async function detemplatizeBlueMarbleTile(tile: ImageData): Promise<ImageData> {
-    const result = await doTaskInWorkerPool({
-        taskId: crypto.randomUUID(),
-        task: 'detemplatizeBlueMarbleTile',
-        image: tile,
-    });
+async function detemplatizeBlueMarbleTile(tile: ImageBitmap): Promise<ImageData> {
+    const result = await doTaskInWorkerPool(
+        {
+            taskId: crypto.randomUUID(),
+            task: 'detemplatizeBlueMarbleTile',
+            bitmap: tile,
+        },
+        [tile],
+    );
     assertTaskResultSuccess(result);
     return result.image;
 }
@@ -263,88 +215,135 @@ async function findTransparentBorder(image: ImageData): Promise<FindTransparentB
     return result.border;
 }
 
-function cropToExtent(image: ImageData, area: PixelExtent): ImageData {
-    // todo: consider replacing this with raw buffer operations
-    const { minX, minY, maxX, maxY } = area;
-    const width = maxX - minX + 1;
-    const height = maxY - minY + 1;
-
-    const canvas = new OffscreenCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-    assertCanvasCtx(ctx);
-    ctx.putImageData(image, -minX, -minY, minX, minY, width, height);
-
-    return ctx.getImageData(0, 0, width, height);
-}
-
-async function cropToNonTransparentArea(image: ImageData): Promise<ImageData> {
-    const result = await doTaskInWorkerPool({
-        taskId: crypto.randomUUID(),
-        task: 'cropToNonTransparentArea',
-        image,
-    });
+async function cropToExtent(image: ImageData, extent: PixelExtent, consume = false): Promise<ImageData> {
+    const result = await doTaskInWorkerPool(
+        {
+            taskId: crypto.randomUUID(),
+            task: 'cropToExtent',
+            image,
+            extent,
+        },
+        consume ? [image.data.buffer] : undefined,
+    );
     assertTaskResultSuccess(result);
     return result.image;
 }
 
-async function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
-    const result = await doTaskInWorkerPool({
-        taskId: crypto.randomUUID(),
-        task: 'imageToPaletteIndexBuffer',
-        image,
-        palette,
-    });
+async function cropToNonTransparentArea(image: ImageData, consume = false): Promise<ImageData> {
+    const result = await doTaskInWorkerPool(
+        {
+            taskId: crypto.randomUUID(),
+            task: 'cropToNonTransparentArea',
+            image,
+        },
+        consume ? [image.data.buffer] : undefined,
+    );
+    assertTaskResultSuccess(result);
+    return result.image;
+}
+
+async function imageToPaletteIndexBuffer(
+    image: ImageData,
+    palette: readonly PixelColor[],
+    consume = false,
+): Promise<ArrayBuffer> {
+    const result = await doTaskInWorkerPool(
+        {
+            taskId: crypto.randomUUID(),
+            task: 'imageToPaletteIndexBuffer',
+            image,
+            palette,
+        },
+        consume ? [image.data.buffer] : undefined,
+    );
     assertTaskResultSuccess(result);
     return result.buffer;
 }
 
-async function writeIndexedPngBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
-    const result = await doTaskInWorkerPool({
-        taskId: crypto.randomUUID(),
-        task: 'writeIndexedPngBuffer',
-        image,
-        palette,
-    });
+async function writeIndexedPngBuffer(
+    image: ImageData,
+    palette: readonly PixelColor[],
+    consume = false,
+): Promise<ArrayBuffer> {
+    const result = await doTaskInWorkerPool(
+        {
+            taskId: crypto.randomUUID(),
+            task: 'writeIndexedPngBuffer',
+            image,
+            palette,
+        },
+        consume ? [image.data.buffer] : undefined,
+    );
     assertTaskResultSuccess(result);
     return result.buffer;
 }
 
-async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColor[]): Promise<Blob> {
-    const result = await doTaskInWorkerPool({
-        taskId: crypto.randomUUID(),
-        task: 'writeIndexedPngBlob',
-        image,
-        palette,
-    });
+async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColor[], consume = false): Promise<Blob> {
+    const result = await doTaskInWorkerPool(
+        {
+            taskId: crypto.randomUUID(),
+            task: 'writeIndexedPngBlob',
+            image,
+            palette,
+        },
+        consume ? [image.data.buffer] : undefined,
+    );
     assertTaskResultSuccess(result);
     return result.blob;
 }
 
-// async function calculateTileColorStats(tileImage: ImageData): Promise<void> {}
-
 async function loadIndexedImage(
     bitmap: ImageBitmap,
     palette: readonly PixelColor[],
-    onNonMatching: 'null',
-): Promise<{ success: true; image: ImageData } | { success: false }> {}
+): Promise<{ success: true; image: ImageData } | { success: false }> {
+    const result = await doTaskInWorkerPool(
+        {
+            taskId: crypto.randomUUID(),
+            task: 'loadIndexedImage',
+            bitmap,
+            palette,
+        },
+        [bitmap],
+    );
+    assertTaskResultSuccess(result);
+    if (result.image) {
+        return { success: true, image: result.image };
+    } else {
+        return { success: false };
+    }
+}
 
 async function loadIndexedImageWithDiff(
     bitmap: ImageBitmap,
     palette: readonly PixelColor[],
-    onNonMatching: 'diff',
+    darkenPercentage: number,
+    highlightColorRgba: number,
 ): Promise<{ success: true; image: ImageData } | { success: false; diff: ImageData }> {
-    // todo: this will be a replacement for verifyImageMatchesPalette + imageToPaletteIndexBuffer in a single step
-    // within a worker
+    const result = await doTaskInWorkerPool(
+        {
+            taskId: crypto.randomUUID(),
+            task: 'loadIndexedImageWithDiff',
+            bitmap,
+            palette,
+            darkenPercentage,
+            highlightColorRgba,
+        },
+        [bitmap],
+    );
+    assertTaskResultSuccess(result);
+    if (result.matches) {
+        return { success: true, image: result.image };
+    } else {
+        return { success: false, diff: result.image };
+    }
 }
 
+// todo
+// async function calculateTileColorStats(tileImage: ImageData): Promise<void> {}
+
 export const ImageTools = {
-    verifyImageMatchesPalette,
-    highlightNonMatchingPixels,
     createThumbnail,
     detectCanvasFingerprintingProtection,
-    computeImageHash,
-    imageToBlob,
-    imageBitmapToImageData,
     detemplatizeBlueMarbleTile,
     findTransparentBorder,
     cropToExtent,
@@ -352,4 +351,6 @@ export const ImageTools = {
     imageToPaletteIndexBuffer,
     writeIndexedPngBuffer,
     writeIndexedPngBlob,
+    loadIndexedImage,
+    loadIndexedImageWithDiff,
 };

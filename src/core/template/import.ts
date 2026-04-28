@@ -62,15 +62,13 @@ async function readTemplateImage(file: Blob): Promise<ArrayBuffer | null> {
         if (bitmap.width > MAX_TEMPLATE_CANVAS_DIMENSION || bitmap.height > MAX_TEMPLATE_CANVAS_DIMENSION) {
             return null;
         }
-        const imageData = ImageTools.imageBitmapToImageData(bitmap);
-        bitmap.close();
 
-        const matchesColors = await ImageTools.verifyImageMatchesPalette(imageData, Platform.colors);
-        if (!matchesColors) {
+        const indexedImageResult = await ImageTools.loadIndexedImage(bitmap, Platform.colors);
+        if (!indexedImageResult.success) {
             return null;
         }
 
-        return await ImageTools.writeIndexedPngBuffer(imageData, Platform.colors);
+        return await ImageTools.writeIndexedPngBuffer(indexedImageResult.image, Platform.colors, true);
     } catch (e) {
         debug('error reading template image from zip file', e);
         return null;

@@ -1,7 +1,7 @@
 import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
 import type { PixelCoordinates } from '../../util/geometry';
-import { ImageTools } from '../../workers/image-tools-dispatcher';
 import type { BaseTemplateParseResult } from './types';
+import { imageBitmapToImageData } from '../../util/image';
 
 export async function handleBlobFromParsedTemplate(
     imageBlob: Blob,
@@ -25,8 +25,7 @@ export async function handleBlobFromParsedTemplate(
         return { success: false, errorCode: 'imageTooLarge' };
     }
 
-    const imageData = ImageTools.imageBitmapToImageData(bitmap);
-    bitmap.close();
+    const imageData = imageBitmapToImageData(bitmap, true);
 
     return {
         success: true,

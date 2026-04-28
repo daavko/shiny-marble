@@ -10,6 +10,7 @@ import {
     type PixelVector,
     type TileCoordinates,
 } from '../../util/geometry';
+import { computeImageDataHash, imageBitmapToImageData } from '../../util/image';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { debug, debugDetailed, debugTime } from '../debug';
 import { encodeIndexedPngBlob } from '../png/indexed-png-writer';
@@ -230,7 +231,7 @@ export const TemplateRegistry = {
     async addTemplate(template: TemplateInit): Promise<void> {
         const id = crypto.randomUUID();
         const thumbnail = await ImageTools.createThumbnail(template.image, 100, 100);
-        const hash = await ImageTools.computeImageHash(template.image);
+        const hash = await computeImageDataHash(template.image);
         const viewportCenter = Platform.getViewportCenterPixel();
         const { width, height } = template.image;
         const pngEncodeDebugTimer = debugTime(`Encoding template image to indexed PNG`);
@@ -272,7 +273,7 @@ export const TemplateRegistry = {
         }
 
         const imageBitmap = await createImageBitmap(storedTemplateImage.image);
-        const imageData = ImageTools.imageBitmapToImageData(imageBitmap);
+        const imageData = imageBitmapToImageData(imageBitmap, true);
         const optimizedTiles = await optimizeTemplate(imageData, template.coordinates);
         await TemplateStorage.saveOptimizedTemplateTiles(
             optimizedTiles.map((tile) => optimizedTemplateTileToStoredOptimizedTemplateTile(template.id, tile)),
@@ -335,7 +336,7 @@ export const TemplateRegistry = {
             return false;
         }
 
-        const newHash = await ImageTools.computeImageHash(newImage);
+        const newHash = await computeImageDataHash(newImage);
         if (newHash === template.hash) {
             debug(`New image for template with id ${id} has the same hash as the old image, skipping replacement`);
             return false;

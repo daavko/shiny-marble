@@ -6,23 +6,22 @@ import { createTemplateImagePicker } from '../components/template-image-picker';
 import { showTemplateNameDialog } from './template-name-dialog';
 
 export function showNewTemplateDialog(): void {
-    const { element: dropArea, context: dropAreaContext } = createTemplateImagePicker(async (image, file) => {
-        const name = await showTemplateNameDialog(file.name.replace(/\.\w+$/, ''), true);
+    const { dialog } = createDialog('New Template', { size: 'large' }, (ctx) => [
+        createTemplateImagePicker(ctx, async (image, file) => {
+            const name = await showTemplateNameDialog(file.name.replace(/\.\w+$/, ''), true);
 
-        if (name === '') {
+            if (name === '') {
+                dialog.close();
+                return;
+            }
+
+            const croppedImage = await ImageTools.cropToNonTransparentArea(image);
+
+            await TemplateRegistry.addTemplate({ name, image: croppedImage });
             dialog.close();
-            return;
-        }
-
-        const croppedImage = await ImageTools.cropToNonTransparentArea(image);
-
-        await TemplateRegistry.addTemplate({ name, image: croppedImage });
-        dialog.close();
-        showInfoAlert(`Template "${name}" added successfully`, 2000);
-    });
-
-    const { dialog, dialogContext } = createDialog('New Template', { size: 'large' }, [dropArea]);
-    dialogContext.adopt(dropAreaContext);
+            showInfoAlert(`Template "${name}" added successfully`, 2000);
+        }),
+    ]);
 
     document.body.appendChild(dialog);
     dialog.showModal();

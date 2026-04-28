@@ -1,6 +1,8 @@
 import { mdiClose } from '@mdi/js';
 import { el, type HTMLElementChild } from '../../core/dom/html';
+import { el$, type ReactiveHTMLElementChild } from '../../core/dom/reactive-html';
 import { createEffectContext, type EffectContext } from '../../core/effects';
+import type { ReadonlySignal } from '../../core/signals';
 import { renderIconButton } from './button';
 
 export { default as dialogStyle } from './dialog.css';
@@ -26,11 +28,20 @@ export interface DialogConfig {
     closedBy?: 'any' | 'closerequest' | 'none';
 }
 
-export function createDialog(title: string, config: DialogConfig, content: HTMLElementChild[]): DialogRef {
+export function createDialog(
+    title: string | ReadonlySignal<string>,
+    config: DialogConfig,
+    content: HTMLElementChild[] | ((ctx: EffectContext) => ReactiveHTMLElementChild[]),
+): DialogRef {
     const { promise: resultPromise, resolve: closeResolve } = Promise.withResolvers<string>();
     const dialogContext = createEffectContext();
 
-    const dialogBody = el('div', { class: 'sm-dialog__content' }, content);
+    let dialogBody: HTMLElement;
+    if (typeof content === 'function') {
+        dialogBody = el$('div', { effectContext: dialogContext, class: 'sm-dialog__content' }, content(dialogContext));
+    } else {
+        dialogBody = el('div', { class: 'sm-dialog__content' }, content);
+    }
     const dialog = el(
         'dialog',
         {
@@ -46,7 +57,7 @@ export function createDialog(title: string, config: DialogConfig, content: HTMLE
         },
         [
             el('header', { class: 'sm-dialog__header' }, [
-                el('h1', [title]),
+                el$('h1', { effectContext: dialogContext }, [title]),
                 renderIconButton(mdiClose, () => {
                     dialog.close();
                 }),

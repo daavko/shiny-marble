@@ -13,13 +13,15 @@ export async function showConfirmationDialog(
     message: string,
     buttons: ConfirmationDialogButton[],
 ): Promise<string> {
-    const buttonElements = buttons.map((button) =>
-        renderBlockButton(button.label, () => dialog.close(button.value), button.buttonOptions),
-    );
-
     const { dialog, resultPromise } = createDialog(title, { closedBy: 'none' }, [
         el('p', [message]),
-        el('div', { class: ['sm-row', 'sm-row--end', 'sm-mt-16'] }, buttonElements),
+        el(
+            'div',
+            { class: ['sm-row', 'sm-row--end', 'sm-mt-16'] },
+            buttons.map((button) =>
+                renderBlockButton(button.label, () => dialog.close(button.value), button.buttonOptions),
+            ),
+        ),
     ]);
 
     document.body.appendChild(dialog);

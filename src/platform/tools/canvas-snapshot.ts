@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import { GeoJSONSource, MapMouseEvent, MercatorCoordinate } from 'maplibre-gl';
 import { debugDetailed, debugTime } from '../../core/debug';
 import { el } from '../../core/dom/html';
+import { cond$, el$, if$, ifNot$, switch$ } from '../../core/dom/reactive-html';
 import { createEffectContext } from '../../core/effects';
 import { computed, signal } from '../../core/signals';
 import { renderBlockButton } from '../../ui/builtin/button';
@@ -62,6 +63,18 @@ export class CanvasSnapshotTool implements ActiveTool {
         },
         extentsEqualityFn,
     );
+    private readonly extentRect = computed([this.cornersExtent], ([cornersExtent]) =>
+        cornersExtent ? extentToRect(cornersExtent) : null,
+    );
+    private readonly extentTooLarge = computed([this.extentRect], ([extentRect]) => {
+        if (extentRect) {
+            return (
+                extentRect.width > MAX_SNAPSHOT_CANVAS_DIMENSION || extentRect.height > MAX_SNAPSHOT_CANVAS_DIMENSION
+            );
+        } else {
+            return false;
+        }
+    });
     private readonly confirmedCorner2 = signal(false);
     private readonly mousePosition = signal<PixelCoordinates | null>(null, coordsEqualityFn);
     private readonly generationProgress = signal<SnapshotGenerationProgress>('choosingCoords');
@@ -230,127 +243,110 @@ export class CanvasSnapshotTool implements ActiveTool {
 
     private render(container: HTMLElement): void {
         const closeBtn = renderBlockButton('Close', () => this.toolPanel?.close());
-        const content = el('div', { class: 'sm-canvas-snapshot-tool-container' });
-        this.effectContext.watch(
-            [this.corner1, this.confirmedCorner2, this.cornersExtent, this.generationProgress],
-            ([corner1, confirmedCorner2, cornersExtent, generationProgress]) => {
-                if (generationProgress === 'generatingSnapshot') {
-                    const counter = el('span');
-                    const unsubscribe = this.effectContext.watch(
-                        [this.tileCount, this.tileCountFinished, this.generationProgress],
-                        ([tileCount, tileCountFinished, generationProgress2]) => {
-                            if (generationProgress2 === 'generatingSnapshot') {
-                                counter.textContent = `(tile ${tileCountFinished} of ${tileCount})`;
-                            } else {
-                                unsubscribe();
-                            }
-                        },
-                        true,
-                    );
-                    content.replaceChildren(
-                        el('p', [
-                            'Generating snapshot... ',
-                            counter,
-                            el('br'),
-                            'If you chose a large area, this may take a while. Please be patient.',
-                        ]),
-                    );
-                } else if (generationProgress === 'finished') {
-                    content.replaceChildren(
-                        el('p', ['Snapshot generated and downloaded! This tool will close itself in a few seconds.']),
-                    );
-                } else if (generationProgress === 'error') {
-                    content.replaceChildren(el('p', ['An error occurred while generating the snapshot.']), closeBtn);
-                } else if (!corner1) {
-                    content.replaceChildren(
+        const resetBtn = renderBlockButton(
+            'Reset',
+            () => {
+                this.corner1.value = null;
+                this.corner2.value = null;
+                this.confirmedCorner2.value = false;
+            },
+            { variant: 'danger' },
+        );
+        const takeSnapshotBtn = renderBlockButton(
+            'Take Snapshot',
+            () => {
+                if (this.cornersExtent.value) {
+                    this.generateSnapshot(this.cornersExtent.value).catch((error: unknown) => {
+                        debugDetailed('Error generating snapshot', error);
+                        this.generationProgress.value = 'error';
+                    });
+                }
+            },
+            { variant: 'primary' },
+        );
+
+        const content = el$('div', { effectContext: this.effectContext, class: 'sm-canvas-snapshot-tool-container' }, [
+            switch$(this.generationProgress, [
+                [
+                    'choosingCoords',
+                    cond$(
+                        this.corner1,
+                        (corner1) => !corner1,
                         el('p', [
                             'Please click on the map to select the first corner of the snapshot area.',
                             el('br'),
                             'You can drag around to move the map.',
                         ]),
-                        closeBtn,
-                    );
-                } else if (cornersExtent) {
-                    const rect = extentToRect(cornersExtent);
-                    if (!confirmedCorner2) {
-                        if (rect.width > MAX_SNAPSHOT_CANVAS_DIMENSION || rect.height > MAX_SNAPSHOT_CANVAS_DIMENSION) {
-                            content.replaceChildren(
-                                el('p', [
-                                    el('span', { style: { color: 'var(--sm-error-foreground-color)' } }, [
-                                        `This area is too large. Please select an area that's at most ${MAX_SNAPSHOT_CANVAS_DIMENSION}x${MAX_SNAPSHOT_CANVAS_DIMENSION}px.`,
+                        el$('p', { effectContext: this.effectContext }, [
+                            ifNot$(
+                                this.confirmedCorner2,
+                                [
+                                    if$(
+                                        this.extentTooLarge,
+                                        el('span', { style: { color: 'var(--sm-error-foreground-color)' } }, [
+                                            `This area is too large. Please select an area that's at most ${MAX_SNAPSHOT_CANVAS_DIMENSION}x${MAX_SNAPSHOT_CANVAS_DIMENSION}px.`,
+                                        ]),
+                                        [
+                                            'Please click on the map to select the opposite corner of the snapshot area.',
+                                            el('br'),
+                                            'You can drag around to move the map.',
+                                        ],
+                                    ),
+                                    computed([this.extentRect], ([extentRect]) =>
+                                        extentRect
+                                            ? `Highlighted area: ${extentRect.width}x${extentRect.height}px`
+                                            : null,
+                                    ),
+                                ],
+                                [
+                                    if$(this.extentTooLarge, [
+                                        el('span', { style: { color: 'var(--sm-error-foreground-color)' } }, [
+                                            `This area is too large. Please select an area that's at most ${MAX_SNAPSHOT_CANVAS_DIMENSION}x${MAX_SNAPSHOT_CANVAS_DIMENSION}px.`,
+                                        ]),
+                                        el('br'),
                                     ]),
-                                    el('br'),
-                                    `Highlighted area: ${rect.width}x${rect.height}px.`,
-                                ]),
-                                closeBtn,
-                            );
-                        } else {
-                            content.replaceChildren(
-                                el('p', [
-                                    'Please click on the map to select the opposite corner of the snapshot area.',
-                                    el('br'),
-                                    'You can drag around to move the map.',
-                                    el('br'),
-                                    `Highlighted area: ${rect.width}x${rect.height}px`,
-                                ]),
-                                closeBtn,
-                            );
-                        }
-                    } else {
-                        if (rect.width > MAX_SNAPSHOT_CANVAS_DIMENSION || rect.height > MAX_SNAPSHOT_CANVAS_DIMENSION) {
-                            content.replaceChildren(
-                                el('p', [
-                                    el('span', { style: { color: 'var(--sm-error-foreground-color)' } }, [
-                                        `This area is too large. Please select an area that's at most ${MAX_SNAPSHOT_CANVAS_DIMENSION}x${MAX_SNAPSHOT_CANVAS_DIMENSION}px.`,
-                                    ]),
-                                    el('br'),
-                                    `Snapshot area selected: ${rect.width}x${rect.height}px`,
-                                ]),
-                                el('div', { class: 'sm-canvas-snapshot-tool__buttons' }, [
-                                    renderBlockButton(
-                                        'Reset',
-                                        () => {
-                                            this.corner1.value = null;
-                                            this.corner2.value = null;
-                                            this.confirmedCorner2.value = false;
-                                        },
-                                        { variant: 'danger' },
+                                    computed([this.extentRect], ([extentRect]) =>
+                                        extentRect
+                                            ? `Snapshot area selected: ${extentRect.width}x${extentRect.height}px`
+                                            : null,
                                     ),
-                                    closeBtn,
-                                ]),
-                            );
-                        } else {
-                            content.replaceChildren(
-                                el('p', [`Snapshot area selected: ${rect.width}x${rect.height}px`]),
-                                el('div', { class: 'sm-canvas-snapshot-tool__buttons' }, [
-                                    renderBlockButton(
-                                        'Reset',
-                                        () => {
-                                            this.corner1.value = null;
-                                            this.corner2.value = null;
-                                            this.confirmedCorner2.value = false;
-                                        },
-                                        { variant: 'danger' },
-                                    ),
-                                    renderBlockButton(
-                                        'Take Snapshot',
-                                        () => {
-                                            this.generateSnapshot(cornersExtent).catch((error: unknown) => {
-                                                debugDetailed('Error generating snapshot', error);
-                                                this.generationProgress.value = 'error';
-                                            });
-                                        },
-                                        { variant: 'primary' },
-                                    ),
-                                    closeBtn,
-                                ]),
-                            );
-                        }
-                    }
-                }
-            },
-            true,
-        );
+                                ],
+                            ),
+                        ]),
+                    ),
+                ],
+                [
+                    'generatingSnapshot',
+                    el$('p', { effectContext: this.effectContext }, [
+                        'Generating snapshot... ',
+                        computed(
+                            [this.tileCount, this.tileCountFinished],
+                            ([tileCount, tileCountFinished]) => `(tile ${tileCountFinished} of ${tileCount})`,
+                        ),
+                        el('br'),
+                        'If you chose a large area, this may take a while. Please be patient.',
+                    ]),
+                ],
+                [
+                    'finished',
+                    el('p', ['Snapshot generated and downloaded! This tool will close itself in a few seconds.']),
+                ],
+                ['error', el('p', ['An error occurred while generating the snapshot.'])],
+            ]),
+            el$('div', { effectContext: this.effectContext, class: 'sm-canvas-snapshot-tool__buttons' }, [
+                switch$(this.generationProgress, [
+                    [
+                        'choosingCoords',
+                        [
+                            if$(this.confirmedCorner2, [resetBtn, ifNot$(this.extentTooLarge, takeSnapshotBtn)]),
+                            closeBtn,
+                        ],
+                    ],
+                    ['error', closeBtn],
+                ]),
+            ]),
+        ]);
+
         container.append(content);
     }
 
@@ -389,6 +385,7 @@ export class CanvasSnapshotTool implements ActiveTool {
 
     private async generateSnapshot(extent: PixelExtent): Promise<void> {
         debugDetailed('Generating snapshot for extent', extent);
+
         const debugTimer = debugTime('Snapshot generation');
 
         this.generationProgress.value = 'generatingSnapshot';

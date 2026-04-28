@@ -33,7 +33,9 @@ export default defineConfig([
             'accessor-pairs': 'error',
 
             '@typescript-eslint/default-param-last': 'warn',
-            '@typescript-eslint/explicit-function-return-type': 'warn',
+            '@typescript-eslint/explicit-function-return-type': ['warn', {
+                allowExpressions: true,
+            }],
             '@typescript-eslint/explicit-member-accessibility': ['warn', { accessibility: 'no-public' }],
             '@typescript-eslint/explicit-module-boundary-types': 'error',
             '@typescript-eslint/member-ordering': 'warn',

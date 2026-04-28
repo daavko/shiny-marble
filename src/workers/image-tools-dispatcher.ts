@@ -7,10 +7,15 @@ import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTask
 import imageToolsWorkerCode from './image-tools.worker';
 import { createWorker } from './worker';
 
-const maxWorkerConcurrency = Math.max(1, Math.floor(hardwareConcurrency / 2));
+const maxWorkerConcurrency = Math.max(1, Math.floor(navigator.hardwareConcurrency / 2));
 const activeWorkers = new Set<Worker>();
 
-const pendingTasks: ImageToolsTaskRequest[] = [];
+interface PendingTask {
+    task: ImageToolsTaskRequest;
+    transfer?: Transferable[];
+}
+
+const pendingTasks: PendingTask[] = [];
 const postedTasks: ImageToolsTaskRequest[] = [];
 
 interface ImageToolsEventMap {
@@ -43,9 +48,9 @@ interface ImageToolsEventTarget extends EventTarget {
 
 const TaskResultEvents: ImageToolsEventTarget = new EventTarget();
 
-function postTaskToWorkerPool(task: ImageToolsTaskRequest): void {
+function postTaskToWorkerPool(task: ImageToolsTaskRequest, transfer?: Transferable[]): void {
     if (activeWorkers.size >= maxWorkerConcurrency) {
-        pendingTasks.push(task);
+        pendingTasks.push({ task, transfer });
     } else {
         const worker = createWorker(imageToolsWorkerCode);
         activeWorkers.add(worker);
@@ -54,8 +59,8 @@ function postTaskToWorkerPool(task: ImageToolsTaskRequest): void {
             TaskResultEvents.dispatchEvent(new MessageEvent('taskresult', { data: event.data }));
             const nextTask = pendingTasks.shift();
             if (nextTask) {
-                postedTasks.push(nextTask);
-                worker.postMessage(nextTask);
+                postedTasks.push(nextTask.task);
+                worker.postMessage(nextTask.task, { transfer: nextTask.transfer });
             } else {
                 activeWorkers.delete(worker);
                 worker.terminate();
@@ -65,17 +70,18 @@ function postTaskToWorkerPool(task: ImageToolsTaskRequest): void {
         worker.addEventListener('message', listener);
 
         postedTasks.push(task);
-        worker.postMessage(task);
+        worker.postMessage(task, { transfer });
     }
 }
 
 async function doTaskInWorkerPool<T extends ImageToolsTaskResult['task']>(
     taskRequest: Extract<ImageToolsTaskRequest, { task: T }>,
+    transfer?: Transferable[],
 ): Promise<Extract<ImageToolsTaskResult, { task: T }>> {
     const taskId = taskRequest.taskId;
 
     debugDetailed(`Posting ${taskRequest.task} task to worker pool`, taskRequest);
-    postTaskToWorkerPool(taskRequest);
+    postTaskToWorkerPool(taskRequest, transfer);
 
     const { promise, resolve, reject } = Promise.withResolvers<Extract<ImageToolsTaskResult, { task: T }>>();
 
@@ -272,13 +278,13 @@ function cropToExtent(image: ImageData, area: PixelExtent): ImageData {
 }
 
 async function cropToNonTransparentArea(image: ImageData): Promise<ImageData> {
-    const border = await findTransparentBorder(image);
-
-    if (border === 'fullyTransparent' || border === 'noTransparentBorder') {
-        return image;
-    } else {
-        return cropToExtent(image, border);
-    }
+    const result = await doTaskInWorkerPool({
+        taskId: crypto.randomUUID(),
+        task: 'cropToNonTransparentArea',
+        image,
+    });
+    assertTaskResultSuccess(result);
+    return result.image;
 }
 
 async function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
@@ -314,19 +320,19 @@ async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColo
     return result.blob;
 }
 
-async function calculateTileColorStats(tileImage: ImageData): Promise<void> {}
+// async function calculateTileColorStats(tileImage: ImageData): Promise<void> {}
 
 async function loadIndexedImage(
     bitmap: ImageBitmap,
     palette: readonly PixelColor[],
     onNonMatching: 'null',
-): Promise<{ success: true; image: ImageData } | { success: false }>;
-async function loadIndexedImage(
+): Promise<{ success: true; image: ImageData } | { success: false }> {}
+
+async function loadIndexedImageWithDiff(
     bitmap: ImageBitmap,
     palette: readonly PixelColor[],
     onNonMatching: 'diff',
-): Promise<{ success: true; image: ImageData } | { success: false; diff: ImageData }>;
-async function loadIndexedImage(bitmap: ImageBitmap, palette: readonly PixelColor[]): Promise<ImageData | null> {
+): Promise<{ success: true; image: ImageData } | { success: false; diff: ImageData }> {
     // todo: this will be a replacement for verifyImageMatchesPalette + imageToPaletteIndexBuffer in a single step
     // within a worker
 }

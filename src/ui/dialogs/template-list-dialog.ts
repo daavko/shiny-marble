@@ -123,7 +123,9 @@ function renderTemplateListItem(template: Signal<LiveTemplate>, dialog: HTMLElem
     const listItemElement = el('div', { class: 'sm-templates-list-dialog__template-item' }, [
         thumbnail,
         title,
+        // todo
         el('span', { class: 'sm-templates-list-dialog__template-item__statistics' }, ['12345678/12345678px (99.99%)']),
+        // todo
         // el('span', { class: 'sm-templates-list-dialog__template-item__statistics' }, ['statistics soom (tm)']),
         el('div', { class: 'sm-templates-list-dialog__template-item__menu-buttons' }, [
             renameButton,
@@ -146,6 +148,7 @@ interface RenderedTemplateListItem {
 }
 
 export function showTemplateListDialog(): void {
+    // todo: rewrite as reactive elements
     const templateListContainer = el('div', { class: 'sm-templates-list-dialog__templates-list' }, []);
     const { dialog, dialogContext } = createDialog(
         'Templates',

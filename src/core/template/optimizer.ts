@@ -88,11 +88,7 @@ async function optimizeTile(
     };
 }
 
-export async function optimizeTemplate(
-    templateId: string,
-    image: ImageData,
-    position: PixelCoordinates,
-): Promise<OptimizedTemplateData> {
+export async function optimizeTemplate(image: ImageData, position: PixelCoordinates): Promise<OptimizedTemplateTile[]> {
     const coveredTiles = getCoveredTiles(
         { ...position, width: image.width, height: image.height },
         Platform.tilePixelDimensions,
@@ -113,20 +109,14 @@ export async function optimizeTemplate(
 
     const optimizedTiles = await Promise.all(optimizedTilesPromises);
 
-    return {
-        id: templateId,
-        paletteVersion: Platform.colorsVersion,
-        position,
-        tileSize: { ...Platform.tilePixelDimensions },
-        tiles: optimizedTiles
-            .filter((tile) => tile != null)
-            .map((tile) => ({
-                ...tile,
-                tilePosition: worldWrapTileCoordinates(
-                    tile.tilePosition,
-                    Platform.tilePixelDimensions,
-                    Platform.canvasPixelDimensions,
-                ),
-            })),
-    };
+    return optimizedTiles
+        .filter((tile) => tile != null)
+        .map((tile) => ({
+            ...tile,
+            tilePosition: worldWrapTileCoordinates(
+                tile.tilePosition,
+                Platform.tilePixelDimensions,
+                Platform.canvasPixelDimensions,
+            ),
+        }));
 }

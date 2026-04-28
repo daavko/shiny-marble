@@ -3,6 +3,7 @@ import { debug } from './debug';
 
 export type EqualityFn<T> = (a: T, b: T) => boolean;
 export type Subscriber<T> = (newValue: T) => void;
+export type SimpleSubscriber = () => void;
 export type UnsubscribeFn = () => void;
 
 const signalBrand = Symbol('Signal');
@@ -17,6 +18,7 @@ export interface ReadonlySignal<T> {
 
 interface InternalSignalProps<T> {
     readonly subscribers: Set<Subscriber<T>>;
+    internalSubscribe(callback: Subscriber<T>, type: SignalSubscriptionType): void;
 }
 
 interface ReadonlyInternalSignal<T> extends ReadonlySignal<T>, InternalSignalProps<T> {}
@@ -66,6 +68,7 @@ abstract class SignalImplBase<T> implements ReadonlyInternalSignal<T> {
 
     protected currentValue: T;
     protected readonly syncSubscribers = new Set<Subscriber<T>>();
+    protected readonly internalSubscribers = new Set<Subscriber<T>>();
 
     protected constructor(
         initialValue: T,
@@ -83,14 +86,28 @@ abstract class SignalImplBase<T> implements ReadonlyInternalSignal<T> {
             case 'sync':
                 this.syncSubscribers.add(callback);
                 return () => {
-                    this.syncSubscribers.delete(callback);
+                    // this.syncSubscribers.delete(callback);
+                    this.unsubscribeSync(callback);
                 };
             case 'microtask':
                 this.subscribers.add(callback);
                 return () => {
-                    this.subscribers.delete(callback);
+                    // this.subscribers.delete(callback);
+                    this.unsubscribe(callback);
                 };
         }
+    }
+
+    internalSubscribe(callback: Subscriber<T>): void {
+        this.internalSubscribers.add(callback);
+    }
+
+    protected unsubscribeSync(callback: Subscriber<T>): void {
+        this.syncSubscribers.delete(callback);
+    }
+
+    protected unsubscribe(callback: Subscriber<T>): void {
+        this.subscribers.delete(callback);
     }
 
     protected updateValue(newValue: T): void {
@@ -99,6 +116,13 @@ abstract class SignalImplBase<T> implements ReadonlyInternalSignal<T> {
         }
 
         this.currentValue = newValue;
+        for (const callback of this.internalSubscribers) {
+            try {
+                callback(newValue);
+            } catch (error) {
+                debug('Error in internal sync signal subscriber callback', error);
+            }
+        }
         for (const callback of this.syncSubscribers) {
             try {
                 callback(newValue);
@@ -134,28 +158,117 @@ function computeCurrentValue<T, TInputs extends ReadonlySignal<unknown>[]>(
     computeValue: (inputValues: MappedSignalValues<TInputs>) => T,
 ): T {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    const inputValues = inputSignals.map((s) => s.value) as MappedSignalValues<TInputs>;
+    const inputValues = inputSignals.map((s) => {
+        if (s instanceof ComputedSignalImplBase) {
+            // a top-level forced recompute needs to propagate to all nested computed signals
+            console.log('forcing recompute of nested computed signal', s);
+            s.recomputeIfNecessary();
+        }
+        return s.value;
+    }) as MappedSignalValues<TInputs>;
     return computeValue(inputValues);
 }
 
-export class ComputedSignalImpl<T, TInputs extends ReadonlySignal<unknown>[]>
+abstract class ComputedSignalImplBase<T, TInputs extends ReadonlySignal<unknown>[]>
     extends SignalImplBase<T>
     implements ReadonlyInternalSignal<T>
 {
+    protected needsRecompute = false;
+
+    protected readonly needsRecomputeSubscribers = new Set<SimpleSubscriber>();
+
+    protected constructor(
+        protected readonly inputSignals: readonly [...TInputs],
+        initialValue: T,
+        equalityFn: EqualityFn<T> = sameValueZero,
+    ) {
+        super(initialValue, equalityFn);
+    }
+
+    override get value(): T {
+        if (this.needsRecompute) {
+            this.recomputeValue();
+        }
+        return super.value;
+    }
+
+    override subscribe(callback: Subscriber<T>, type: SignalSubscriptionType = 'microtask'): UnsubscribeFn {
+        if (this.needsRecompute) {
+            this.recomputeValue();
+        }
+        return super.subscribe(callback, type);
+    }
+
+    override internalSubscribe(callback: Subscriber<T>): void {
+        super.internalSubscribe(callback);
+    }
+
+    needsRecomputeSubscribe(callback: SimpleSubscriber): void {
+        this.needsRecomputeSubscribers.add(callback);
+    }
+
+    recomputeIfNecessary(): void {
+        if (this.needsRecompute) {
+            this.recomputeValue();
+        }
+    }
+
+    protected setupInputSubscriptions(): void {
+        for (const sig of this.inputSignals) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
+            (sig as InternalSignal<unknown>).internalSubscribe(() => {
+                if (this.subscribers.size === 0 && this.syncSubscribers.size === 0) {
+                    this.notifyNeedsRecompute();
+                } else {
+                    this.recomputeValue();
+                }
+            }, 'sync');
+
+            if (sig instanceof ComputedSignalImplBase) {
+                sig.needsRecomputeSubscribe(() => {
+                    if (this.subscribers.size === 0 && this.syncSubscribers.size === 0) {
+                        this.notifyNeedsRecompute();
+                    } else {
+                        this.recomputeValue();
+                    }
+                });
+            }
+        }
+    }
+
+    protected notifyNeedsRecompute(): void {
+        this.needsRecompute = true;
+        for (const callback of this.needsRecomputeSubscribers) {
+            try {
+                callback();
+            } catch (error) {
+                debug('Error in needsRecompute subscriber callback', error);
+            }
+        }
+    }
+
+    protected abstract recomputeValue(): void;
+}
+
+export class ComputedSignalImpl<T, TInputs extends ReadonlySignal<unknown>[]> extends ComputedSignalImplBase<
+    T,
+    TInputs
+> {
     constructor(
-        private readonly inputSignals: readonly [...TInputs],
-        private readonly computeValue: (inputValues: MappedSignalValues<TInputs>) => T,
+        inputSignals: readonly [...TInputs],
+        protected readonly computeValue: (inputValues: MappedSignalValues<TInputs>) => T,
         equalityFn: EqualityFn<T> = sameValueZero,
     ) {
         const initialValue = computeCurrentValue(inputSignals, computeValue);
-        super(initialValue, equalityFn);
+        super(inputSignals, initialValue, equalityFn);
 
-        for (const sig of inputSignals) {
-            sig.subscribe(() => {
-                const newValue = computeCurrentValue(this.inputSignals, this.computeValue);
-                this.updateValue(newValue);
-            }, 'sync');
-        }
+        this.setupInputSubscriptions();
+    }
+
+    protected recomputeValue(): void {
+        this.needsRecompute = false;
+        const newValue = computeCurrentValue(this.inputSignals, this.computeValue);
+        this.updateValue(newValue);
     }
 }
 
@@ -165,6 +278,74 @@ export function computed<const TInputs extends ReadonlySignal<unknown>[], T>(
     equalityFn: EqualityFn<T> = sameValueZero,
 ): ReadonlySignal<T> {
     return new ComputedSignalImpl(inputSignals, computeValue, equalityFn);
+}
+
+class FlatComputedSignalImpl<T, TInputs extends ReadonlySignal<unknown>[]>
+    extends ComputedSignalImplBase<T, TInputs>
+    implements ReadonlyInternalSignal<T>
+{
+    private unsubscribeFromInnerSignalFn?: UnsubscribeFn;
+
+    constructor(
+        inputSignals: readonly [...TInputs],
+        protected readonly computeValue: (inputValues: MappedSignalValues<TInputs>) => T | ReadonlySignal<T>,
+        equalityFn: EqualityFn<T> = sameValueZero,
+    ) {
+        const initialValueOrSignal = computeCurrentValue(inputSignals, computeValue);
+        super(inputSignals, toValue(initialValueOrSignal), equalityFn);
+
+        if (isSignal(initialValueOrSignal)) {
+            this.subscribeToInnerSignal(initialValueOrSignal);
+        }
+
+        this.setupInputSubscriptions();
+    }
+
+    protected override unsubscribe(callback: Subscriber<T>): void {
+        super.unsubscribe(callback);
+        if (this.subscribers.size === 0 && this.syncSubscribers.size === 0) {
+            this.unsubscribeFromInnerSignal();
+            this.notifyNeedsRecompute();
+        }
+    }
+
+    protected override unsubscribeSync(callback: Subscriber<T>): void {
+        super.unsubscribeSync(callback);
+        if (this.subscribers.size === 0 && this.syncSubscribers.size === 0) {
+            this.unsubscribeFromInnerSignal();
+            this.notifyNeedsRecompute();
+        }
+    }
+
+    protected recomputeValue(): void {
+        this.needsRecompute = false;
+        this.unsubscribeFromInnerSignal();
+
+        const newValueOrSignal = computeCurrentValue(this.inputSignals, this.computeValue);
+        this.updateValue(toValue(newValueOrSignal));
+        if (isSignal(newValueOrSignal)) {
+            this.subscribeToInnerSignal(newValueOrSignal);
+        }
+    }
+
+    protected subscribeToInnerSignal(innerSignal: ReadonlySignal<T>): void {
+        this.unsubscribeFromInnerSignalFn = innerSignal.subscribe((newValue) => {
+            this.updateValue(newValue);
+        }, 'sync');
+    }
+
+    protected unsubscribeFromInnerSignal(): void {
+        this.unsubscribeFromInnerSignalFn?.();
+        this.unsubscribeFromInnerSignalFn = undefined;
+    }
+}
+
+export function flatComputed<const TInputs extends ReadonlySignal<unknown>[], T>(
+    inputSignals: readonly [...TInputs],
+    computeValue: (inputValues: MappedSignalValues<TInputs>) => T | ReadonlySignal<T>,
+    equalityFn: EqualityFn<T> = sameValueZero,
+): ReadonlySignal<T> {
+    return new FlatComputedSignalImpl(inputSignals, computeValue, equalityFn);
 }
 
 export function isSignal(value: unknown): value is ReadonlySignal<unknown> {

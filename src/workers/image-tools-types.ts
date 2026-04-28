@@ -14,6 +14,7 @@ type FindTransparentBorderTaskName = 'findTransparentBorder';
 type ImageToPaletteIndexBufferTaskName = 'imageToPaletteIndexBuffer';
 type WriteIndexedPngBufferTaskName = 'writeIndexedPngBuffer';
 type WriteIndexedPngBlobTaskName = 'writeIndexedPngBlob';
+type CropToExtentTaskName = 'cropToExtent';
 
 export interface VerifyImageMatchesPaletteTaskRequest extends BaseImageToolsTask<VerifyImageMachesPaletteTaskName> {
     image: ImageData;
@@ -53,6 +54,15 @@ export interface WriteIndexedPngBlobTaskRequest extends BaseImageToolsTask<Write
     palette: readonly PixelColor[];
 }
 
+export type CropToExtentTaskRequest = BaseImageToolsTask<CropToExtentTaskName> & {
+    image: ImageData;
+    extent: PixelExtent;
+};
+
+export type CropToNonTransparentAreaTaskRequest = BaseImageToolsTask<'cropToNonTransparentArea'> & {
+    image: ImageData;
+};
+
 export type ImageToolsTaskRequest =
     | VerifyImageMatchesPaletteTaskRequest
     | HighlightNonMatchingPixelsTaskRequest
@@ -61,7 +71,9 @@ export type ImageToolsTaskRequest =
     | FindTransparentBorderTaskRequest
     | ImageToPaletteIndexBufferTaskRequest
     | WriteIndexedPngBufferTaskRequest
-    | WriteIndexedPngBlobTaskRequest;
+    | WriteIndexedPngBlobTaskRequest
+    | CropToExtentTaskRequest
+    | CropToNonTransparentAreaTaskRequest;
 
 interface BaseImageToolsTaskResult<T extends string> {
     task: T;
@@ -180,6 +192,32 @@ export interface WriteIndexedPngBlobTaskErrorResult extends BaseImageToolsTaskRe
 
 export type WriteIndexedPngBlobTaskResult = WriteIndexedPngBlobTaskSuccessResult | WriteIndexedPngBlobTaskErrorResult;
 
+export interface CropToExtentTaskSuccessResult extends BaseImageToolsTaskResult<CropToExtentTaskName> {
+    success: true;
+    image: ImageData;
+}
+
+export interface CropToExtentTaskErrorResult extends BaseImageToolsTaskResult<CropToExtentTaskName> {
+    success: false;
+    error: unknown;
+}
+
+export type CropToExtentTaskResult = CropToExtentTaskSuccessResult | CropToExtentTaskErrorResult;
+
+export interface CropToNonTransparentAreaTaskSuccessResult extends BaseImageToolsTaskResult<'cropToNonTransparentArea'> {
+    success: true;
+    image: ImageData;
+}
+
+export interface CropToNonTransparentAreaTaskErrorResult extends BaseImageToolsTaskResult<'cropToNonTransparentArea'> {
+    success: false;
+    error: unknown;
+}
+
+export type CropToNonTransparentAreaTaskResult =
+    | CropToNonTransparentAreaTaskSuccessResult
+    | CropToNonTransparentAreaTaskErrorResult;
+
 export type ImageToolsTaskResult =
     | VerifyImageMatchesPaletteTaskResult
     | HighlightNonMatchingPixelsTaskResult
@@ -188,13 +226,6 @@ export type ImageToolsTaskResult =
     | FindTransparentBorderTaskResult
     | ImageToPaletteIndexBufferTaskResult
     | WriteIndexedPngBufferTaskResult
-    | WriteIndexedPngBlobTaskResult;
-
-export function assertTaskResultType<T extends ImageToolsTaskResult['task']>(
-    result: ImageToolsTaskResult,
-    expectedTask: T,
-): asserts result is Extract<ImageToolsTaskResult, { task: T }> {
-    if (result.task !== expectedTask) {
-        throw new Error(`Expected task result of type ${expectedTask} but got ${result.task}`);
-    }
-}
+    | WriteIndexedPngBlobTaskResult
+    | CropToExtentTaskResult
+    | CropToNonTransparentAreaTaskResult;

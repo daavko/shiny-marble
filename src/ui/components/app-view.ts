@@ -1,5 +1,5 @@
 import { mdiClose, mdiCog, mdiStarFourPointsCircleOutline } from '@mdi/js';
-import { el } from '../../core/dom/html';
+import { el, type HTMLElementChild } from '../../core/dom/html';
 import { Platform } from '../../platform/platform';
 import { CanvasSnapshotTool } from '../../platform/tools/canvas-snapshot';
 import { renderBlockButton, renderIconButton } from '../builtin/button';
@@ -22,28 +22,17 @@ export function renderAppView(): void {
         return;
     }
 
-    const view = el('div', { class: 'sm-app-view__inner' }, [
-        el('section', [
-            el('h2', { class: 'sm-app-view__section-heading' }, ['Templates']),
-            el('p', ['99 templates total, 5 enabled']),
-            el('div', { class: ['sm-row', 'sm-row--center', 'sm-mt-12'] }, [
-                renderBlockButton('New Template', () => showNewTemplateDialog(), { variant: 'primary' }),
-                renderBlockButton('Manage', () => showTemplateListDialog()),
-                renderBlockButton('Import (soon (tm))', () => showImportTemplateDialog()),
-            ]),
-        ]),
-        el('hr'),
-        el('section', [
-            el('h2', { class: 'sm-app-view__section-heading' }, ['Utilities']),
-            el('div', { class: ['sm-row', 'sm-row--center'] }, [
-                renderBlockButton('Take 1:1 snapshot', () => {
-                    const snapshotTool = new CanvasSnapshotTool();
-                    void Platform.requestToolActivation(snapshotTool);
-                    toggleAppView();
-                }),
-            ]),
-        ]),
-    ]);
+    const platformSpecificContent = Platform.renderPlatformSpecificAppViewContent();
+    const platformSpecificContentElements: HTMLElementChild[] = [];
+    if (platformSpecificContent != null) {
+        platformSpecificContentElements.push(el('hr'));
+        if (Array.isArray(platformSpecificContent)) {
+            platformSpecificContentElements.push(...platformSpecificContent);
+        } else {
+            platformSpecificContentElements.push(platformSpecificContent);
+        }
+    }
+
     const container = el('div', { class: 'sm-app-view' }, [
         el('header', { class: 'sm-app-view__header' }, [
             el('h1', { class: 'sm-app-view__title' }, [
@@ -57,25 +46,34 @@ export function renderAppView(): void {
                 renderIconButton(mdiClose, () => toggleAppView()),
             ]),
         ]),
-        view,
-    ]);
-
-    const platformSpecificContent = Platform.renderPlatformSpecificAppViewContent();
-    if (platformSpecificContent != null) {
-        view.append(el('hr'));
-        if (Array.isArray(platformSpecificContent)) {
-            view.append(...platformSpecificContent);
-        } else {
-            view.append(platformSpecificContent);
-        }
-    }
-
-    view.append(
-        el('hr'),
-        el('footer', { class: 'sm-app-view__footer' }, [
-            el('p', [`Shiny Marble v${GM_info.script.version} - made by ${GM_info.script.author}`]),
+        el('div', { class: 'sm-app-view__inner' }, [
+            el('section', [
+                el('h2', { class: 'sm-app-view__section-heading' }, ['Templates']),
+                el('p', ['99 templates total, 5 enabled']),
+                el('div', { class: ['sm-row', 'sm-row--center', 'sm-mt-12'] }, [
+                    renderBlockButton('New Template', () => showNewTemplateDialog(), { variant: 'primary' }),
+                    renderBlockButton('Manage', () => showTemplateListDialog()),
+                    renderBlockButton('Import (soon (tm))', () => showImportTemplateDialog()),
+                ]),
+            ]),
+            el('hr'),
+            el('section', [
+                el('h2', { class: 'sm-app-view__section-heading' }, ['Utilities']),
+                el('div', { class: ['sm-row', 'sm-row--center'] }, [
+                    renderBlockButton('Take 1:1 snapshot', () => {
+                        const snapshotTool = new CanvasSnapshotTool();
+                        void Platform.requestToolActivation(snapshotTool);
+                        toggleAppView();
+                    }),
+                ]),
+            ]),
+            ...platformSpecificContentElements,
+            el('hr'),
+            el('footer', { class: 'sm-app-view__footer' }, [
+                el('p', [`Shiny Marble v${GM_info.script.version} - made by ${GM_info.script.author}`]),
+            ]),
         ]),
-    );
+    ]);
 
     document.body.appendChild(container);
     renderedAppView = {

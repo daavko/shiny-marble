@@ -154,6 +154,13 @@ async function getStorage(): Promise<TemplateStorageDB> {
 }
 
 export const TemplateStorage = {
+    async addTemplate(template: StoredTemplate, image: StoredTemplateImage): Promise<void> {
+        const db = await getStorage();
+        const tx = db.transaction(['templates', 'templateImages'], 'readwrite');
+        const templatesStore = tx.objectStore('templates');
+        const imagesStore = tx.objectStore('templateImages');
+        await Promise.all([templatesStore.put(template), imagesStore.put(image), tx.done]);
+    },
     async saveTemplate(template: StoredTemplate): Promise<void> {
         const db = await getStorage();
         await db.put('templates', template);
@@ -175,6 +182,23 @@ export const TemplateStorage = {
     async getAllTemplates(): Promise<StoredTemplate[]> {
         const db = await getStorage();
         return await db.getAll('templates');
+    },
+    async replaceTemplateImage(
+        template: StoredTemplate,
+        oldImageHash: string,
+        newImage: StoredTemplateImage,
+    ): Promise<void> {
+        const db = await getStorage();
+        const tx = db.transaction(['templates', 'templateImages'], 'readwrite');
+        const templatesStore = tx.objectStore('templates');
+        const imagesStore = tx.objectStore('templateImages');
+
+        await Promise.all([
+            templatesStore.put(template),
+            imagesStore.put(newImage),
+            imagesStore.delete(oldImageHash),
+            tx.done,
+        ]);
     },
     async deleteTemplate(id: string): Promise<void> {
         const db = await getStorage();
@@ -210,15 +234,25 @@ export const TemplateStorage = {
         const db = await getStorage();
         await db.delete('templateImages', hash);
     },
-    async cleanupUnusedTemplateImages(usedHashes: Set<string>): Promise<void> {
+    async cleanupUnusedTemplateImages(): Promise<void> {
         const db = await getStorage();
-        const tx = db.transaction('templateImages', 'readwrite');
-        const store = tx.objectStore('templateImages');
-        const allImageHashes = new Set(await store.getAllKeys());
+        const tx = db.transaction(['templates', 'templateImages'], 'readwrite');
+        const templatesStore = tx.objectStore('templates');
+        const templates = await templatesStore.getAll();
+        const usedHashes = new Set(templates.map((t) => t.hash));
+        const imagesStore = tx.objectStore('templateImages');
+        const allImageHashes = new Set(await imagesStore.getAllKeys());
         const hashesToDelete = Array.from(allImageHashes.difference(usedHashes));
         if (hashesToDelete.length > 0) {
-            await Promise.all([...hashesToDelete.map((hash) => store.delete(hash)), tx.done]);
+            await Promise.all([...hashesToDelete.map((hash) => imagesStore.delete(hash)), tx.done]);
         }
+    },
+    async saveOptimizedTemplateTiles(tiles: StoredOptimizedTemplateTile[]): Promise<void> {
+        const db = await getStorage();
+        const tx = db.transaction('optimizedTemplateTiles', 'readwrite');
+        const store = tx.objectStore('optimizedTemplateTiles');
+        const putPromises = tiles.map((tile) => store.put(tile));
+        await Promise.all([...putPromises, tx.done]);
     },
     async getOptimizedTemplateTiles(templateId: string): Promise<StoredOptimizedTemplateTile[]> {
         const db = await getStorage();
@@ -232,5 +266,13 @@ export const TemplateStorage = {
         ]);
         const templateIds = tiles.map((key) => key[0]);
         return Array.from(new Set(templateIds));
+    },
+    async deleteOptimizedTemplateTiles(templateId: string): Promise<void> {
+        const db = await getStorage();
+        const tx = db.transaction('optimizedTemplateTiles', 'readwrite');
+        const store = tx.objectStore('optimizedTemplateTiles');
+        const index = store.index('templateId');
+        const tileKeys = await index.getAllKeys(templateId);
+        await Promise.all([...tileKeys.map((key) => store.delete(key)), tx.done]);
     },
 };

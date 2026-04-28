@@ -4,14 +4,13 @@ import { showInfoAlert } from '../components/alerts-container';
 import { createTemplateImagePicker } from '../components/template-image-picker';
 
 export function showReplaceTemplateImageDialog(templateId: string): void {
-    const { element: dropArea, context: dropAreaContext } = createTemplateImagePicker(async (image) => {
-        await TemplateRegistry.replaceTemplateImage(templateId, image);
-        dialog.close();
-        showInfoAlert(`Template image replaced successfully`, 2000);
-    });
-
-    const { dialog, dialogContext } = createDialog('Replace Template Image', { size: 'large' }, [dropArea]);
-    dialogContext.adopt(dropAreaContext);
+    const { dialog } = createDialog('Replace Template Image', { size: 'large' }, (ctx) => [
+        createTemplateImagePicker(ctx, async (image) => {
+            await TemplateRegistry.replaceTemplateImage(templateId, image);
+            dialog.close();
+            showInfoAlert(`Template image replaced successfully`, 2000);
+        }),
+    ]);
 
     document.body.appendChild(dialog);
     dialog.showModal();

@@ -2,7 +2,8 @@ import prettyBytes from 'pretty-bytes';
 import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
 import { debug, debugDetailed } from '../../core/debug';
 import { el } from '../../core/dom/html';
-import { createEffectContext, type EffectContext } from '../../core/effects';
+import { cond$, el$, if$ } from '../../core/dom/reactive-html';
+import type { EffectContext } from '../../core/effects';
 import { getPngImageSize, isPngFile } from '../../core/png/png-tools';
 import { signal } from '../../core/signals';
 import { getLosslessWebpImageSize, isLosslessWebpFile } from '../../core/webp/webp-tools';
@@ -13,26 +14,19 @@ import { renderBlockButton } from '../builtin/button';
 
 export { default as templateImagePickerStyle } from './template-image-picker.css';
 
-export interface TemplateImagePickerRef {
-    element: HTMLElement;
-    context: EffectContext;
-}
-
 export function createTemplateImagePicker(
+    effectContext: EffectContext,
     imagePickedCallback: (image: ImageData, imageFile: File) => void | Promise<void>,
-): TemplateImagePickerRef {
-    const imagePicker = el('div', { class: 'sm-template-image-picker' });
+): HTMLElement {
+    const processing = signal(false);
+    const imageDiff = signal<ImageData | null>(null);
+    const errorMessage = signal<string | null>(null);
+    const dropAreaDragOver = signal(false);
+
     const fileInput = el('input', {
         attributes: { type: 'file', accept: 'image/png, image/webp' },
         events: { change: () => handleFileChange() },
     });
-    const errorContainer = el('div', { class: 'sm-template-image-picker__error-container' });
-
-    const context = createEffectContext();
-
-    const processing = signal(false);
-    const imageDiff = signal<ImageData | null>(null);
-    const errorMessage = signal<string | null>(null);
 
     function handleFileChange(): void {
         const files = fileInput.files;
@@ -51,7 +45,9 @@ export function createTemplateImagePicker(
             });
     }
 
-    function handleDrop(dropArea: HTMLElement, event: DragEvent): void {
+    function handleDrop(event: DragEvent): void {
+        dropAreaDragOver.value = false;
+
         const data = event.dataTransfer;
         if (data == null) {
             return;
@@ -63,7 +59,6 @@ export function createTemplateImagePicker(
         }
 
         event.preventDefault();
-        dropArea.classList.remove('sm-template-image-picker__drop-area--drag-over');
 
         handleFileSelected(files[0])
             .catch((e: unknown) => {
@@ -142,36 +137,6 @@ export function createTemplateImagePicker(
         await imagePickedCallback(image, file);
     }
 
-    function renderRegularDropArea(): HTMLElement {
-        const dropArea = el(
-            'section',
-            {
-                class: 'sm-template-image-picker__drop-area',
-                attributes: {
-                    tabindex: -1,
-                },
-                events: {
-                    dragenter: () => dropArea.classList.add('sm-template-image-picker__drop-area--drag-over'),
-                    dragleave: () => dropArea.classList.remove('sm-template-image-picker__drop-area--drag-over'),
-                    dragend: () => dropArea.classList.remove('sm-template-image-picker__drop-area--drag-over'),
-                    drop: (e) => {
-                        handleDrop(dropArea, e);
-                    },
-                },
-            },
-            [
-                el('p', ['Drop or paste your image file here.']),
-                renderBlockButton('Select a file', () => fileInput.click()),
-                errorContainer,
-            ],
-        );
-        return dropArea;
-    }
-
-    function renderLoadingState(): HTMLElement {
-        return el('div', { class: 'sm-template-image-picker__loading' }, [el('p', ['Processing image...'])]);
-    }
-
     function renderPaletteDiffContainer(diffImage: ImageData): HTMLElement {
         const canvas = el('canvas', {
             class: 'sm-template-image-picker__palette-diff__canvas',
@@ -206,33 +171,49 @@ export function createTemplateImagePicker(
         ]);
     }
 
-    context.watch(
-        [processing, imageDiff],
-        ([processingValue, imageDiffData]) => {
-            if (processingValue) {
-                imagePicker.replaceChildren(renderLoadingState());
-            } else {
-                if (imageDiffData) {
-                    imagePicker.replaceChildren(renderPaletteDiffContainer(imageDiffData));
-                } else {
-                    const dropArea = renderRegularDropArea();
-                    imagePicker.replaceChildren(dropArea);
-                    dropArea.focus();
-                }
-            }
-        },
-        true,
-    );
-
-    context.watch([errorMessage], ([message]) => {
-        errorContainer.textContent = '';
-        if (message != null) {
-            errorContainer.appendChild(el('p', [message]));
-        }
-    });
-
-    return {
-        element: imagePicker,
-        context,
-    };
+    return el$('div', { effectContext, class: 'sm-template-image-picker' }, [
+        if$(
+            processing,
+            el('div', { class: 'sm-template-image-picker__loading' }, [el('p', ['Processing image...'])]),
+            cond$(
+                imageDiff,
+                (diff) => diff != null,
+                (diffImage) => renderPaletteDiffContainer(diffImage),
+                el$(
+                    'section',
+                    {
+                        effectContext,
+                        class: 'sm-template-image-picker__drop-area',
+                        reactiveClass: {
+                            'sm-template-image-picker__drop-area--drag-over': dropAreaDragOver,
+                        },
+                        attributes: {
+                            tabindex: -1,
+                        },
+                        events: {
+                            dragenter: () => {
+                                dropAreaDragOver.value = true;
+                            },
+                            dragleave: () => {
+                                dropAreaDragOver.value = false;
+                            },
+                            dragend: () => {
+                                dropAreaDragOver.value = false;
+                            },
+                            drop: (e) => handleDrop(e),
+                        },
+                    },
+                    [
+                        el('p', ['Drop or paste your image file here.']),
+                        renderBlockButton('Select a file', () => fileInput.click()),
+                        cond$(
+                            errorMessage,
+                            (msg) => msg != null,
+                            (msg) => el('div', { class: 'sm-template-image-picker__error-container' }, [msg]),
+                        ),
+                    ],
+                ),
+            ),
+        ),
+    ]);
 }

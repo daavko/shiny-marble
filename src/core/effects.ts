@@ -58,6 +58,7 @@ export function createEffectContext(): EffectContext {
         createSubcontext(): EffectContext {
             const subctx = createEffectContext();
             ctx.adopt(subctx);
+            subctx.registerCleanup(() => ctx.unadopt(subctx));
             return subctx;
         },
         destroy(): void {

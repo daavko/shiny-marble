@@ -1,7 +1,7 @@
 import { encodeIndexedPngBlob, encodeIndexedPngData } from '../core/png/indexed-png-writer';
 import type { PixelColor } from '../platform/types';
 import { createPixelColorIndexLut } from '../util/color';
-import { pixelExtent } from '../util/geometry';
+import { extentToRect, type PixelExtent, pixelExtent } from '../util/geometry';
 import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 
 function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): boolean {
@@ -194,6 +194,31 @@ function imageToPaletteIndexBuffer(image: ImageData, palette: readonly PixelColo
     return buffer;
 }
 
+function cropToExtent(image: ImageData, extent: PixelExtent): ImageData {
+    const rect = extentToRect(extent);
+    const srcView = new Uint32Array(image.data.buffer);
+    const dest = new ImageData(rect.width, rect.height);
+    const destView = new Uint32Array(dest.data.buffer);
+
+    for (let y = 0; y < rect.height; y++) {
+        const srcRowStart = (rect.y + y) * image.width + rect.x;
+        const destRowStart = y * rect.width;
+        destView.set(srcView.subarray(srcRowStart, srcRowStart + rect.width), destRowStart);
+    }
+
+    return dest;
+}
+
+function cropToNonTransparentArea(image: ImageData): ImageData {
+    const border = findTransparentBorder(image);
+
+    if (border === 'fullyTransparent' || border === 'noTransparentBorder') {
+        return image;
+    } else {
+        return cropToExtent(image, border);
+    }
+}
+
 async function writeIndexedPngBuffer(image: ImageData, palette: readonly PixelColor[]): Promise<ArrayBuffer> {
     return encodeIndexedPngData(image, palette);
 }
@@ -206,37 +231,43 @@ function postTaskResult(data: ImageToolsTaskResult, transfer?: Transferable[]): 
     globalThis.postMessage(data, { transfer });
 }
 
+function handleTask<T extends ImageToolsTaskRequest>(request: T, taskFn: (request: T) => void): void {
+    try {
+        taskFn(request);
+    } catch (error) {
+        postTaskResult({ task: request.task, taskId: request.taskId, success: false, error });
+    }
+}
+
+async function handleAsyncTask<T extends ImageToolsTaskRequest>(
+    request: T,
+    taskFn: (request: T) => Promise<void>,
+): Promise<void> {
+    try {
+        await taskFn(request);
+    } catch (error) {
+        postTaskResult({ task: request.task, taskId: request.taskId, success: false, error });
+    }
+}
+
 async function handleTaskRequest(request: ImageToolsTaskRequest): Promise<void> {
     switch (request.task) {
-        case 'verifyImageMatchesPalette': {
-            const { taskId, image, palette } = request;
-            try {
+        case 'verifyImageMatchesPalette':
+            handleTask(request, ({ taskId, image, palette }) => {
                 const matches = verifyImageMatchesPalette(image, palette);
                 postTaskResult({ task: 'verifyImageMatchesPalette', taskId, success: true, matches });
-            } catch (error) {
-                postTaskResult({ task: 'verifyImageMatchesPalette', taskId, success: false, error });
-                return;
-            }
-
+            });
             break;
-        }
-        case 'highlightNonMatchingPixels': {
-            const { taskId, image, palette, darkenPercentage, highlightColorRgba } = request;
-            try {
+        case 'highlightNonMatchingPixels':
+            handleTask(request, ({ taskId, image, palette, darkenPercentage, highlightColorRgba }) => {
                 const resultImage = highlightNonMatchingPixels(image, palette, darkenPercentage, highlightColorRgba);
                 postTaskResult({ task: 'highlightNonMatchingPixels', taskId, success: true, image: resultImage }, [
                     resultImage.data.buffer,
                 ]);
-            } catch (error) {
-                postTaskResult({ task: 'highlightNonMatchingPixels', taskId, success: false, error });
-                return;
-            }
-
+            });
             break;
-        }
-        case 'detectCanvasFingerprintingProtection': {
-            const { taskId } = request;
-            try {
+        case 'detectCanvasFingerprintingProtection':
+            handleTask(request, ({ taskId }) => {
                 const protectionDetected = detectCanvasFingerprintingProtection();
                 postTaskResult({
                     task: 'detectCanvasFingerprintingProtection',
@@ -244,115 +275,61 @@ async function handleTaskRequest(request: ImageToolsTaskRequest): Promise<void> 
                     success: true,
                     protectionDetected,
                 });
-            } catch (error) {
-                postTaskResult({ task: 'detectCanvasFingerprintingProtection', taskId, success: false, error });
-                return;
-            }
-
+            });
             break;
-        }
-        case 'detemplatizeBlueMarbleTile': {
-            const { taskId, image } = request;
-            try {
+        case 'detemplatizeBlueMarbleTile':
+            handleTask(request, ({ taskId, image }) => {
                 const resultImage = detemplatizeBlueMarbleTile(image);
-                postTaskResult(
-                    {
-                        task: 'detemplatizeBlueMarbleTile',
-                        taskId,
-                        success: true,
-                        image: resultImage,
-                    },
-                    [resultImage.data.buffer],
-                );
-            } catch (error) {
-                postTaskResult({ task: 'detemplatizeBlueMarbleTile', taskId, success: false, error });
-                return;
-            }
-
+                postTaskResult({ task: 'detemplatizeBlueMarbleTile', taskId, success: true, image: resultImage }, [
+                    resultImage.data.buffer,
+                ]);
+            });
             break;
-        }
-        case 'findTransparentBorder': {
-            const { taskId, image } = request;
-            try {
+        case 'findTransparentBorder':
+            handleTask(request, ({ taskId, image }) => {
                 const border = findTransparentBorder(image);
-                postTaskResult({
-                    task: 'findTransparentBorder',
-                    taskId,
-                    success: true,
-                    border,
-                });
-            } catch (error) {
-                postTaskResult({ task: 'findTransparentBorder', taskId, success: false, error });
-                return;
-            }
-
+                postTaskResult({ task: 'findTransparentBorder', taskId, success: true, border });
+            });
             break;
-        }
-        case 'imageToPaletteIndexBuffer': {
-            const { taskId, image, palette } = request;
-            try {
+        case 'imageToPaletteIndexBuffer':
+            handleTask(request, ({ taskId, image, palette }) => {
                 const buffer = imageToPaletteIndexBuffer(image, palette);
-                postTaskResult(
-                    {
-                        task: 'imageToPaletteIndexBuffer',
-                        taskId,
-                        success: true,
-                        buffer,
-                    },
-                    [buffer],
-                );
-            } catch (error) {
-                postTaskResult({ task: 'imageToPaletteIndexBuffer', taskId, success: false, error });
-                return;
-            }
-
+                postTaskResult({ task: 'imageToPaletteIndexBuffer', taskId, success: true, buffer }, [buffer]);
+            });
             break;
-        }
-        case 'writeIndexedPngBuffer': {
-            const { taskId, image, palette } = request;
-            try {
+        case 'writeIndexedPngBuffer':
+            await handleAsyncTask(request, async ({ taskId, image, palette }) => {
                 const buffer = await writeIndexedPngBuffer(image, palette);
-                postTaskResult(
-                    {
-                        task: 'writeIndexedPngBuffer',
-                        taskId,
-                        success: true,
-                        buffer,
-                    },
-                    [buffer],
-                );
-            } catch (error) {
-                postTaskResult({ task: 'writeIndexedPngBuffer', taskId, success: false, error });
-                return;
-            }
-
+                postTaskResult({ task: 'writeIndexedPngBuffer', taskId, success: true, buffer }, [buffer]);
+            });
             break;
-        }
-        case 'writeIndexedPngBlob': {
-            const { taskId, image, palette } = request;
-            try {
+        case 'writeIndexedPngBlob':
+            await handleAsyncTask(request, async ({ taskId, image, palette }) => {
                 const blob = await writeIndexedPngBlob(image, palette);
-                postTaskResult(
-                    {
-                        task: 'writeIndexedPngBlob',
-                        taskId,
-                        success: true,
-                        blob,
-                    },
-                    [blob],
-                );
-            } catch (error) {
-                postTaskResult({ task: 'writeIndexedPngBlob', taskId, success: false, error });
-                return;
-            }
-
+                postTaskResult({ task: 'writeIndexedPngBlob', taskId, success: true, blob }, [blob]);
+            });
             break;
-        }
+        case 'cropToNonTransparentArea':
+            handleTask(request, ({ taskId, image }) => {
+                const resultImage = cropToNonTransparentArea(image);
+                postTaskResult({ task: 'cropToNonTransparentArea', taskId, success: true, image: resultImage }, [
+                    resultImage.data.buffer,
+                ]);
+            });
+            break;
+        case 'cropToExtent':
+            handleTask(request, ({ taskId, image, extent }) => {
+                const resultImage = cropToExtent(image, extent);
+                postTaskResult({ task: 'cropToExtent', taskId, success: true, image: resultImage }, [
+                    resultImage.data.buffer,
+                ]);
+            });
+            break;
     }
 }
 
-globalThis.addEventListener('message', (event: MessageEvent<ImageToolsTaskRequest>) => {
-    void handleTaskRequest(event.data);
+globalThis.addEventListener('message', ({ data: request }: MessageEvent<ImageToolsTaskRequest>) => {
+    void handleTaskRequest(request);
 });
 
 export default WORKER_FAKE_EXPORT;

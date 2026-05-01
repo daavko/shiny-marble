@@ -1,5 +1,5 @@
-import { downloadDebugLog } from '../../core/debug';
 import { el, type HTMLElementChild } from '../../core/dom/html';
+import { downloadDebugLog } from '../../platform/debug';
 import { Platform, PlatformSettings } from '../../platform/platform';
 import { renderBlockButton } from '../builtin/button';
 import { createDialog } from '../builtin/dialog';

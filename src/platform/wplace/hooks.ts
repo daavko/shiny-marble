@@ -1,7 +1,7 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
-import { debug } from '../../core/debug';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
+import { debug } from '../debug';
 
 export async function addWplaceMapInstanceHook(
     resolveMapInstance: (mapInstance: MapLibreInstance) => void,

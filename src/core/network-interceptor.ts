@@ -1,5 +1,4 @@
 import picomatch, { type Matcher } from 'picomatch/posix';
-import { debug } from './debug';
 import { originalFetch } from './fetch';
 
 interface SimpleMatcher {
@@ -153,7 +152,6 @@ export const NetworkInterceptor = {
 
             override send(body?: Document | XMLHttpRequestBodyInit | null): void {
                 if (this.#blocked) {
-                    debug('Blocked XMLHttpRequest to', this.responseURL);
                     return;
                 }
                 super.send(body);

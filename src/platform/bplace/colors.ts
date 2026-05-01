@@ -1,5 +1,6 @@
 import { simpleNamedColorToPixelColor } from '../../util/color';
-import type { PixelColor } from '../types';
+
+import type { PixelColor } from '../../core/types';
 
 export const BPLACE_COLORS: PixelColor[] = [
     { name: 'Pastel red', rgba: 0xffd1d1ff },

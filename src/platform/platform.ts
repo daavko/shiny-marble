@@ -1,11 +1,8 @@
 import { LngLat, type LngLatLike, type Map as MapLibreInstance, MercatorCoordinate } from 'maplibre-gl';
-import { debug } from '../core/debug';
 import type { HTMLElementChild } from '../core/dom/html';
 import { addStyles } from '../core/dom/styles';
-import type { EffectContext } from '../core/effects';
 import { NetworkInterceptor } from '../core/network-interceptor';
-import { signal } from '../core/signals';
-import { TemplateRegistry } from '../core/template/registry';
+import type { PixelColor } from '../core/types';
 import { buttonStyle } from '../ui/builtin/button';
 import { dialogStyle } from '../ui/builtin/dialog';
 import { inputStyle } from '../ui/builtin/input';
@@ -19,14 +16,6 @@ import { appViewStyle } from '../ui/components/app-view';
 import { templateImagePickerStyle } from '../ui/components/template-image-picker';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { templateListDialogStyle } from '../ui/dialogs/template-list-dialog';
-import { worldWrapPixelCoordinates } from '../util/geometry';
-import { BplacePlatform } from './bplace/platform';
-import platformStyle from './platform.css';
-import { createSetting, createSettings } from './settings';
-import { canvasSnapshotToolStyle } from './tools/canvas-snapshot';
-import type { ActiveTool, CanvasPlatform, PixelColor } from './types';
-import utilStyle from './util.css';
-import { WplacePlatform } from './wplace/platform';
 import {
     type MapTileCoordinates,
     type MapTileExtent,
@@ -34,7 +23,19 @@ import {
     pixelCoordinates,
     type PixelDimensions,
     type RenderTileDimensions,
-} from '../util/geometry-basic';
+} from '../util/geometry';
+import { BplacePlatform } from './bplace/platform';
+import { debug } from './debug';
+import { worldWrapPixelCoordinates } from './geometry';
+import platformStyle from './platform.css';
+import type { EffectContext } from './reactivity/effects';
+import { signal } from './reactivity/signals';
+import { createSetting, createSettings } from './settings';
+import { TemplateRegistry } from './template/registry';
+import { canvasSnapshotToolStyle } from './tools/canvas-snapshot';
+import type { ActiveTool, CanvasPlatform } from './types';
+import utilStyle from './util.css';
+import { WplacePlatform } from './wplace/platform';
 
 let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;

@@ -1,5 +1,5 @@
 import { el } from '../../core/dom/html';
-import { createEffectContext, type EffectContext } from '../../core/effects';
+import { createEffectContext, type EffectContext } from '../../platform/reactivity/effects';
 
 export { default as activeToolPanelStyle } from './active-tool-panel.css';
 

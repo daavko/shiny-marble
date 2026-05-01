@@ -1,7 +1,7 @@
 import { Map as MapLibreInstance } from 'maplibre-gl';
-import { debug } from '../../core/debug';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
+import { debug } from '../debug';
 
 interface RefObject {
     current: unknown;

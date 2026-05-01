@@ -1,4 +1,4 @@
-import type { PixelCoordinates } from '../../util/geometry-basic';
+import type { PixelCoordinates } from '../../util/geometry';
 
 export interface TemplateParseSuccess {
     success: true;

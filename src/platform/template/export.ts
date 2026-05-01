@@ -1,5 +1,5 @@
 import { BlobReader, BlobWriter, TextReader, ZipWriter } from '@zip.js/zip.js';
-import { Platform } from '../../platform/platform';
+import { Platform } from '../platform';
 import {
     TEMPLATE_ZIP_CURRENT_VERSION,
     TEMPLATE_ZIP_METADATA_FILENAME,

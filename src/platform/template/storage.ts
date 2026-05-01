@@ -6,7 +6,7 @@ import type {
     PixelDimensions,
     PixelRect,
     RenderTileCoordinates,
-} from '../../util/geometry-basic';
+} from '../../util/geometry';
 import { waitForDataAndTransaction } from '../../util/idb';
 import { debug } from '../debug';
 

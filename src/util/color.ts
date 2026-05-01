@@ -1,4 +1,4 @@
-import type { PixelColor } from '../platform/types';
+import type { PixelColor } from '../core/types';
 
 export function simpleNamedColorToPixelColor(name: string, rgba: number): PixelColor {
     const red = rgba & 0xff;

@@ -1,13 +1,13 @@
 import prettyBytes from 'pretty-bytes';
 import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
-import { debug, debugDetailed } from '../../core/debug';
 import { el } from '../../core/dom/html';
-import { cond$, el$, if$ } from '../../core/dom/reactive-html';
-import type { EffectContext } from '../../core/effects';
 import { getPngImageSize, isPngFile } from '../../core/png/png-tools';
-import { signal } from '../../core/signals';
 import { getLosslessWebpImageSize, isLosslessWebpFile } from '../../core/webp/webp-tools';
+import { debug, debugDetailed } from '../../platform/debug';
 import { Platform } from '../../platform/platform';
+import type { EffectContext } from '../../platform/reactivity/effects';
+import { cond$, el$, if$ } from '../../platform/reactivity/reactive-html';
+import { signal } from '../../platform/reactivity/signals';
 import { downloadBlob } from '../../util/file';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { renderBlockButton } from '../builtin/button';

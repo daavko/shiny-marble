@@ -1,6 +1,6 @@
 import { mdiClose } from '@mdi/js';
-import { debugDetailed } from '../../core/debug';
 import { el } from '../../core/dom/html';
+import { debugDetailed } from '../../platform/debug';
 import { renderIconButton } from '../builtin/button';
 
 export { default as alertsContainerStyle } from './alerts-container.css';

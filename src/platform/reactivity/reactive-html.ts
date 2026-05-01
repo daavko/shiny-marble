@@ -1,14 +1,3 @@
-import { arrayEqualityFn } from '../../util/misc';
-import type { EffectContext } from '../effects';
-import {
-    computed,
-    type EqualityFn,
-    flatComputed,
-    isSignal,
-    type MappedSignalValues,
-    type ReadonlySignal,
-    signal,
-} from '../signals';
 import {
     type AnyElementEventListenerMap,
     bindElementEvents,
@@ -21,7 +10,18 @@ import {
     svgEl,
     type SVGElementChild,
     type SVGElementEventListenerMap,
-} from './html';
+} from '../../core/dom/html';
+import { arrayEqualityFn } from '../../util/equality';
+import type { EffectContext } from './effects';
+import {
+    computed,
+    type EqualityFn,
+    flatComputed,
+    isSignal,
+    type MappedSignalValues,
+    type ReadonlySignal,
+    signal,
+} from './signals';
 
 type AttributeValue = string | number | boolean | null | undefined;
 export type ReactiveAttributesRecord = Record<string, AttributeValue | ReadonlySignal<AttributeValue>>;

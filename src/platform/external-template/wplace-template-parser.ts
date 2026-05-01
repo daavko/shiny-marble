@@ -1,6 +1,7 @@
 import * as v from 'valibot';
 import { originalFetch } from '../../core/fetch';
-import { coordsWithNewOrigin, worldWrapPixelCoordinates } from '../../util/geometry';
+import { coordsWithNewOrigin } from '../../util/geometry';
+import { worldWrapPixelCoordinates } from '../geometry';
 import { Platform } from '../platform';
 import { handleBlobFromParsedTemplate } from './common';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';

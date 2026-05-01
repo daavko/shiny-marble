@@ -1,5 +1,5 @@
-import { PlatformSettings } from '../platform/platform';
 import { downloadBlob } from '../util/file';
+import { PlatformSettings } from './platform';
 
 const DEBUG_LOG: string[] = [];
 

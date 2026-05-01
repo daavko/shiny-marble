@@ -1,7 +1,7 @@
 import { mdiDotsVertical, mdiExport, mdiPencil, mdiTrashCanOutline } from '@mdi/js';
 import { el } from '../../core/dom/html';
-import { createEffectContext, type EffectContext } from '../../core/effects';
-import { signal, type Signal } from '../../core/signals';
+import { createEffectContext, type EffectContext } from '../../platform/reactivity/effects';
+import { signal, type Signal } from '../../platform/reactivity/signals';
 import {
     type LiveTemplate,
     TemplateAddedEvent,
@@ -9,7 +9,7 @@ import {
     TemplateDeletedEvent,
     TemplateRegistry,
     TemplateRegistryEvents,
-} from '../../core/template/registry';
+} from '../../platform/template/registry';
 import { renderIconButton } from '../builtin/button';
 import { createDialog } from '../builtin/dialog';
 import { openPopoverMenu } from '../builtin/popover-menu';

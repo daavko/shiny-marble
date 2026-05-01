@@ -1,12 +1,12 @@
 import { addStyle } from '../../core/dom/styles';
 import { originalFetch } from '../../core/fetch';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
-import { coveredTilesExtentToTiles } from '../../util/geometry';
+import { pixelDimensions, renderTileDimensions } from '../../util/geometry';
+import { coveredTilesExtentToTiles } from '../geometry';
 import type { CanvasPlatform } from '../types';
 import { WPLACE_COLORS } from './colors';
 import { addWplaceMapInstanceHook } from './hooks';
 import wplacePlatformStyle from './platform.css';
-import { pixelDimensions, renderTileDimensions } from '../../util/geometry-basic';
 
 export const WplacePlatform: CanvasPlatform = {
     id: 'wplace',

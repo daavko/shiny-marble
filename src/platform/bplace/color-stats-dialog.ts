@@ -1,9 +1,9 @@
-import { debugDetailed } from '../../core/debug';
 import { el } from '../../core/dom/html';
-import { cond$, el$, switch$ } from '../../core/dom/reactive-html';
-import { computed, signal } from '../../core/signals';
 import { createDialog } from '../../ui/builtin/dialog';
-import { arrayEqualityFn } from '../../util/misc';
+import { arrayEqualityFn } from '../../util/equality';
+import { debugDetailed } from '../debug';
+import { cond$, el$, switch$ } from '../reactivity/reactive-html';
+import { computed, signal } from '../reactivity/signals';
 import type { ColorUsageRecord } from './schemas';
 import { fetchUserColorStats } from './supabase';
 

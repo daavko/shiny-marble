@@ -1,8 +1,8 @@
 import { mdiClose } from '@mdi/js';
 import { el, type HTMLElementChild } from '../../core/dom/html';
-import { el$, type ReactiveHTMLElementChild } from '../../core/dom/reactive-html';
-import { createEffectContext, type EffectContext } from '../../core/effects';
-import type { ReadonlySignal } from '../../core/signals';
+import { createEffectContext, type EffectContext } from '../../platform/reactivity/effects';
+import { el$, type ReactiveHTMLElementChild } from '../../platform/reactivity/reactive-html';
+import type { ReadonlySignal } from '../../platform/reactivity/signals';
 import { renderIconButton } from './button';
 
 export { default as dialogStyle } from './dialog.css';

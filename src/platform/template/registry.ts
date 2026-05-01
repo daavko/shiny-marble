@@ -1,6 +1,5 @@
-import { Platform } from '../../platform/platform';
-import type { PixelColor } from '../../platform/types';
-import { getCoveredRenderTiles } from '../../util/geometry';
+import { encodeIndexedPngBlob } from '../../core/png/indexed-png-writer';
+import type { PixelColor } from '../../core/types';
 import {
     type MapTileCoordinates,
     type PixelCoordinates,
@@ -9,11 +8,12 @@ import {
     pixelDimensions,
     type PixelRect,
     type RenderTileCoordinates,
-} from '../../util/geometry-basic';
+} from '../../util/geometry';
 import { computeImageDataHash, imageBitmapToImageData } from '../../util/image';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { debug, debugDetailed, debugTime } from '../debug';
-import { encodeIndexedPngBlob } from '../png/indexed-png-writer';
+import { getCoveredRenderTiles } from '../geometry';
+import { Platform } from '../platform';
 import type { TileId } from './common';
 import { type OptimizedTemplateTile, optimizeTemplate } from './optimizer';
 import { type StoredOptimizedTemplateTile, type StoredTemplate, TemplateStorage } from './storage';

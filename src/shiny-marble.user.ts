@@ -1,5 +1,5 @@
-import { debug } from './core/debug';
 import { Platform } from './platform/platform';
+import { debug } from './platform/debug';
 import { renderAlertsContainer, showErrorAlert } from './ui/components/alerts-container';
 import { renderAppIcon } from './ui/components/app-icon';
 import { waitWithTimeout } from './util/promise';

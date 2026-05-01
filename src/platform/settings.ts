@@ -1,8 +1,8 @@
 import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
-import { debug, debugDetailed } from '../core/debug';
-import { type Signal, SignalImpl, type Subscriber } from '../core/signals';
 import { showErrorAlert } from '../ui/components/alerts-container';
-import { sameValueZero } from '../util/misc';
+import { sameValueZero } from '../util/equality';
+import { type Signal, SignalImpl, type Subscriber } from './reactivity/signals';
+import { debug, debugDetailed } from './debug';
 
 const ChangesBroadcaster = new BroadcastChannel('sm-settings-changes');
 

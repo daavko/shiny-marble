@@ -3,7 +3,8 @@ import { addStyle, addStyles, removeStyle } from '../../core/dom/styles';
 import { renderBlockButton } from '../../ui/builtin/button';
 import { createBooleanSetting, createNumberRangeSetting } from '../../ui/builtin/settings-ui';
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
-import { coveredTilesExtentToTiles } from '../../util/geometry';
+import { pixelDimensions, renderTileDimensions } from '../../util/geometry';
+import { coveredTilesExtentToTiles } from '../geometry';
 import { createSetting, createSettings } from '../settings';
 import type { CanvasPlatform } from '../types';
 import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
@@ -17,7 +18,6 @@ import { fetchSingleTileImage } from './tiles/tile-fetch';
 import hideAchievementConfettiStyle from './toggleable-styles/hide-achievement-confetti.css';
 import hideBuyChromasButtonStyle from './toggleable-styles/hide-buy-chromas-btn.css';
 import hideGuildNotificationBadgeStyle from './toggleable-styles/hide-guild-notification-badge.css';
-import { pixelDimensions, renderTileDimensions } from '../../util/geometry-basic';
 
 function toggleStylesheet(style: string, enabled: boolean): void {
     if (enabled) {

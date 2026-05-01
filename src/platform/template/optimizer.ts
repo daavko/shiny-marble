@@ -1,20 +1,16 @@
-import { Platform } from '../../platform/platform';
-import type { PixelColor } from '../../platform/types';
-import {
-    getCoveredRenderTiles,
-    intersection,
-    renderTileToPixelRect,
-    worldWrapRenderTileCoordinates,
-} from '../../util/geometry';
+import type { PixelColor } from '../../core/types';
 import {
     extentToRect,
+    intersection,
     type PixelCoordinates,
     type PixelDimensions,
     type PixelRect,
     rectToExtent,
     type RenderTileCoordinates,
-} from '../../util/geometry-basic';
+} from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { getCoveredRenderTiles, renderTileToPixelRect, worldWrapRenderTileCoordinates } from '../geometry';
+import { Platform } from '../platform';
 
 export interface OptimizedTemplateTile {
     /**

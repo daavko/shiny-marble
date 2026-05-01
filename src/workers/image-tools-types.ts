@@ -1,6 +1,5 @@
-import type { PixelColor } from '../platform/types';
-
-import type { PixelExtent } from '../util/geometry-basic';
+import type { PixelExtent } from '../util/geometry';
+import type { PixelColor } from '../core/types';
 
 interface BaseImageToolsTask<T extends string> {
     task: T;

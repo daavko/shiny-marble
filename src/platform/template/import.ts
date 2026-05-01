@@ -1,11 +1,11 @@
 import { BlobReader, BlobWriter, ZipReader } from '@zip.js/zip.js';
 import type { SafeParseResult } from 'valibot';
 import * as v from 'valibot';
-import { Platform } from '../../platform/platform';
-import { pixelCoordinates } from '../../util/geometry-basic';
+import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
+import { pixelCoordinates } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
-import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../const';
 import { debug } from '../debug';
+import { Platform } from '../platform';
 import {
     TEMPLATE_ZIP_IMPORT_MAX_SIZE,
     TEMPLATE_ZIP_IMPORT_MAX_TEMPLATE_COUNT,

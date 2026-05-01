@@ -1,34 +1,29 @@
 import { featureCollection, lineString, polygon } from '@turf/turf';
 import { DateTime } from 'luxon';
 import { GeoJSONSource, MapMouseEvent, MercatorCoordinate } from 'maplibre-gl';
-import { debugDetailed, debugTime } from '../../core/debug';
 import { el } from '../../core/dom/html';
-import { cond$, el$, if$, ifNot$, switch$ } from '../../core/dom/reactive-html';
-import { createEffectContext } from '../../core/effects';
-import { computed, signal } from '../../core/signals';
 import { renderBlockButton } from '../../ui/builtin/button';
 import type { ActiveToolPanelRef } from '../../ui/components/active-tool-panel';
 import { assertCanvasCtx } from '../../util/canvas';
+import { coordsEqualityFn, rectsEqualityFn } from '../../util/equality';
 import { downloadBlob } from '../../util/file';
 import {
-    coordsEqualityFn,
     coordsWithNewOrigin,
     cornersToRect,
-    getCoveredMapTilesExtent,
-    mapTileToPixelCoordinates,
-    rectsEqualityFn,
-    rectToAllCorners,
-    splitWorldWrappingPixelRect,
-} from '../../util/geometry';
-import {
-    extentToRect,
+    extentSize,
     type MapTileExtent,
     type PixelCoordinates,
     pixelCoordinates,
     type PixelRect,
-} from '../../util/geometry-basic';
+    rectToAllCorners,
+} from '../../util/geometry';
 import { sleep } from '../../util/promise';
+import { debugDetailed, debugTime } from '../debug';
+import { getCoveredMapTilesExtent, mapTileToPixelCoordinates, splitWorldWrappingPixelRect } from '../geometry';
 import { Platform } from '../platform';
+import { createEffectContext } from '../reactivity/effects';
+import { cond$, el$, if$, ifNot$, switch$ } from '../reactivity/reactive-html';
+import { computed, signal } from '../reactivity/signals';
 import type { ActiveTool } from '../types';
 
 export { default as canvasSnapshotToolStyle } from './canvas-snapshot.css';
@@ -402,10 +397,10 @@ export class CanvasSnapshotTool implements ActiveTool {
         const leftTileExtent = getCoveredMapTilesExtent(leftRect);
         const rightTileExtent = rightRect ? getCoveredMapTilesExtent(rightRect) : null;
 
-        const leftTileRect = extentToRect(leftTileExtent);
-        const rightTileRect = rightTileExtent ? extentToRect(rightTileExtent) : null;
+        const leftAreaSize = extentSize(leftTileExtent);
+        const rigthAreaSize = rightTileExtent ? extentSize(rightTileExtent) : null;
         this.tileCount.value =
-            leftTileRect.width * leftTileRect.height + (rightTileRect ? rightTileRect.width * rightTileRect.height : 0);
+            leftAreaSize.width * leftAreaSize.height + (rigthAreaSize ? rigthAreaSize.width * rigthAreaSize.height : 0);
         debugDetailed('Covered tiles', leftTileExtent, rightTileExtent);
 
         const canvas = new OffscreenCanvas(rect.width, rect.height);

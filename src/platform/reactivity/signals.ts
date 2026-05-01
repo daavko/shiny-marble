@@ -1,5 +1,5 @@
-import { sameValueZero } from '../util/misc';
-import { debug } from './debug';
+import { sameValueZero } from '../../util/equality';
+import { debug } from '../debug';
 
 export type EqualityFn<T> = (a: T, b: T) => boolean;
 export type Subscriber<T> = (newValue: T) => void;

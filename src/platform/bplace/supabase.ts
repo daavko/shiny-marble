@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import type { MapTileCoordinates, MapTileExtent } from '../../util/geometry';
 import {
     type CityFeature,
     cityFeaturesResponse,
@@ -15,7 +16,6 @@ import {
     type TileInfo,
     tilesInfoResponse,
 } from './schemas';
-import type { MapTileCoordinates, MapTileExtent } from '../../util/geometry-basic';
 
 const SUPABASE_URL = 'https://bocmfycjqgujxkhcnfck.supabase.co';
 const SUPABASE_API_KEY =

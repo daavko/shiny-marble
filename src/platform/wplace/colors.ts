@@ -1,5 +1,6 @@
 import { simpleNamedColorToPixelColor } from '../../util/color';
-import type { PixelColor } from '../types';
+
+import type { PixelColor } from '../../core/types';
 
 export const WPLACE_COLORS: PixelColor[] = [
     { name: 'Transparent', rgba: 0x00000000 },

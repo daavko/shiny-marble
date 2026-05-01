@@ -1,18 +1,9 @@
 import type { Map as MapLibreInstance } from 'maplibre-gl';
 import type { HTMLElementChild } from '../core/dom/html';
-import type { EffectContext } from '../core/effects';
+import type { PixelColor } from '../core/types';
 import type { ActiveToolPanelRef } from '../ui/components/active-tool-panel';
-import type { MapTileCoordinates, MapTileExtent, PixelDimensions, RenderTileDimensions } from '../util/geometry-basic';
-
-export interface PixelColor {
-    readonly name: string;
-    readonly hex: string;
-    readonly rgba: number;
-    readonly red: number;
-    readonly green: number;
-    readonly blue: number;
-    readonly alpha: number;
-}
+import type { MapTileCoordinates, MapTileExtent, PixelDimensions, RenderTileDimensions } from '../util/geometry';
+import type { EffectContext } from './reactivity/effects';
 
 export interface CanvasPlatform {
     readonly id: string;

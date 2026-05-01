@@ -1,4 +1,4 @@
-import { TemplateRegistry } from '../../core/template/registry';
+import { TemplateRegistry } from '../../platform/template/registry';
 import { createDialog } from '../builtin/dialog';
 import { showInfoAlert } from '../components/alerts-container';
 import { createTemplateImagePicker } from '../components/template-image-picker';

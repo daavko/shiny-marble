@@ -1,4 +1,4 @@
-import type { HTMLEventListenerFn, SVGEventListenerFn } from './dom/html';
+import type { HTMLEventListenerFn, SVGEventListenerFn } from '../../core/dom/html';
 import { computed, type MappedSignalValues, type ReadonlySignal, type UnsubscribeFn } from './signals';
 
 export interface EffectContext {

@@ -5,13 +5,14 @@ import {
     coordsWithNewOrigin,
     enlargeExtentToContainRectMut,
     extentSize,
-    mapTileToPixelCoordinates,
-    worldWrapPixelCoordinates,
+    mapTileCoordinates,
+    type PixelCoordinates,
+    pixelExtent,
 } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { mapTileToPixelCoordinates, worldWrapPixelCoordinates } from '../geometry';
 import { Platform } from '../platform';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
-import { mapTileCoordinates, type PixelCoordinates, pixelExtent } from '../../util/geometry-basic';
 
 interface BlueMarbleTileCoords {
     tileX: number;

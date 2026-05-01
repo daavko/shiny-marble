@@ -33,9 +33,12 @@ export default defineConfig([
             'accessor-pairs': 'error',
 
             '@typescript-eslint/default-param-last': 'warn',
-            '@typescript-eslint/explicit-function-return-type': ['warn', {
-                allowExpressions: true,
-            }],
+            '@typescript-eslint/explicit-function-return-type': [
+                'warn',
+                {
+                    allowExpressions: true,
+                },
+            ],
             '@typescript-eslint/explicit-member-accessibility': ['warn', { accessibility: 'no-public' }],
             '@typescript-eslint/explicit-module-boundary-types': 'error',
             '@typescript-eslint/member-ordering': 'warn',
@@ -82,9 +85,57 @@ export default defineConfig([
         },
     },
     {
-        files: ['src/workers/**/*.{js,mjs,cjs,ts,mts,cts}'],
+        files: ['src/workers/**/*.worker.{js,mjs,cjs,ts,mts,cts}'],
         languageOptions: {
             globals: globals.worker,
+        },
+        rules: {
+            '@typescript-eslint/no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['**/platform/*', '**/ui/*'],
+                            message: 'Disallowed import in worker context.',
+                            allowTypeImports: true,
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        files: ['src/core/**/*.{js,mjs,cjs,ts,mts,cts}'],
+        rules: {
+            '@typescript-eslint/no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['**/platform/*', '**/ui/*', '**/workers/*'],
+                            message: 'Disallowed import in core context.',
+                            allowTypeImports: true,
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        files: ['src/util/**/*.{js,mjs,cjs,ts,mts,cts}'],
+        rules: {
+            '@typescript-eslint/no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['**/platform/*', '**/ui/*', '**/workers/*'],
+                            message: 'Disallowed import in util context.',
+                            allowTypeImports: true,
+                        },
+                    ],
+                },
+            ],
         },
     },
     eslintConfigPrettier,

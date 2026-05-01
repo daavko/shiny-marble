@@ -1,4 +1,4 @@
-import type { EffectContext } from '../../core/effects';
+import type { EffectContext } from '../../platform/reactivity/effects';
 import type { Setting } from '../../platform/settings';
 import { createCheckbox, createNumberInput, createRangeInput, createSelectInput, createTextInput } from './input';
 

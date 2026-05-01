@@ -1,11 +1,11 @@
 import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../core/const';
-import { debugDetailed } from '../core/debug';
-import type { PixelColor } from '../platform/types';
+import { createWorker } from '../core/worker';
+import { debugDetailed } from '../platform/debug';
 import { assertCanvasCtx } from '../util/canvas';
+import type { PixelExtent } from '../util/geometry';
 import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 import imageToolsWorkerCode from './image-tools.worker';
-import { createWorker } from './worker';
-import type { PixelExtent } from '../util/geometry-basic';
+import type { PixelColor } from '../core/types';
 
 const maxWorkerConcurrency = Math.max(1, Math.floor(navigator.hardwareConcurrency / 2));
 const activeWorkers = new Set<Worker>();

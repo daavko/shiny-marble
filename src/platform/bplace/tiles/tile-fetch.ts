@@ -1,6 +1,6 @@
 import * as v from 'valibot';
 import { originalFetch } from '../../../core/fetch';
-import type { MapTileCoordinates } from '../../../util/geometry-basic';
+import type { MapTileCoordinates } from '../../../util/geometry';
 import { type BplaceBinaryTile, parseBinaryTileBlob } from './tile-parser';
 
 const bplaceTileNotFoundResponse = v.object({

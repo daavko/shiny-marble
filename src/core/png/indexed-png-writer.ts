@@ -1,7 +1,7 @@
-import type { PixelColor } from '../../platform/types';
 import { createPixelColorIndexLut, simpleNamedColorToPixelColor } from '../../util/color';
 import { compressData } from '../../util/compression';
 import { PNG_CHUNK_NAME_ENCODER, PNG_SIGNATURE } from './common';
+import type { PixelColor } from '../types';
 
 let CRC_TABLE: Uint32Array | null = null;
 

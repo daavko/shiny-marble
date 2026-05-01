@@ -1,7 +1,7 @@
 import { encodeIndexedPngBlob, encodeIndexedPngData } from '../core/png/indexed-png-writer';
-import type { PixelColor } from '../platform/types';
+import type { PixelColor } from '../core/types';
 import { createPixelColorIndexLut } from '../util/color';
-import { extentToRect, type PixelExtent, pixelExtent } from '../util/geometry-basic';
+import { extentToRect, type PixelExtent, pixelExtent } from '../util/geometry';
 import { imageBitmapToImageData } from '../util/image';
 import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 

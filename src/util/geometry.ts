@@ -1,170 +1,125 @@
+import { Platform } from '../platform/platform';
+import {
+    type Coordinates,
+    type Dimensions,
+    type Extent,
+    type MapTileCoordinates,
+    mapTileCoordinates,
+    type MapTileExtent,
+    type PixelCoordinates,
+    pixelCoordinates,
+    type PixelDimensions,
+    pixelDimensions,
+    type PixelRect,
+    pixelRect,
+    type Rect,
+    rectToExtent,
+    type RenderTileCoordinates,
+    renderTileCoordinates,
+    type RenderTileDimensions,
+    type RenderTileExtent,
+    type RenderTileRect,
+} from './geometry-basic';
 import { brand, type Brand } from './types';
 
-interface Coordinates {
-    x: number;
-    y: number;
-}
-
-interface Vector {
-    x: number;
-    y: number;
-}
-
-interface Dimensions {
-    width: number;
-    height: number;
-}
-
-interface Rect extends Coordinates, Dimensions {}
-
-interface Extent {
-    minX: number;
-    minY: number;
-    maxX: number;
-    maxY: number;
-}
-
-type PixelBrand = 'Pixel';
-type TileBrand = 'Tile';
-
-export type PixelCoordinates = Brand<Coordinates, PixelBrand>;
-export type TileCoordinates = Brand<Coordinates, TileBrand>;
-
-export type PixelVector = Brand<Vector, PixelBrand>;
-
-export type PixelDimensions = Brand<Dimensions, PixelBrand>;
-export type TileDimensions = Brand<Dimensions, TileBrand>;
-
-export type PixelRect = Brand<Rect, PixelBrand>;
-export type TileRect = Brand<Rect, TileBrand>;
-
-export type PixelExtent = Brand<Extent, PixelBrand>;
-export type TileExtent = Brand<Extent, TileBrand>;
-
-export function pixelCoordinates(coords: Coordinates): PixelCoordinates {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    return coords as PixelCoordinates;
-}
-
-export function tileCoordinates(coords: Coordinates): TileCoordinates {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    return coords as TileCoordinates;
-}
-
-export function pixelDimensions(dimensions: Dimensions): PixelDimensions {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    return dimensions as PixelDimensions;
-}
-
-export function tileDimensions(dimensions: Dimensions): TileDimensions {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    return dimensions as TileDimensions;
-}
-
-export function pixelRect(rect: Rect): PixelRect {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    return rect as PixelRect;
-}
-
-export function tileRect(rect: Rect): TileRect {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    return rect as TileRect;
-}
-
-export function tileUnitRect(coords: TileCoordinates): TileRect {
-    return tileRect({ x: coords.x, y: coords.y, width: 1, height: 1 });
-}
-
-export function pixelExtent(extent: Extent): PixelExtent {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    return extent as PixelExtent;
-}
-
-export function tileExtent(extent: Extent): TileExtent {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-    return extent as TileExtent;
-}
-
-export function pixelToTileCoordinates(coords: PixelCoordinates, tileSize: PixelDimensions): TileCoordinates {
-    return tileCoordinates({
-        x: Math.floor(coords.x / tileSize.width),
-        y: Math.floor(coords.y / tileSize.height),
+export function pixelToMapTileCoordinates(coords: PixelCoordinates): MapTileCoordinates {
+    return mapTileCoordinates({
+        x: Math.floor(coords.x / Platform.mapTilePixelDimensions.width),
+        y: Math.floor(coords.y / Platform.mapTilePixelDimensions.height),
     });
 }
 
-export function tileToPixelCoordinates(coords: TileCoordinates, tileSize: PixelDimensions): PixelCoordinates {
+export function mapTileToPixelCoordinates(coords: MapTileCoordinates): PixelCoordinates {
     return pixelCoordinates({
-        x: coords.x * tileSize.width,
-        y: coords.y * tileSize.height,
+        x: coords.x * Platform.mapTilePixelDimensions.width,
+        y: coords.y * Platform.mapTilePixelDimensions.height,
     });
 }
 
-export function pixelToTileDimensions(dimensions: PixelDimensions, tileSize: PixelDimensions): TileDimensions {
-    return tileDimensions({
-        width: Math.ceil(dimensions.width / tileSize.width),
-        height: Math.ceil(dimensions.height / tileSize.height),
+export function renderTileToPixelCoordinates(coords: RenderTileCoordinates): PixelCoordinates {
+    return pixelCoordinates({
+        x: coords.x * Platform.renderTilePixelDimensions.width,
+        y: coords.y * Platform.renderTilePixelDimensions.height,
     });
 }
 
-export function tileToPixelDimensions(dimensions: TileDimensions, tileSize: PixelDimensions): PixelDimensions {
+export function renderTileToPixelDimensions(dimensions: RenderTileDimensions): PixelDimensions {
     return pixelDimensions({
-        width: dimensions.width * tileSize.width,
-        height: dimensions.height * tileSize.height,
+        width: dimensions.width * Platform.renderTilePixelDimensions.width,
+        height: dimensions.height * Platform.renderTilePixelDimensions.height,
     });
 }
 
-export function tileToPixelRect(rect: TileRect, tileSize: PixelDimensions): PixelRect {
+export function renderTileToPixelRect(rect: RenderTileRect): PixelRect {
     return {
-        ...tileToPixelCoordinates(rect, tileSize),
-        ...tileToPixelDimensions(rect, tileSize),
+        ...renderTileToPixelCoordinates(rect),
+        ...renderTileToPixelDimensions(rect),
     };
 }
 
-export function rectToExtent<T>(rect: Brand<Rect, T>): Brand<Extent, T> {
-    return brand({
-        minX: rect.x,
-        minY: rect.y,
-        maxX: rect.x + rect.width,
-        maxY: rect.y + rect.height,
-    });
-}
+/**
+ * returns a MINIMAL rectangle that contains both corners
+ */
+export function cornersToRect<T>(
+    corner1: Brand<Coordinates, T>,
+    corner2: Brand<Coordinates, T>,
+    worldSize: PixelDimensions,
+): Brand<Rect, T> {
+    let minX = Math.min(corner1.x, corner2.x);
+    let maxX = Math.max(corner1.x, corner2.x);
+    const minY = Math.min(corner1.y, corner2.y);
+    const maxY = Math.max(corner1.y, corner2.y);
 
-export function extentToRect<T>(extent: Brand<Extent, T>): Brand<Rect, T> {
-    return brand({
-        x: extent.minX,
-        y: extent.minY,
-        width: extent.maxX - extent.minX,
-        height: extent.maxY - extent.minY,
-    });
-}
-
-export function coordsToExtent<T>(coordsArray: Brand<Coordinates, T>[]): Brand<Extent, T> {
-    if (coordsArray.length === 0) {
-        return brand({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
+    if (maxX - minX > worldSize.width / 2) {
+        [minX, maxX] = [maxX, minX + worldSize.width];
     }
 
-    const result: Extent = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-    for (const coords of coordsArray) {
-        if (coords.x < result.minX) {
-            result.minX = coords.x;
-        }
-        if (coords.y < result.minY) {
-            result.minY = coords.y;
-        }
-        if (coords.x > result.maxX) {
-            result.maxX = coords.x;
-        }
-        if (coords.y > result.maxY) {
-            result.maxY = coords.y;
-        }
+    return brand({ x: minX, y: minY, width: maxX - minX, height: maxY - minY });
+}
+
+/**
+ * IGNORES WORLD WRAPPING, results need to be world-wrapped if necessary
+ *
+ * order of corners in returned array is top-left, top-right, bottom-left, bottom-right
+ */
+export function rectToAllCorners<T>(
+    rect: Brand<Rect, T>,
+): [Brand<Coordinates, T>, Brand<Coordinates, T>, Brand<Coordinates, T>, Brand<Coordinates, T>] {
+    return [
+        brand({ x: rect.x, y: rect.y }),
+        brand({ x: rect.x + rect.width, y: rect.y }),
+        brand({ x: rect.x, y: rect.y + rect.height }),
+        brand({ x: rect.x + rect.width, y: rect.y + rect.height }),
+    ];
+}
+
+/**
+ * assumes the extent is smaller than world size and therefore handles only a single wrap
+ */
+export function splitWorldWrappingPixelRect(rect: PixelRect): [PixelRect, PixelRect | null] {
+    if (rect.x + rect.width <= Platform.canvasPixelDimensions.width) {
+        return [rect, null];
+    } else {
+        const leftRect = pixelRect({
+            x: rect.x,
+            y: rect.y,
+            width: Platform.canvasPixelDimensions.width - rect.x,
+            height: rect.height,
+        });
+        const rightRect = pixelRect({
+            x: 0,
+            y: rect.y,
+            width: rect.width - leftRect.width,
+            height: rect.height,
+        });
+        return [leftRect, rightRect];
     }
-    return brand(result);
 }
 
 export function extentSize<T>(extent: Brand<Extent, T>): Brand<Dimensions, T> {
     return brand({
-        width: extent.maxX - extent.minX,
-        height: extent.maxY - extent.minY,
+        width: extent.maxX - extent.minX + 1,
+        height: extent.maxY - extent.minY + 1,
     });
 }
 
@@ -202,36 +157,83 @@ export function intersection<T>(rect1: Brand<Rect, T>, rect2: Brand<Rect, T>): B
 }
 
 /**
- * IGNORES WORLD WRAPPING, results need to be world-wrapped if necessary
+ * NEVER USE WITH A RECT THAT CROSSES THE WORLD SEAM
  */
-export function getCoveredTiles(rect: PixelRect, tileSize: PixelDimensions): TileRect[] {
-    const topLeftTile = pixelToTileCoordinates(rect, tileSize);
-    const bottomRightTile = pixelToTileCoordinates(
+export function getCoveredMapTilesExtent(rect: PixelRect): MapTileExtent {
+    const topLeftTile = pixelToMapTileCoordinates(rect);
+    const bottomRightTile = pixelToMapTileCoordinates(
         pixelCoordinates({ x: rect.x + rect.width, y: rect.y + rect.height }),
-        tileSize,
     );
 
-    const coveredTiles: TileRect[] = [];
-    for (let tileY = topLeftTile.y; tileY <= bottomRightTile.y; tileY++) {
-        for (let tileX = topLeftTile.x; tileX <= bottomRightTile.x; tileX++) {
-            coveredTiles.push(tileUnitRect(tileCoordinates({ x: tileX, y: tileY })));
+    return brand({
+        minX: topLeftTile.x,
+        minY: topLeftTile.y,
+        maxX: bottomRightTile.x,
+        maxY: bottomRightTile.y,
+    });
+}
+
+/**
+ * NEVER USE WITH A RECT THAT CROSSES THE WORLD SEAM
+ */
+export function coveredTilesExtentToTiles(extent: MapTileExtent): MapTileCoordinates[] {
+    const tiles: MapTileCoordinates[] = [];
+    for (let tileY = extent.minY; tileY <= extent.maxY; tileY++) {
+        for (let tileX = extent.minX; tileX <= extent.maxX; tileX++) {
+            tiles.push(mapTileCoordinates({ x: tileX, y: tileY }));
         }
     }
-    return coveredTiles;
+    return tiles;
 }
 
-export function worldWrapTileCoordinates(
-    coords: TileCoordinates,
-    tileSize: PixelDimensions,
-    worldSize: PixelDimensions,
-): TileCoordinates {
-    const worldSizeInTiles = pixelToTileDimensions(worldSize, tileSize);
-    const wrappedX = ((coords.x % worldSizeInTiles.width) + worldSizeInTiles.width) % worldSizeInTiles.width;
-    return tileCoordinates({ x: wrappedX, y: coords.y });
+/**
+ * IGNORES WORLD WRAPPING, results need to be world-wrapped if necessary
+ */
+export function getCoveredRenderTilesExtent(rect: PixelRect): RenderTileExtent {
+    const topLeftTile = pixelToMapTileCoordinates(rect);
+    const bottomRightTile = pixelToMapTileCoordinates(
+        pixelCoordinates({ x: rect.x + rect.width, y: rect.y + rect.height }),
+    );
+
+    return brand({
+        minX: topLeftTile.x,
+        minY: topLeftTile.y,
+        maxX: bottomRightTile.x,
+        maxY: bottomRightTile.y,
+    });
 }
 
-export function worldWrapPixelCoordinates(coords: PixelCoordinates, worldSize: PixelDimensions): PixelCoordinates {
-    const wrappedX = ((coords.x % worldSize.width) + worldSize.width) % worldSize.width;
+/**
+ * IGNORES WORLD WRAPPING, results need to be world-wrapped if necessary
+ */
+export function coveredRenderTilesExtentToTiles(extent: RenderTileExtent): RenderTileCoordinates[] {
+    const tiles: RenderTileCoordinates[] = [];
+    for (let tileY = extent.minY; tileY <= extent.maxY; tileY++) {
+        for (let tileX = extent.minX; tileX <= extent.maxX; tileX++) {
+            tiles.push(renderTileCoordinates({ x: tileX, y: tileY }));
+        }
+    }
+    return tiles;
+}
+
+/**
+ * IGNORES WORLD WRAPPING, results need to be world-wrapped if necessary
+ */
+export function getCoveredRenderTiles(rect: PixelRect): RenderTileCoordinates[] {
+    return coveredRenderTilesExtentToTiles(getCoveredRenderTilesExtent(rect));
+}
+
+export function worldWrapRenderTileCoordinates(coords: RenderTileCoordinates): RenderTileCoordinates {
+    const wrappedX =
+        ((coords.x % Platform.canvasRenderTileDimensions.width) + Platform.canvasRenderTileDimensions.width) %
+        Platform.canvasRenderTileDimensions.width;
+    return renderTileCoordinates({ x: wrappedX, y: coords.y });
+}
+
+export function worldWrapPixelCoordinates(coords: PixelCoordinates): PixelCoordinates {
+    const wrappedX =
+        ((coords.x % Platform.canvasPixelDimensions.width) + Platform.canvasPixelDimensions.width) %
+        Platform.canvasPixelDimensions.width;
     return pixelCoordinates({ x: wrappedX, y: coords.y });
 }
 

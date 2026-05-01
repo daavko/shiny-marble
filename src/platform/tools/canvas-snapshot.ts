@@ -12,18 +12,21 @@ import { assertCanvasCtx } from '../../util/canvas';
 import { downloadBlob } from '../../util/file';
 import {
     coordsEqualityFn,
-    coordsToExtent,
     coordsWithNewOrigin,
-    extentsEqualityFn,
-    extentToRect,
-    getCoveredTiles,
-    pixelCoordinates,
-    type PixelCoordinates,
-    type PixelExtent,
-    tileCoordinates,
-    tileToPixelCoordinates,
-    worldWrapTileCoordinates,
+    cornersToRect,
+    getCoveredMapTilesExtent,
+    mapTileToPixelCoordinates,
+    rectsEqualityFn,
+    rectToAllCorners,
+    splitWorldWrappingPixelRect,
 } from '../../util/geometry';
+import {
+    extentToRect,
+    type MapTileExtent,
+    type PixelCoordinates,
+    pixelCoordinates,
+    type PixelRect,
+} from '../../util/geometry-basic';
 import { sleep } from '../../util/promise';
 import { Platform } from '../platform';
 import type { ActiveTool } from '../types';
@@ -49,24 +52,18 @@ export class CanvasSnapshotTool implements ActiveTool {
 
     private readonly corner1 = signal<PixelCoordinates | null>(null, coordsEqualityFn);
     private readonly corner2 = signal<PixelCoordinates | null>(null, coordsEqualityFn);
-    private readonly cornersExtent = computed(
+    private readonly cornersRect = computed(
         [this.corner1, this.corner2],
         ([corner1, corner2]) => {
             if (corner1 && corner2) {
-                const extent = coordsToExtent([corner1, corner2]);
-                extent.maxX += 1;
-                extent.maxY += 1;
-                return extent;
+                return cornersToRect(corner1, corner2, Platform.canvasPixelDimensions);
             } else {
                 return null;
             }
         },
-        extentsEqualityFn,
+        rectsEqualityFn,
     );
-    private readonly extentRect = computed([this.cornersExtent], ([cornersExtent]) =>
-        cornersExtent ? extentToRect(cornersExtent) : null,
-    );
-    private readonly extentTooLarge = computed([this.extentRect], ([extentRect]) => {
+    private readonly extentTooLarge = computed([this.cornersRect], ([extentRect]) => {
         if (extentRect) {
             return (
                 extentRect.width > MAX_SNAPSHOT_CANVAS_DIMENSION || extentRect.height > MAX_SNAPSHOT_CANVAS_DIMENSION
@@ -81,26 +78,17 @@ export class CanvasSnapshotTool implements ActiveTool {
     private readonly tileCount = signal(0);
     private readonly tileCountFinished = signal(0);
 
-    private readonly rectangleVisibility = computed([this.cornersExtent], ([cornersExtent]) =>
-        cornersExtent ? 'visible' : 'none',
-    );
+    private readonly rectangleVisibility = computed([this.cornersRect], ([rect]) => (rect ? 'visible' : 'none'));
     private readonly crosshairLinesVisibility = computed(
         [this.mousePosition, this.confirmedCorner2],
         ([mousePosition, confirmedCorner2]) => (mousePosition && !confirmedCorner2 ? 'visible' : 'none'),
     );
-    private readonly rectangleGeojson = computed([this.cornersExtent], ([cornersExtent]) => {
-        if (cornersExtent) {
-            const topLeft = Platform.pixelToLatLon(pixelCoordinates({ x: cornersExtent.minX, y: cornersExtent.minY }));
-            const topRight = Platform.pixelToLatLon(pixelCoordinates({ x: cornersExtent.maxX, y: cornersExtent.minY }));
-            const bottomRight = Platform.pixelToLatLon(
-                pixelCoordinates({ x: cornersExtent.maxX, y: cornersExtent.maxY }),
+    private readonly rectangleGeojson = computed([this.cornersRect], ([rect]) => {
+        if (rect) {
+            const [topLeft, topRight, bottomLeft, bottomRight] = rectToAllCorners(rect).map((corner) =>
+                Platform.pixelToLatLon(corner).toArray(),
             );
-            const bottomLeft = Platform.pixelToLatLon(
-                pixelCoordinates({ x: cornersExtent.minX, y: cornersExtent.maxY }),
-            );
-            return polygon([
-                [topLeft.toArray(), topRight.toArray(), bottomRight.toArray(), bottomLeft.toArray(), topLeft.toArray()],
-            ]);
+            return polygon([[topLeft, topRight, bottomRight, bottomLeft, topLeft]]);
         } else {
             return polygon([
                 [
@@ -255,8 +243,8 @@ export class CanvasSnapshotTool implements ActiveTool {
         const takeSnapshotBtn = renderBlockButton(
             'Take Snapshot',
             () => {
-                if (this.cornersExtent.value) {
-                    this.generateSnapshot(this.cornersExtent.value).catch((error: unknown) => {
+                if (this.cornersRect.value) {
+                    this.generateSnapshot(this.cornersRect.value).catch((error: unknown) => {
                         debugDetailed('Error generating snapshot', error);
                         this.generationProgress.value = 'error';
                     });
@@ -292,10 +280,8 @@ export class CanvasSnapshotTool implements ActiveTool {
                                             'You can drag around to move the map.',
                                         ],
                                     ),
-                                    computed([this.extentRect], ([extentRect]) =>
-                                        extentRect
-                                            ? `Highlighted area: ${extentRect.width}x${extentRect.height}px`
-                                            : null,
+                                    computed([this.cornersRect], ([rect]) =>
+                                        rect ? `Highlighted area: ${rect.width}x${rect.height}px` : null,
                                     ),
                                 ],
                                 [
@@ -305,10 +291,8 @@ export class CanvasSnapshotTool implements ActiveTool {
                                         ]),
                                         el('br'),
                                     ]),
-                                    computed([this.extentRect], ([extentRect]) =>
-                                        extentRect
-                                            ? `Snapshot area selected: ${extentRect.width}x${extentRect.height}px`
-                                            : null,
+                                    computed([this.cornersRect], ([rect]) =>
+                                        rect ? `Snapshot area selected: ${rect.width}x${rect.height}px` : null,
                                     ),
                                 ],
                             ),
@@ -383,41 +367,54 @@ export class CanvasSnapshotTool implements ActiveTool {
         }
     };
 
-    private async generateSnapshot(extent: PixelExtent): Promise<void> {
-        debugDetailed('Generating snapshot for extent', extent);
-
-        const debugTimer = debugTime('Snapshot generation');
-
-        this.generationProgress.value = 'generatingSnapshot';
-
-        const rect = extentToRect(extent);
-        const rectOrigin = pixelCoordinates({ x: rect.x, y: rect.y });
-        const coveredTiles = getCoveredTiles(rect, Platform.tilePixelDimensions);
-        this.tileCount.value = coveredTiles.length;
-        debugDetailed('Covered tiles', coveredTiles);
-
-        const canvas = new OffscreenCanvas(rect.width, rect.height);
-        const ctx = canvas.getContext('2d');
-        assertCanvasCtx(ctx);
-
-        for (const tileRect of coveredTiles) {
+    private async fetchAndDrawTileExtent(
+        ctx: OffscreenCanvasRenderingContext2D,
+        extent: MapTileExtent,
+        origin: PixelCoordinates,
+    ): Promise<void> {
+        for await (const { tileCoords, tileBitmap } of Platform.createTilesRegionGenerator(extent)) {
             this.tileCountFinished.value += 1;
-            const tileBitmap = await Platform.fetchTileImage(
-                worldWrapTileCoordinates(tileRect, Platform.tilePixelDimensions, Platform.canvasPixelDimensions),
-            );
-            debugDetailed('Fetched tile', tileRect, tileBitmap);
+            debugDetailed('Fetched tile', tileCoords, tileBitmap);
             if (!tileBitmap) {
                 // no image data at this position, skip
                 continue;
             }
 
-            const tilePixelCoords = tileToPixelCoordinates(
-                tileCoordinates({ x: tileRect.x, y: tileRect.y }),
-                Platform.tilePixelDimensions,
-            );
-            const originRelativeTilePixelCoords = coordsWithNewOrigin(tilePixelCoords, rectOrigin);
+            const tilePixelCoords = mapTileToPixelCoordinates(tileCoords);
+            const originRelativeTilePixelCoords = coordsWithNewOrigin(tilePixelCoords, origin);
 
             ctx.drawImage(tileBitmap, originRelativeTilePixelCoords.x, originRelativeTilePixelCoords.y);
+        }
+    }
+
+    private async generateSnapshot(rect: PixelRect): Promise<void> {
+        debugDetailed('Generating snapshot for rect', rect);
+
+        const debugTimer = debugTime('Snapshot generation');
+
+        this.generationProgress.value = 'generatingSnapshot';
+
+        const rectOrigin = pixelCoordinates({ x: rect.x, y: rect.y });
+
+        // due to how stupid bplace tiling is, we have to pre-split the *pixel* rect and then calculate the map tiles
+        const [leftRect, rightRect] = splitWorldWrappingPixelRect(rect);
+
+        const leftTileExtent = getCoveredMapTilesExtent(leftRect);
+        const rightTileExtent = rightRect ? getCoveredMapTilesExtent(rightRect) : null;
+
+        const leftTileRect = extentToRect(leftTileExtent);
+        const rightTileRect = rightTileExtent ? extentToRect(rightTileExtent) : null;
+        this.tileCount.value =
+            leftTileRect.width * leftTileRect.height + (rightTileRect ? rightTileRect.width * rightTileRect.height : 0);
+        debugDetailed('Covered tiles', leftTileExtent, rightTileExtent);
+
+        const canvas = new OffscreenCanvas(rect.width, rect.height);
+        const ctx = canvas.getContext('2d');
+        assertCanvasCtx(ctx);
+
+        await this.fetchAndDrawTileExtent(ctx, leftTileExtent, rectOrigin);
+        if (rightTileExtent) {
+            await this.fetchAndDrawTileExtent(ctx, rightTileExtent, rectOrigin);
         }
 
         const blob = await canvas.convertToBlob({ type: 'image/png' });

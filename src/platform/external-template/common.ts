@@ -1,7 +1,7 @@
 import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
-import type { PixelCoordinates } from '../../util/geometry';
 import type { BaseTemplateParseResult } from './types';
 import { imageBitmapToImageData } from '../../util/image';
+import type { PixelCoordinates } from '../../util/geometry-basic';
 
 export async function handleBlobFromParsedTemplate(
     imageBlob: Blob,

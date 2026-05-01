@@ -12,7 +12,10 @@ import {
     type GeographicFeatureSearchResult,
     geographicFeaturesResponse,
     locationSearchResponseSchema,
+    type TileInfo,
+    tilesInfoResponse,
 } from './schemas';
+import type { MapTileCoordinates, MapTileExtent } from '../../util/geometry-basic';
 
 const SUPABASE_URL = 'https://bocmfycjqgujxkhcnfck.supabase.co';
 const SUPABASE_API_KEY =
@@ -184,5 +187,31 @@ export async function fetchUserColorStats(): Promise<ColorUsageRecord[]> {
             order: 'usage_count.desc,colors(palette_order).asc,colors(shade).asc',
         }),
         colorUsageStatsResponse,
+    );
+}
+
+export async function fetchTileInfo(coords: MapTileCoordinates): Promise<TileInfo | undefined> {
+    const response = await doSupabaseRestRequest(
+        'distinct_tiles_512',
+        new URLSearchParams({
+            select: '*',
+            tile_x: `eq.${coords.x}`,
+            tile_y: `eq.${coords.y}`,
+        }),
+        tilesInfoResponse,
+    );
+
+    return response.at(0);
+}
+
+export async function fetchTilesInfo(extent: MapTileExtent): Promise<TileInfo[]> {
+    return doSupabaseRestRequest(
+        'distinct_tiles_512',
+        new URLSearchParams({
+            select: '*',
+            and: `(tile_x.gte.${extent.minX},tile_x.lte.${extent.maxX},tile_y.gte.${extent.minY},tile_y.lte.${extent.maxY})`,
+            order: 'tile_y.asc,tile_x.asc',
+        }),
+        tilesInfoResponse,
     );
 }

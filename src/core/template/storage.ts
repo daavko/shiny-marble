@@ -1,6 +1,12 @@
 import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
 import { showErrorAlert } from '../../ui/components/alerts-container';
-import type { PixelCoordinates, PixelDimensions, PixelRect, TileCoordinates } from '../../util/geometry';
+import type {
+    MapTileCoordinates,
+    PixelCoordinates,
+    PixelDimensions,
+    PixelRect,
+    RenderTileCoordinates,
+} from '../../util/geometry-basic';
 import { waitForDataAndTransaction } from '../../util/idb';
 import { debug } from '../debug';
 
@@ -49,7 +55,7 @@ export interface StoredTemplateImage {
 
 export interface StoredOptimizedTemplateTile {
     templateId: string;
-    tilePosition: TileCoordinates;
+    tilePosition: RenderTileCoordinates;
 
     /**
      * position and dimensions within the tile
@@ -258,7 +264,7 @@ export const TemplateStorage = {
         const db = await getStorage();
         return await db.getAllFromIndex('optimizedTemplateTiles', 'templateId', templateId);
     },
-    async getTemplatesCoveringTile(tilePosition: TileCoordinates): Promise<string[]> {
+    async getTemplatesCoveringTile(tilePosition: MapTileCoordinates): Promise<string[]> {
         const db = await getStorage();
         const tiles = await db.getAllKeysFromIndex('optimizedTemplateTiles', 'tilePosition', [
             tilePosition.x,

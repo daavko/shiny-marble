@@ -2,10 +2,10 @@ import { MAX_TEMPLATE_CANVAS_DIMENSION } from '../core/const';
 import { debugDetailed } from '../core/debug';
 import type { PixelColor } from '../platform/types';
 import { assertCanvasCtx } from '../util/canvas';
-import type { PixelExtent } from '../util/geometry';
 import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 import imageToolsWorkerCode from './image-tools.worker';
 import { createWorker } from './worker';
+import type { PixelExtent } from '../util/geometry-basic';
 
 const maxWorkerConcurrency = Math.max(1, Math.floor(navigator.hardwareConcurrency / 2));
 const activeWorkers = new Set<Worker>();
@@ -194,11 +194,7 @@ async function detectCanvasFingerprintingProtection(): Promise<boolean> {
 
 async function detemplatizeBlueMarbleTile(tile: ImageBitmap): Promise<ImageData> {
     const result = await doTaskInWorkerPool(
-        {
-            taskId: crypto.randomUUID(),
-            task: 'detemplatizeBlueMarbleTile',
-            bitmap: tile,
-        },
+        { taskId: crypto.randomUUID(), task: 'detemplatizeBlueMarbleTile', bitmap: tile },
         [tile],
     );
     assertTaskResultSuccess(result);
@@ -206,23 +202,14 @@ async function detemplatizeBlueMarbleTile(tile: ImageBitmap): Promise<ImageData>
 }
 
 async function findTransparentBorder(image: ImageData): Promise<FindTransparentBorderResult> {
-    const result = await doTaskInWorkerPool({
-        taskId: crypto.randomUUID(),
-        task: 'findTransparentBorder',
-        image,
-    });
+    const result = await doTaskInWorkerPool({ taskId: crypto.randomUUID(), task: 'findTransparentBorder', image });
     assertTaskResultSuccess(result);
     return result.border;
 }
 
 async function cropToExtent(image: ImageData, extent: PixelExtent, consume = false): Promise<ImageData> {
     const result = await doTaskInWorkerPool(
-        {
-            taskId: crypto.randomUUID(),
-            task: 'cropToExtent',
-            image,
-            extent,
-        },
+        { taskId: crypto.randomUUID(), task: 'cropToExtent', image, extent },
         consume ? [image.data.buffer] : undefined,
     );
     assertTaskResultSuccess(result);
@@ -231,11 +218,7 @@ async function cropToExtent(image: ImageData, extent: PixelExtent, consume = fal
 
 async function cropToNonTransparentArea(image: ImageData, consume = false): Promise<ImageData> {
     const result = await doTaskInWorkerPool(
-        {
-            taskId: crypto.randomUUID(),
-            task: 'cropToNonTransparentArea',
-            image,
-        },
+        { taskId: crypto.randomUUID(), task: 'cropToNonTransparentArea', image },
         consume ? [image.data.buffer] : undefined,
     );
     assertTaskResultSuccess(result);
@@ -248,12 +231,7 @@ async function imageToPaletteIndexBuffer(
     consume = false,
 ): Promise<ArrayBuffer> {
     const result = await doTaskInWorkerPool(
-        {
-            taskId: crypto.randomUUID(),
-            task: 'imageToPaletteIndexBuffer',
-            image,
-            palette,
-        },
+        { taskId: crypto.randomUUID(), task: 'imageToPaletteIndexBuffer', image, palette },
         consume ? [image.data.buffer] : undefined,
     );
     assertTaskResultSuccess(result);
@@ -266,12 +244,7 @@ async function writeIndexedPngBuffer(
     consume = false,
 ): Promise<ArrayBuffer> {
     const result = await doTaskInWorkerPool(
-        {
-            taskId: crypto.randomUUID(),
-            task: 'writeIndexedPngBuffer',
-            image,
-            palette,
-        },
+        { taskId: crypto.randomUUID(), task: 'writeIndexedPngBuffer', image, palette },
         consume ? [image.data.buffer] : undefined,
     );
     assertTaskResultSuccess(result);
@@ -280,37 +253,20 @@ async function writeIndexedPngBuffer(
 
 async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColor[], consume = false): Promise<Blob> {
     const result = await doTaskInWorkerPool(
-        {
-            taskId: crypto.randomUUID(),
-            task: 'writeIndexedPngBlob',
-            image,
-            palette,
-        },
+        { taskId: crypto.randomUUID(), task: 'writeIndexedPngBlob', image, palette },
         consume ? [image.data.buffer] : undefined,
     );
     assertTaskResultSuccess(result);
     return result.blob;
 }
 
-async function loadIndexedImage(
-    bitmap: ImageBitmap,
-    palette: readonly PixelColor[],
-): Promise<{ success: true; image: ImageData } | { success: false }> {
+async function loadIndexedImage(bitmap: ImageBitmap, palette: readonly PixelColor[]): Promise<ImageData | null> {
     const result = await doTaskInWorkerPool(
-        {
-            taskId: crypto.randomUUID(),
-            task: 'loadIndexedImage',
-            bitmap,
-            palette,
-        },
+        { taskId: crypto.randomUUID(), task: 'loadIndexedImage', bitmap, palette },
         [bitmap],
     );
     assertTaskResultSuccess(result);
-    if (result.image) {
-        return { success: true, image: result.image };
-    } else {
-        return { success: false };
-    }
+    return result.image;
 }
 
 async function loadIndexedImageWithDiff(

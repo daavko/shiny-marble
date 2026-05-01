@@ -1,9 +1,9 @@
 import { encodeIndexedPngBlob, encodeIndexedPngData } from '../core/png/indexed-png-writer';
 import type { PixelColor } from '../platform/types';
 import { createPixelColorIndexLut } from '../util/color';
-import { extentToRect, type PixelExtent, pixelExtent } from '../util/geometry';
-import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
+import { extentToRect, type PixelExtent, pixelExtent } from '../util/geometry-basic';
 import { imageBitmapToImageData } from '../util/image';
+import type { FindTransparentBorderResult, ImageToolsTaskRequest, ImageToolsTaskResult } from './image-tools-types';
 
 function verifyImageMatchesPalette(image: ImageData, palette: readonly PixelColor[]): boolean {
     const paletteLut = createPixelColorIndexLut(palette);
@@ -205,12 +205,26 @@ async function writeIndexedPngBlob(image: ImageData, palette: readonly PixelColo
 }
 
 function cropToExtent(image: ImageData, extent: PixelExtent): ImageData {
+    if (extent.minX < 0) {
+        extent.minX = 0;
+    }
+
+    if (extent.minY < 0) {
+        extent.minY = 0;
+    }
+
+    if (extent.maxX >= image.width) {
+        extent.maxX = image.width - 1;
+    }
+
+    if (extent.maxY >= image.height) {
+        extent.maxY = image.height - 1;
+    }
+
     const rect = extentToRect(extent);
     const srcView = new Uint32Array(image.data.buffer);
     const dest = new ImageData(rect.width, rect.height);
     const destView = new Uint32Array(dest.data.buffer);
-
-    // todo: protect against out of bounds extent by just changing the extent to never be out of bounds
 
     for (let y = 0; y < rect.height; y++) {
         const srcRowStart = (rect.y + y) * image.width + rect.x;

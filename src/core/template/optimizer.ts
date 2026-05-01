@@ -1,26 +1,26 @@
 import { Platform } from '../../platform/platform';
 import type { PixelColor } from '../../platform/types';
 import {
-    extentToRect,
-    getCoveredTiles,
+    getCoveredRenderTiles,
     intersection,
+    renderTileToPixelRect,
+    worldWrapRenderTileCoordinates,
+} from '../../util/geometry';
+import {
+    extentToRect,
     type PixelCoordinates,
     type PixelDimensions,
     type PixelRect,
     rectToExtent,
-    tileCoordinates,
-    type TileCoordinates,
-    type TileRect,
-    tileToPixelRect,
-    worldWrapTileCoordinates,
-} from '../../util/geometry';
+    type RenderTileCoordinates,
+} from '../../util/geometry-basic';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 
 export interface OptimizedTemplateTile {
     /**
      * tile position
      */
-    tilePosition: TileCoordinates;
+    tilePosition: RenderTileCoordinates;
 
     /**
      * position and dimensions within the tile
@@ -65,7 +65,7 @@ export interface OptimizedTemplateData {
 }
 
 async function optimizeTile(
-    tileRect: TileRect,
+    tilePosition: RenderTileCoordinates,
     imageData: ImageData,
     imageRect: PixelRect,
     palette: readonly PixelColor[],
@@ -82,20 +82,17 @@ async function optimizeTile(
     const paletteIndexBuffer = await ImageTools.imageToPaletteIndexBuffer(imageData, palette, true);
 
     return {
-        tilePosition: tileCoordinates({ x: tileRect.x, y: tileRect.y }),
+        tilePosition,
         imageRect,
         data: paletteIndexBuffer,
     };
 }
 
 export async function optimizeTemplate(image: ImageData, position: PixelCoordinates): Promise<OptimizedTemplateTile[]> {
-    const coveredTiles = getCoveredTiles(
-        { ...position, width: image.width, height: image.height },
-        Platform.tilePixelDimensions,
-    );
+    const coveredTiles = getCoveredRenderTiles({ ...position, width: image.width, height: image.height });
 
-    const optimizedTilesPromises = coveredTiles.map(async (tile) => {
-        const tilePixelRect = tileToPixelRect(tile, Platform.tilePixelDimensions);
+    const optimizedTilesPromises = coveredTiles.map(async (tileCoord) => {
+        const tilePixelRect = renderTileToPixelRect({ ...tileCoord, width: 1, height: 1 });
         const tileImageRect = intersection(tilePixelRect, { ...position, width: image.width, height: image.height });
         if (!tileImageRect) {
             // this should never happen
@@ -104,7 +101,7 @@ export async function optimizeTemplate(image: ImageData, position: PixelCoordina
 
         const tileImageData = await ImageTools.cropToExtent(image, rectToExtent(tileImageRect), true);
 
-        return optimizeTile(tile, tileImageData, tileImageRect, Platform.colors);
+        return optimizeTile(tileCoord, tileImageData, tileImageRect, Platform.colors);
     });
 
     const optimizedTiles = await Promise.all(optimizedTilesPromises);
@@ -113,10 +110,6 @@ export async function optimizeTemplate(image: ImageData, position: PixelCoordina
         .filter((tile) => tile != null)
         .map((tile) => ({
             ...tile,
-            tilePosition: worldWrapTileCoordinates(
-                tile.tilePosition,
-                Platform.tilePixelDimensions,
-                Platform.canvasPixelDimensions,
-            ),
+            tilePosition: worldWrapRenderTileCoordinates(tile.tilePosition),
         }));
 }

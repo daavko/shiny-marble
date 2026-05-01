@@ -1,15 +1,15 @@
 import { Platform } from '../../platform/platform';
 import type { PixelColor } from '../../platform/types';
+import { getCoveredRenderTiles } from '../../util/geometry';
 import {
-    getCoveredTiles,
-    pixelCoordinates,
+    type MapTileCoordinates,
     type PixelCoordinates,
-    pixelDimensions,
+    pixelCoordinates,
     type PixelDimensions,
+    pixelDimensions,
     type PixelRect,
-    type PixelVector,
-    type TileCoordinates,
-} from '../../util/geometry';
+    type RenderTileCoordinates,
+} from '../../util/geometry-basic';
 import { computeImageDataHash, imageBitmapToImageData } from '../../util/image';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { debug, debugDetailed, debugTime } from '../debug';
@@ -111,12 +111,12 @@ interface TemplateInit {
     image: ImageData;
 }
 
-function tileId(tilePosition: TileCoordinates): TileId {
+function tileId(tilePosition: RenderTileCoordinates): TileId {
     return `${tilePosition.x}_${tilePosition.y}`;
 }
 
 function getCoveringTileIds(templateRect: PixelRect): TileId[] {
-    return getCoveredTiles(templateRect, Platform.tilePixelDimensions).map((tileRect) => tileId(tileRect));
+    return getCoveredRenderTiles(templateRect).map((tileCoord) => tileId(tileCoord));
 }
 
 function getEmptyColorStats(templateRect: PixelRect): Map<TileId, Map<PixelColor, number>> {
@@ -124,7 +124,7 @@ function getEmptyColorStats(templateRect: PixelRect): Map<TileId, Map<PixelColor
     return new Map(tileIds.map((id) => [id, new Map<PixelColor, number>()]));
 }
 
-function tilePositionsToEmptyColorStats(tilePositions: TileCoordinates[]): Map<TileId, Map<PixelColor, number>> {
+function tilePositionsToEmptyColorStats(tilePositions: RenderTileCoordinates[]): Map<TileId, Map<PixelColor, number>> {
     return new Map(tilePositions.map((tilePosition) => [tileId(tilePosition), new Map<PixelColor, number>()]));
 }
 
@@ -149,7 +149,7 @@ function liveTemplateToStoredTemplate(template: LiveTemplate): StoredTemplate {
         dimensions: template.dimensions,
         hash: template.hash,
         thumbnail: template.thumbnail,
-        tileSize: Platform.tilePixelDimensions,
+        tileSize: Platform.mapTilePixelDimensions,
         paletteVersion: Platform.colorsVersion,
     };
 }
@@ -213,11 +213,11 @@ export const TemplateRegistry = {
                 );
                 await TemplateStorage.deleteOptimizedTemplateTiles(template.id);
             } else if (
-                template.tileSize.width !== Platform.tilePixelDimensions.width ||
-                template.tileSize.height !== Platform.tilePixelDimensions.height
+                template.tileSize.width !== Platform.mapTilePixelDimensions.width ||
+                template.tileSize.height !== Platform.mapTilePixelDimensions.height
             ) {
                 debug(
-                    `Template ${template.id} was saved with tile size ${template.tileSize.width}x${template.tileSize.height}, current is ${Platform.tilePixelDimensions.width}x${Platform.tilePixelDimensions.height}, deleting optimized tiles...`,
+                    `Template ${template.id} was saved with tile size ${template.tileSize.width}x${template.tileSize.height}, current is ${Platform.mapTilePixelDimensions.width}x${Platform.mapTilePixelDimensions.height}, deleting optimized tiles...`,
                 );
                 await TemplateStorage.deleteOptimizedTemplateTiles(template.id);
             }
@@ -298,20 +298,17 @@ export const TemplateRegistry = {
         debug(`Deoptimized template with id ${id}`);
     },
 
-    async moveTemplate(id: string, amount: PixelVector): Promise<void> {
+    async moveTemplate(id: string, newCoords: PixelCoordinates): Promise<void> {
         const template = availableTemplates.get(id);
         if (!template) {
             debug(`Cannot move template with id ${id} - template not found`);
             return;
         }
 
-        template.coordinates = pixelCoordinates({
-            x: template.coordinates.x + amount.x,
-            y: template.coordinates.y + amount.y,
-        });
+        template.coordinates = newCoords;
         await TemplateStorage.saveTemplate(liveTemplateToStoredTemplate(template));
         TemplateRegistryEvents.dispatchEvent(new TemplateChangedEvent(template));
-        debug(`Moved template with id ${id} by (${amount.x}, ${amount.y})`);
+        debug(`Moved template with id ${id} to (${newCoords.x}, ${newCoords.y})`);
         await TemplateRegistry.deoptimizeTemplate(id);
     },
 
@@ -372,7 +369,7 @@ export const TemplateRegistry = {
         debug('Deleted template with id', id);
     },
 
-    async handleTileUpdate(tilePosition: TileCoordinates, tileImage: ImageData): Promise<void> {
+    async handleTileUpdate(tilePosition: MapTileCoordinates, tileImage: ImageData): Promise<void> {
         // todo
     },
 

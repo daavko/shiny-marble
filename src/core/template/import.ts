@@ -2,7 +2,7 @@ import { BlobReader, BlobWriter, ZipReader } from '@zip.js/zip.js';
 import type { SafeParseResult } from 'valibot';
 import * as v from 'valibot';
 import { Platform } from '../../platform/platform';
-import { pixelCoordinates } from '../../util/geometry';
+import { pixelCoordinates } from '../../util/geometry-basic';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../const';
 import { debug } from '../debug';
@@ -63,12 +63,12 @@ async function readTemplateImage(file: Blob): Promise<ArrayBuffer | null> {
             return null;
         }
 
-        const indexedImageResult = await ImageTools.loadIndexedImage(bitmap, Platform.colors);
-        if (!indexedImageResult.success) {
+        const indexedImage = await ImageTools.loadIndexedImage(bitmap, Platform.colors);
+        if (!indexedImage) {
             return null;
         }
 
-        return await ImageTools.writeIndexedPngBuffer(indexedImageResult.image, Platform.colors, true);
+        return await ImageTools.writeIndexedPngBuffer(indexedImage, Platform.colors, true);
     } catch (e) {
         debug('error reading template image from zip file', e);
         return null;

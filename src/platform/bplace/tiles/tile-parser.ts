@@ -1,5 +1,5 @@
-import { decompressData } from '../../util/compression';
-import { BplacePlatform } from './platform';
+import { decompressData } from '../../../util/compression';
+import { BplacePlatform } from '../platform';
 
 export interface BplaceBinaryTile {
     image: ImageData;
@@ -22,7 +22,7 @@ export async function parseBinaryTileBlob(blob: ArrayBuffer): Promise<BplaceBina
 }
 
 function parseTileData(tileData: ArrayBuffer): BplaceBinaryTile {
-    const pixelsPerTile = BplacePlatform.tilePixelDimensions.width * BplacePlatform.tilePixelDimensions.height;
+    const pixelsPerTile = BplacePlatform.mapTilePixelDimensions.width * BplacePlatform.mapTilePixelDimensions.height;
     let dataView: DataView;
     let bytesPerPixel: number;
     if (tileData.byteLength === pixelsPerTile * 5) {
@@ -66,8 +66,8 @@ function parseTileData(tileData: ArrayBuffer): BplaceBinaryTile {
     const imageBuffer = new Uint8ClampedArray(colorBuffer.buffer);
     const image = new ImageData(
         imageBuffer,
-        BplacePlatform.tilePixelDimensions.width,
-        BplacePlatform.tilePixelDimensions.height,
+        BplacePlatform.mapTilePixelDimensions.width,
+        BplacePlatform.mapTilePixelDimensions.height,
     );
 
     return { image, playerShortIds };

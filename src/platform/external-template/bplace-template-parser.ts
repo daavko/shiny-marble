@@ -1,8 +1,8 @@
 import * as v from 'valibot';
 import { originalFetch } from '../../core/fetch';
-import { pixelCoordinates } from '../../util/geometry';
 import { handleBlobFromParsedTemplate } from './common';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
+import { pixelCoordinates } from '../../util/geometry-basic';
 
 const bplaceTemplateSchema = v.object({
     template: v.object({

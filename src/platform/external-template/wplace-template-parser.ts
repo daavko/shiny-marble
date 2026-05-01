@@ -45,7 +45,6 @@ export async function parseWplaceTemplate(json: unknown): Promise<WplaceTemplate
     const topLeftPixel = Platform.latLonToPixel({ lat: bounds.north, lon: bounds.west }, 'floor');
     const bottomRightPixel = worldWrapPixelCoordinates(
         coordsWithNewOrigin(Platform.latLonToPixel({ lat: bounds.south, lon: bounds.east }, 'floor'), topLeftPixel),
-        Platform.canvasPixelDimensions,
     );
 
     const expectedWidth = bottomRightPixel.x;

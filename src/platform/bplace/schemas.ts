@@ -88,3 +88,16 @@ const colorUsageRecord = v.pipe(
 );
 export type ColorUsageRecord = v.InferOutput<typeof colorUsageRecord>;
 export const colorUsageStatsResponse = v.array(colorUsageRecord);
+
+const tileInfo = v.object({
+    tile_x: v.number(),
+    tile_y: v.number(),
+    is_dirty: v.boolean(),
+    last_rendered_at: v.pipe(
+        v.string(),
+        v.isoDateTime(),
+        v.transform((str) => new Date(str)),
+    ),
+});
+export type TileInfo = v.InferOutput<typeof tileInfo>;
+export const tilesInfoResponse = v.array(tileInfo);

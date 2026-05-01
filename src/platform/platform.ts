@@ -19,7 +19,7 @@ import { appViewStyle } from '../ui/components/app-view';
 import { templateImagePickerStyle } from '../ui/components/template-image-picker';
 import { settingsDialogStyle } from '../ui/dialogs/settings-dialog';
 import { templateListDialogStyle } from '../ui/dialogs/template-list-dialog';
-import { pixelCoordinates, type PixelCoordinates, type PixelDimensions, type TileCoordinates } from '../util/geometry';
+import { worldWrapPixelCoordinates } from '../util/geometry';
 import { BplacePlatform } from './bplace/platform';
 import platformStyle from './platform.css';
 import { createSetting, createSettings } from './settings';
@@ -27,6 +27,14 @@ import { canvasSnapshotToolStyle } from './tools/canvas-snapshot';
 import type { ActiveTool, CanvasPlatform, PixelColor } from './types';
 import utilStyle from './util.css';
 import { WplacePlatform } from './wplace/platform';
+import {
+    type MapTileCoordinates,
+    type MapTileExtent,
+    type PixelCoordinates,
+    pixelCoordinates,
+    type PixelDimensions,
+    type RenderTileDimensions,
+} from '../util/geometry-basic';
 
 let mapInstance: MapLibreInstance | null = null;
 let hookAdded = false;
@@ -68,8 +76,16 @@ export const Platform = {
         return activePlatform.canvasPixelDimensions;
     },
 
-    get tilePixelDimensions(): PixelDimensions {
-        return activePlatform.tilePixelDimensions;
+    get canvasRenderTileDimensions(): RenderTileDimensions {
+        return activePlatform.canvasRenderTileDimensions;
+    },
+
+    get mapTilePixelDimensions(): PixelDimensions {
+        return activePlatform.mapTilePixelDimensions;
+    },
+
+    get renderTilePixelDimensions(): PixelDimensions {
+        return activePlatform.renderTilePixelDimensions;
     },
 
     async initPlatform(): Promise<void> {
@@ -164,12 +180,19 @@ export const Platform = {
         return Platform.mercatorToPixel(MercatorCoordinate.fromLngLat(mapPosition), adjust);
     },
 
+    /**
+     * automatically handles world wrapping
+     */
     pixelToMercator(position: PixelCoordinates): MercatorCoordinate {
-        const x = position.x / activePlatform.canvasPixelDimensions.width;
-        const y = position.y / activePlatform.canvasPixelDimensions.height;
+        const wrappedPosition = worldWrapPixelCoordinates(position);
+        const x = wrappedPosition.x / activePlatform.canvasPixelDimensions.width;
+        const y = wrappedPosition.y / activePlatform.canvasPixelDimensions.height;
         return new MercatorCoordinate(x, y);
     },
 
+    /**
+     * automatically handles world wrapping
+     */
     pixelToLatLon(position: PixelCoordinates): LngLat {
         return Platform.pixelToMercator(position).toLngLat();
     },
@@ -188,7 +211,16 @@ export const Platform = {
         });
     },
 
-    async fetchTileImage(tileCoords: TileCoordinates): Promise<ImageBitmap | null> {
+    async fetchTileImage(tileCoords: MapTileCoordinates): Promise<ImageBitmap | null> {
         return activePlatform.fetchTileImage(tileCoords);
+    },
+
+    /**
+     * extent HAS TO be non-wrappable, meaning it can't cross the world seam
+     */
+    createTilesRegionGenerator(
+        extent: MapTileExtent,
+    ): AsyncGenerator<{ tileCoords: MapTileCoordinates; tileBitmap: ImageBitmap | null }> {
+        return activePlatform.createTilesRegionGenerator(extent);
     },
 };

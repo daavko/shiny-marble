@@ -5,15 +5,13 @@ import {
     coordsWithNewOrigin,
     enlargeExtentToContainRectMut,
     extentSize,
-    type PixelCoordinates,
-    pixelExtent,
-    tileCoordinates,
-    tileToPixelCoordinates,
+    mapTileToPixelCoordinates,
     worldWrapPixelCoordinates,
 } from '../../util/geometry';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
 import { Platform } from '../platform';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';
+import { mapTileCoordinates, type PixelCoordinates, pixelExtent } from '../../util/geometry-basic';
 
 interface BlueMarbleTileCoords {
     tileX: number;
@@ -100,10 +98,7 @@ type BlueMarbleTemplateErrorCode =
 export type BlueMarbleTemplateParseResult = TemplateParseResult<BlueMarbleTemplateErrorCode>;
 
 function blueMarbleTileCoordsToPixelCoords(coords: BlueMarbleTileCoords): PixelCoordinates {
-    const tilePixelCoords = tileToPixelCoordinates(
-        tileCoordinates({ x: coords.tileX, y: coords.tileY }),
-        Platform.tilePixelDimensions,
-    );
+    const tilePixelCoords = mapTileToPixelCoordinates(mapTileCoordinates({ x: coords.tileX, y: coords.tileY }));
     tilePixelCoords.x += coords.x;
     tilePixelCoords.y += coords.y;
     return tilePixelCoords;
@@ -165,8 +160,8 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
         }
 
         if (
-            bitmap.width / 3 > Platform.tilePixelDimensions.width ||
-            bitmap.height / 3 > Platform.tilePixelDimensions.height
+            bitmap.width / 3 > Platform.mapTilePixelDimensions.width ||
+            bitmap.height / 3 > Platform.mapTilePixelDimensions.height
         ) {
             bitmap.close();
             return { success: false, errorCode: 'tileTooLarge' };
@@ -174,10 +169,7 @@ export async function parseBlueMarbleTemplate(json: unknown): Promise<BlueMarble
 
         const detemplatizedTile = await ImageTools.detemplatizeBlueMarbleTile(bitmap);
 
-        const templateRelativeTileCoords = worldWrapPixelCoordinates(
-            coordsWithNewOrigin(tile.coords, templateCoords),
-            Platform.canvasPixelDimensions,
-        );
+        const templateRelativeTileCoords = worldWrapPixelCoordinates(coordsWithNewOrigin(tile.coords, templateCoords));
 
         enlargeExtentToContainRectMut(totalExtent, {
             ...templateRelativeTileCoords,

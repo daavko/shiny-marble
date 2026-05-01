@@ -1,4 +1,4 @@
-import type { PixelCoordinates } from '../../util/geometry';
+import type { PixelCoordinates } from '../../util/geometry-basic';
 
 export type TileId = `${number}_${number}`;
 

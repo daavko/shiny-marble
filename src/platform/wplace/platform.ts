@@ -63,11 +63,15 @@ export const WplacePlatform: CanvasPlatform = {
         return await createImageBitmap(blob);
     },
     async *createTilesRegionGenerator(extent) {
-        const tileCoords = coveredTilesExtentToTiles(extent);
-        for (const coords of tileCoords) {
+        const tileCoordsList = coveredTilesExtentToTiles(extent);
+        const fetchPromises = tileCoordsList.map((tileCoords) => ({
+            tileCoords,
+            tileBitmapPromise: WplacePlatform.fetchTileImage(tileCoords),
+        }));
+        for (const { tileCoords, tileBitmapPromise } of fetchPromises) {
             yield {
-                tileCoords: coords,
-                tileBitmap: await WplacePlatform.fetchTileImage(coords),
+                tileCoords,
+                tileBitmap: await tileBitmapPromise,
             };
         }
     },

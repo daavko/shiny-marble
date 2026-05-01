@@ -161,41 +161,55 @@ export const Platform = {
 
     getViewportCenterPixel(): PixelCoordinates {
         const map = Platform.getCurrentMapInstance();
-        return Platform.latLonToPixel(map.getCenter());
+        return Platform.latLonToPixel(map.getCenter(), 'round');
     },
 
-    mercatorToPixel(mercatorCoord: MercatorCoordinate, adjust: 'floor' | 'round' | 'ceil' = 'round'): PixelCoordinates {
+    mercatorToPixel(
+        mercatorCoord: MercatorCoordinate,
+        adjust: 'floor' | 'round' | 'ceil',
+        worldWrap = true,
+    ): PixelCoordinates {
         const rawX = mercatorCoord.x * activePlatform.canvasPixelDimensions.width;
         const rawY = mercatorCoord.y * activePlatform.canvasPixelDimensions.height;
+        let ret: PixelCoordinates;
         switch (adjust) {
             case 'floor':
-                return pixelCoordinates({ x: Math.floor(rawX), y: Math.floor(rawY) });
+                ret = pixelCoordinates({ x: Math.floor(rawX), y: Math.floor(rawY) });
+                break;
             case 'round':
-                return pixelCoordinates({ x: Math.round(rawX), y: Math.round(rawY) });
+                ret = pixelCoordinates({ x: Math.round(rawX), y: Math.round(rawY) });
+                break;
             case 'ceil':
-                return pixelCoordinates({ x: Math.ceil(rawX), y: Math.ceil(rawY) });
+                ret = pixelCoordinates({ x: Math.ceil(rawX), y: Math.ceil(rawY) });
+                break;
         }
+        if (worldWrap) {
+            ret = worldWrapPixelCoordinates(ret);
+        }
+        return ret;
     },
 
-    latLonToPixel(mapPosition: LngLatLike, adjust: 'floor' | 'round' | 'ceil' = 'round'): PixelCoordinates {
-        return Platform.mercatorToPixel(MercatorCoordinate.fromLngLat(mapPosition), adjust);
+    latLonToPixel(mapPosition: LngLatLike, adjust: 'floor' | 'round' | 'ceil', worldWrap = true): PixelCoordinates {
+        return Platform.mercatorToPixel(MercatorCoordinate.fromLngLat(mapPosition), adjust, worldWrap);
     },
 
     /**
      * automatically handles world wrapping
      */
-    pixelToMercator(position: PixelCoordinates): MercatorCoordinate {
-        const wrappedPosition = worldWrapPixelCoordinates(position);
-        const x = wrappedPosition.x / activePlatform.canvasPixelDimensions.width;
-        const y = wrappedPosition.y / activePlatform.canvasPixelDimensions.height;
+    pixelToMercator(position: PixelCoordinates, worldWrapping = true): MercatorCoordinate {
+        if (worldWrapping) {
+            position = worldWrapPixelCoordinates(position);
+        }
+        const x = position.x / activePlatform.canvasPixelDimensions.width;
+        const y = position.y / activePlatform.canvasPixelDimensions.height;
         return new MercatorCoordinate(x, y);
     },
 
     /**
      * automatically handles world wrapping
      */
-    pixelToLatLon(position: PixelCoordinates): LngLat {
-        return Platform.pixelToMercator(position).toLngLat();
+    pixelToLatLon(position: PixelCoordinates, worldWrapping = true): LngLat {
+        return Platform.pixelToMercator(position, worldWrapping).toLngLat();
     },
 
     async requestToolActivation(tool: ActiveTool): Promise<void> {

@@ -152,16 +152,17 @@ export const BplacePlatform: CanvasPlatform = {
     },
     async *createTilesRegionGenerator(extent) {
         const tilesInfo = await fetchTilesInfo(extent);
-        const tilesCoords = coveredTilesExtentToTiles(extent);
+        const tilesCoordsList = coveredTilesExtentToTiles(extent);
 
-        for (const tileCoords of tilesCoords) {
+        const fetchPromises = tilesCoordsList.map((tileCoords) => {
             const tileInfo = tilesInfo.find((info) => info.tile_x === tileCoords.x && info.tile_y === tileCoords.y);
-            if (!tileInfo) {
-                yield { tileCoords, tileBitmap: null };
-            } else {
-                const tileBitmap = await fetchSingleTileImage(tileCoords, tileInfo.last_rendered_at);
-                yield { tileCoords, tileBitmap };
-            }
+            return {
+                tileCoords,
+                tileBitmapPromise: tileInfo ? fetchSingleTileImage(tileCoords, tileInfo.last_rendered_at) : null,
+            };
+        });
+        for (const { tileCoords, tileBitmapPromise } of fetchPromises) {
+            yield { tileCoords, tileBitmap: await tileBitmapPromise };
         }
     },
 };

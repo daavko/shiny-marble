@@ -161,7 +161,6 @@ function computeCurrentValue<T, TInputs extends ReadonlySignal<unknown>[]>(
     const inputValues = inputSignals.map((s) => {
         if (s instanceof ComputedSignalImplBase) {
             // a top-level forced recompute needs to propagate to all nested computed signals
-            console.log('forcing recompute of nested computed signal', s);
             s.recomputeIfNecessary();
         }
         return s.value;

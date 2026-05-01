@@ -95,7 +95,7 @@ const tileInfo = v.object({
     is_dirty: v.boolean(),
     last_rendered_at: v.pipe(
         v.string(),
-        v.isoDateTime(),
+        v.isoTimestamp(),
         v.transform((str) => new Date(str)),
     ),
 });

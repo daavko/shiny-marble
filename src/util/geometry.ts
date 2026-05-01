@@ -114,7 +114,7 @@ export function extentToRect<T>(extent: Brand<Extent, T>): Brand<Rect, T> {
 /**
  * returns a MINIMAL rectangle that contains both corners
  */
-export function cornersToRect<T>(
+export function cornersToRectInclusive<T>(
     corner1: Brand<Coordinates, T>,
     corner2: Brand<Coordinates, T>,
     worldSize: PixelDimensions,
@@ -128,7 +128,7 @@ export function cornersToRect<T>(
         [minX, maxX] = [maxX, minX + worldSize.width];
     }
 
-    return brand({ x: minX, y: minY, width: maxX - minX, height: maxY - minY });
+    return brand({ x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 });
 }
 
 /**

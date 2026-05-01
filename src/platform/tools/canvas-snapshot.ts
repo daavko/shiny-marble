@@ -9,7 +9,7 @@ import { coordsEqualityFn, rectsEqualityFn } from '../../util/equality';
 import { downloadBlob } from '../../util/file';
 import {
     coordsWithNewOrigin,
-    cornersToRect,
+    cornersToRectInclusive,
     extentSize,
     type MapTileExtent,
     type PixelCoordinates,
@@ -51,7 +51,7 @@ export class CanvasSnapshotTool implements ActiveTool {
         [this.corner1, this.corner2],
         ([corner1, corner2]) => {
             if (corner1 && corner2) {
-                return cornersToRect(corner1, corner2, Platform.canvasPixelDimensions);
+                return cornersToRectInclusive(corner1, corner2, Platform.canvasPixelDimensions);
             } else {
                 return null;
             }
@@ -81,7 +81,7 @@ export class CanvasSnapshotTool implements ActiveTool {
     private readonly rectangleGeojson = computed([this.cornersRect], ([rect]) => {
         if (rect) {
             const [topLeft, topRight, bottomLeft, bottomRight] = rectToAllCorners(rect).map((corner) =>
-                Platform.pixelToLatLon(corner).toArray(),
+                Platform.pixelToLatLon(corner, false).toArray(),
             );
             return polygon([[topLeft, topRight, bottomRight, bottomLeft, topLeft]]);
         } else {
@@ -232,6 +232,7 @@ export class CanvasSnapshotTool implements ActiveTool {
                 this.corner1.value = null;
                 this.corner2.value = null;
                 this.confirmedCorner2.value = false;
+                this.generationProgress.value = 'choosingCoords';
             },
             { variant: 'danger' },
         );
@@ -272,7 +273,7 @@ export class CanvasSnapshotTool implements ActiveTool {
                                         [
                                             'Please click on the map to select the opposite corner of the snapshot area.',
                                             el('br'),
-                                            'You can drag around to move the map.',
+                                            'You can drag around to move the map. ',
                                         ],
                                     ),
                                     computed([this.cornersRect], ([rect]) =>
@@ -369,7 +370,6 @@ export class CanvasSnapshotTool implements ActiveTool {
     ): Promise<void> {
         for await (const { tileCoords, tileBitmap } of Platform.createTilesRegionGenerator(extent)) {
             this.tileCountFinished.value += 1;
-            debugDetailed('Fetched tile', tileCoords, tileBitmap);
             if (!tileBitmap) {
                 // no image data at this position, skip
                 continue;
@@ -389,8 +389,6 @@ export class CanvasSnapshotTool implements ActiveTool {
 
         this.generationProgress.value = 'generatingSnapshot';
 
-        const rectOrigin = pixelCoordinates({ x: rect.x, y: rect.y });
-
         // due to how stupid bplace tiling is, we have to pre-split the *pixel* rect and then calculate the map tiles
         const [leftRect, rightRect] = splitWorldWrappingPixelRect(rect);
 
@@ -398,18 +396,22 @@ export class CanvasSnapshotTool implements ActiveTool {
         const rightTileExtent = rightRect ? getCoveredMapTilesExtent(rightRect) : null;
 
         const leftAreaSize = extentSize(leftTileExtent);
-        const rigthAreaSize = rightTileExtent ? extentSize(rightTileExtent) : null;
+        const rightAreaSize = rightTileExtent ? extentSize(rightTileExtent) : null;
         this.tileCount.value =
-            leftAreaSize.width * leftAreaSize.height + (rigthAreaSize ? rigthAreaSize.width * rigthAreaSize.height : 0);
+            leftAreaSize.width * leftAreaSize.height + (rightAreaSize ? rightAreaSize.width * rightAreaSize.height : 0);
         debugDetailed('Covered tiles', leftTileExtent, rightTileExtent);
 
         const canvas = new OffscreenCanvas(rect.width, rect.height);
         const ctx = canvas.getContext('2d');
         assertCanvasCtx(ctx);
 
-        await this.fetchAndDrawTileExtent(ctx, leftTileExtent, rectOrigin);
+        await this.fetchAndDrawTileExtent(ctx, leftTileExtent, pixelCoordinates({ x: leftRect.x, y: leftRect.y }));
         if (rightTileExtent) {
-            await this.fetchAndDrawTileExtent(ctx, rightTileExtent, rectOrigin);
+            await this.fetchAndDrawTileExtent(
+                ctx,
+                rightTileExtent,
+                pixelCoordinates({ x: -leftRect.width, y: leftRect.y }),
+            );
         }
 
         const blob = await canvas.convertToBlob({ type: 'image/png' });

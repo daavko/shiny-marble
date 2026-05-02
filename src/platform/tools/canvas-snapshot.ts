@@ -1,6 +1,6 @@
 import { featureCollection, lineString, polygon } from '@turf/turf';
 import { DateTime } from 'luxon';
-import { GeoJSONSource, MapMouseEvent, MercatorCoordinate } from 'maplibre-gl';
+import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import { el } from '../../core/dom/html';
 import { renderBlockButton } from '../../ui/builtin/button';
 import type { ActiveToolPanelRef } from '../../ui/components/active-tool-panel';
@@ -18,6 +18,7 @@ import {
     rectToAllCorners,
 } from '../../util/geometry';
 import { sleep } from '../../util/promise';
+import { MercatorCoordinate } from '../../vendor/maplibre/geo/mercator-coordinate';
 import { debugDetailed, debugTime } from '../debug';
 import { getCoveredMapTilesExtent, mapTileToPixelCoordinates, splitWorldWrappingPixelRect } from '../geometry';
 import { Platform } from '../platform';

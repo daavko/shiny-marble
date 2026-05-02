@@ -1,4 +1,4 @@
-import { Map as MapLibreInstance } from 'maplibre-gl';
+import type { Map as MapLibreInstance } from 'maplibre-gl';
 import { gatherModuleHrefs } from '../../util/modules';
 import { hasPropertyOfType, isObject, isObjectAndHasProperty } from '../../util/object';
 import { debug } from '../debug';
@@ -70,93 +70,10 @@ export async function addBplaceMapInstanceHook(
                                 newVal._canvas instanceof HTMLCanvasElement
                             ) {
                                 exportedValue.useRef = originalUseRef;
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-                                const mapInstance = newVal as MapLibreInstance;
-                                const newMap = new MapLibreInstance({
-                                    container: mapInstance._container,
-                                    style: '/styles/bplace_style.json',
-                                    center: mapInstance.getCenter(),
-                                    zoom: mapInstance.getZoom(),
-                                    bearing: mapInstance.getBearing(),
-                                    pitch: mapInstance.getPitch(),
-                                    attributionControl: false,
-                                    doubleClickZoom: false,
-                                    dragRotate: false,
-                                    pitchWithRotate: false,
-                                    touchPitch: false,
-                                    pixelRatio: Math.min(window.devicePixelRatio, 2),
-                                    maxZoom: 19,
-                                    fadeDuration: 0,
-                                    refreshExpiredTiles: false,
-                                    canvasContextAttributes: {
-                                        preserveDrawingBuffer: true,
-                                    },
-                                });
-                                debug('Map instance detected, replacing with own instance', mapInstance, newMap);
-                                newMap.touchZoomRotate.disableRotation();
-                                newMap.keyboard.disableRotation();
-                                mapInstance.remove();
-
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
-                                const mapInstancePrototype = Object.getPrototypeOf(mapInstance) as object;
-                                const prototypeProxy = new Proxy(mapInstancePrototype, {
-                                    get(target, prop, receiver: unknown): unknown {
-                                        const value = Reflect.get(target, prop, receiver) as unknown;
-                                        if (typeof value === 'function') {
-                                            return (...fnArgs: unknown[]) => {
-                                                return Reflect.apply(
-                                                    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type,@typescript-eslint/no-unsafe-type-assertion -- safe
-                                                    newMap[prop as keyof MapLibreInstance] as Function,
-                                                    newMap,
-                                                    fnArgs,
-                                                ) as unknown;
-                                            };
-                                        } else {
-                                            return Reflect.get(newMap, prop);
-                                        }
-                                    },
-                                    set(target, prop, value, receiver): boolean {
-                                        return Reflect.set(target, prop, value, receiver);
-                                    },
-                                });
-                                Object.setPrototypeOf(mapInstance, prototypeProxy);
-                                // override all own properties to point to the new map instance
-                                for (const key of Object.keys(mapInstance)) {
-                                    const mapPropertyDescriptor = Object.getOwnPropertyDescriptor(mapInstance, key);
-                                    if (mapPropertyDescriptor == null) {
-                                        continue;
-                                    }
-
-                                    if (typeof mapPropertyDescriptor.value === 'function') {
-                                        Object.defineProperty(mapInstance, key, {
-                                            value: (...fnArgs: unknown[]) => {
-                                                Reflect.apply(
-                                                    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type,@typescript-eslint/no-unsafe-type-assertion -- safe
-                                                    newMap[key as keyof MapLibreInstance] as Function,
-                                                    newMap,
-                                                    fnArgs,
-                                                );
-                                            },
-                                            configurable: true,
-                                            enumerable: true,
-                                        });
-                                    } else {
-                                        Object.defineProperty(mapInstance, key, {
-                                            get: () => {
-                                                return Reflect.get(newMap, key) as unknown;
-                                            },
-                                            set: (newPropVal: unknown) => {
-                                                Reflect.set(newMap, key, newPropVal);
-                                            },
-                                            configurable: true,
-                                            enumerable: true,
-                                        });
-                                    }
-                                }
-
-                                val = newMap;
+                                val = newVal;
                                 cleanupPatchedRefs(patchedRefs);
-                                resolveMapInstance(newMap);
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe
+                                resolveMapInstance(newVal as MapLibreInstance);
                             }
                         },
                         configurable: true,

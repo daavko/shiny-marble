@@ -50,6 +50,18 @@ export default defineConfig([
             ],
             '@typescript-eslint/no-import-type-side-effects': 'error',
             '@typescript-eslint/no-invalid-void-type': 'off', // this rule is partially broken so not very useful, see https://github.com/typescript-eslint/typescript-eslint/issues/8113
+            '@typescript-eslint/no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: 'maplibre-gl',
+                            message: 'Use vendored parts of the library instead.',
+                            allowTypeImports: true,
+                        },
+                    ],
+                },
+            ],
             '@typescript-eslint/no-shadow': 'warn',
             '@typescript-eslint/no-unnecessary-parameter-property-assignment': 'error',
             '@typescript-eslint/no-unsafe-type-assertion': 'warn',
@@ -136,6 +148,12 @@ export default defineConfig([
                     ],
                 },
             ],
+        },
+    },
+    {
+        files: ['src/vendor/**/*.{js,mjs,cjs,ts,mts,cts}'],
+        rules: {
+            '@typescript-eslint/member-ordering': 'off',
         },
     },
     eslintConfigPrettier,

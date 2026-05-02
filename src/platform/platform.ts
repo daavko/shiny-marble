@@ -1,4 +1,4 @@
-import { LngLat, type LngLatLike, type Map as MapLibreInstance, MercatorCoordinate } from 'maplibre-gl';
+import type { LngLat, LngLatLike, Map as MapLibreInstance } from 'maplibre-gl';
 import type { HTMLElementChild } from '../core/dom/html';
 import { addStyles } from '../core/dom/styles';
 import { NetworkInterceptor } from '../core/network-interceptor';
@@ -24,6 +24,7 @@ import {
     type PixelDimensions,
     type RenderTileDimensions,
 } from '../util/geometry';
+import { MercatorCoordinate } from '../vendor/maplibre/geo/mercator-coordinate';
 import { BplacePlatform } from './bplace/platform';
 import { debug } from './debug';
 import { worldWrapPixelCoordinates } from './geometry';

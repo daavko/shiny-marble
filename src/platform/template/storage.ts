@@ -28,10 +28,7 @@ export interface StoredTemplate {
     paletteVersion: number;
 
     /**
-     * tile size this was stored with, in case the canvas changes tile sizes for some reason...
-     *
-     * bplace has done this once already so it's better to be safe here, worst case this just causes the template to be
-     * re-optimized and re-saved with new tile size
+     * render tile size this was stored with, in case it changes for any reason
      */
     tileSize: PixelDimensions;
 

@@ -1,4 +1,3 @@
-import { encodeIndexedPngBlob } from '../../core/png/indexed-png-writer';
 import type { PixelColor } from '../../core/types';
 import {
     type MapTileCoordinates,
@@ -11,7 +10,7 @@ import {
 } from '../../util/geometry';
 import { computeImageDataHash, imageBitmapToImageData } from '../../util/image';
 import { ImageTools } from '../../workers/image-tools-dispatcher';
-import { debug, debugDetailed, debugTime } from '../debug';
+import { debug, debugDetailed } from '../debug';
 import { getCoveredRenderTiles } from '../geometry';
 import { Platform } from '../platform';
 import type { TileId } from './common';
@@ -149,7 +148,7 @@ function liveTemplateToStoredTemplate(template: LiveTemplate): StoredTemplate {
         dimensions: template.dimensions,
         hash: template.hash,
         thumbnail: template.thumbnail,
-        tileSize: Platform.mapTilePixelDimensions,
+        tileSize: Platform.renderTilePixelDimensions,
         paletteVersion: Platform.colorsVersion,
     };
 }
@@ -213,11 +212,11 @@ export const TemplateRegistry = {
                 );
                 await TemplateStorage.deleteOptimizedTemplateTiles(template.id);
             } else if (
-                template.tileSize.width !== Platform.mapTilePixelDimensions.width ||
-                template.tileSize.height !== Platform.mapTilePixelDimensions.height
+                template.tileSize.width !== Platform.renderTilePixelDimensions.width ||
+                template.tileSize.height !== Platform.renderTilePixelDimensions.height
             ) {
                 debug(
-                    `Template ${template.id} was saved with tile size ${template.tileSize.width}x${template.tileSize.height}, current is ${Platform.mapTilePixelDimensions.width}x${Platform.mapTilePixelDimensions.height}, deleting optimized tiles...`,
+                    `Template ${template.id} was saved with tile size ${template.tileSize.width}x${template.tileSize.height}, current is ${Platform.renderTilePixelDimensions.width}x${Platform.renderTilePixelDimensions.height}, deleting optimized tiles...`,
                 );
                 await TemplateStorage.deleteOptimizedTemplateTiles(template.id);
             }
@@ -234,13 +233,11 @@ export const TemplateRegistry = {
         const hash = await computeImageDataHash(template.image);
         const viewportCenter = Platform.getViewportCenterPixel();
         const { width, height } = template.image;
-        const pngEncodeDebugTimer = debugTime(`Encoding template image to indexed PNG`);
-        const imageBlob = await encodeIndexedPngBlob(template.image, Platform.colors);
-        pngEncodeDebugTimer?.stop();
+        const imageBlob = await ImageTools.writeIndexedPngBlob(template.image, Platform.colors, true);
 
         const coordinates = pixelCoordinates({
-            x: viewportCenter.x - template.image.width / 2,
-            y: viewportCenter.y - template.image.height / 2,
+            x: viewportCenter.x - width / 2,
+            y: viewportCenter.y - height / 2,
         });
         const dimensions = pixelDimensions({ width, height });
         const newTemplate: LiveTemplate = {
@@ -340,14 +337,13 @@ export const TemplateRegistry = {
         }
 
         const newThumbnail = await ImageTools.createThumbnail(newImage, 100, 100);
-        const pngEncodeDebugTimer = debugTime(`Encoding new template image to indexed PNG`);
-        const newImageBlob = await encodeIndexedPngBlob(newImage, Platform.colors);
-        pngEncodeDebugTimer?.stop();
+        const { width, height } = newImage;
+        const newImageBlob = await ImageTools.writeIndexedPngBlob(newImage, Platform.colors, true);
 
         // Update template with new image info
         const oldHash = template.hash;
         template.hash = newHash;
-        template.dimensions = pixelDimensions({ width: newImage.width, height: newImage.height });
+        template.dimensions = pixelDimensions({ width, height });
         URL.revokeObjectURL(template.thumbnailUrl);
         template.thumbnail = newThumbnail;
         template.thumbnailUrl = URL.createObjectURL(newThumbnail);
@@ -356,8 +352,8 @@ export const TemplateRegistry = {
             hash: newHash,
             image: newImageBlob,
         });
-        TemplateRegistryEvents.dispatchEvent(new TemplateChangedEvent(template));
         await TemplateRegistry.deoptimizeTemplate(id);
+        TemplateRegistryEvents.dispatchEvent(new TemplateChangedEvent(template));
         debug(`Replaced image of template with id ${id}`);
         return true;
     },

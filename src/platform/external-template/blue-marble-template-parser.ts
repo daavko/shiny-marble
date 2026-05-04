@@ -9,7 +9,7 @@ import {
     type PixelCoordinates,
     pixelExtent,
 } from '../../util/geometry';
-import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { ImageTools } from '../../workers/image-tools';
 import { mapTileToPixelCoordinates, worldWrapPixelCoordinates } from '../geometry';
 import { Platform } from '../platform';
 import type { BaseParsedTemplateErrorCode, TemplateParseResult } from './types';

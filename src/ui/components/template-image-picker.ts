@@ -9,7 +9,7 @@ import type { EffectContext } from '../../platform/reactivity/effects';
 import { cond$, el$, if$ } from '../../platform/reactivity/reactive-html';
 import { signal } from '../../platform/reactivity/signals';
 import { downloadBlob } from '../../util/file';
-import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { ImageTools } from '../../workers/image-tools';
 import { renderBlockButton } from '../builtin/button';
 
 export { default as templateImagePickerStyle } from './template-image-picker.css';

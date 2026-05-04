@@ -1,5 +1,5 @@
 import { TemplateRegistry } from '../../platform/template/registry';
-import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { ImageTools } from '../../workers/image-tools';
 import { createDialog } from '../builtin/dialog';
 import { showInfoAlert } from '../components/alerts-container';
 import { createTemplateImagePicker } from '../components/template-image-picker';

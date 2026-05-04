@@ -8,7 +8,7 @@ import {
     rectToExtent,
     type RenderTileCoordinates,
 } from '../../util/geometry';
-import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { ImageTools } from '../../workers/image-tools';
 import { getCoveredRenderTiles, renderTileToPixelRect, worldWrapRenderTileCoordinates } from '../geometry';
 import { Platform } from '../platform';
 

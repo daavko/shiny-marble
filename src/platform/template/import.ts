@@ -3,7 +3,7 @@ import type { SafeParseResult } from 'valibot';
 import * as v from 'valibot';
 import { MAX_INPUT_TEMPLATE_FILE_SIZE, MAX_TEMPLATE_CANVAS_DIMENSION } from '../../core/const';
 import { pixelCoordinates } from '../../util/geometry';
-import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { ImageTools } from '../../workers/image-tools';
 import { debug } from '../debug';
 import { Platform } from '../platform';
 import {

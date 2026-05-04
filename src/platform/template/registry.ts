@@ -9,7 +9,7 @@ import {
     type RenderTileCoordinates,
 } from '../../util/geometry';
 import { computeImageDataHash, imageBitmapToImageData } from '../../util/image';
-import { ImageTools } from '../../workers/image-tools-dispatcher';
+import { ImageTools } from '../../workers/image-tools';
 import { debug, debugDetailed } from '../debug';
 import { getCoveredRenderTiles } from '../geometry';
 import { Platform } from '../platform';

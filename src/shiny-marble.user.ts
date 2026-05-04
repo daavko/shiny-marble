@@ -1,9 +1,9 @@
-import { Platform } from './platform/platform';
 import { debug } from './platform/debug';
+import { Platform } from './platform/platform';
 import { renderAlertsContainer, showErrorAlert } from './ui/components/alerts-container';
 import { renderAppIcon } from './ui/components/app-icon';
 import { waitWithTimeout } from './util/promise';
-import { ImageTools } from './workers/image-tools-dispatcher';
+import { ImageTools } from './workers/image-tools';
 
 function formatCanvasFingerprintingError(browser: string): string {
     return `${browser} with canvas fingerprinting protections detected. Shiny Marble will not be able to function properly with these protections enabled, since canvas fingerprinting protections mess with pixel values.`;

@@ -35,12 +35,12 @@
         "@types/luxon": "^3.7.1",
         "@types/picomatch": "^4.0.3",
         "esbuild": "^0.28.0",
-        "eslint": "^10.2.1",
+        "eslint": "^10.3.0",
         "eslint-config-prettier": "^10.1.8",
-        "globals": "^17.5.0",
+        "globals": "^17.6.0",
         "prettier": "^3.8.3",
         "prettier-plugin-organize-imports": "^4.3.0",
         "typescript": "~6.0.2",
-        "typescript-eslint": "^8.59.0"
+        "typescript-eslint": "^8.59.2"
     }
 }

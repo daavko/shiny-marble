@@ -1,5 +1,5 @@
 import type { TileId } from '../platform/template/common';
-import type { PixelRect } from '../util/geometry';
+import type { PixelDimensions, PixelRect } from '../util/geometry';
 
 export interface TemplateTile {
     rect: PixelRect;
@@ -7,9 +7,9 @@ export interface TemplateTile {
 }
 
 export interface RenderTileCompositingRequest {
+    id: string;
     tileId: TileId;
-    size: number;
-    version: number;
+    dimensions: PixelDimensions;
     /**
      * ordered list, back to front
      */
@@ -17,8 +17,22 @@ export interface RenderTileCompositingRequest {
     transparentColorIndex: number;
 }
 
-export interface RenderTileCompositingResponse {
+// export interface RenderTileCompositingResponse {
+//     id: string;
+//     tileId: TileId;
+//     data: ArrayBuffer;
+// }
+
+export interface RenderTileCompositingSuccessResult {
+    success: true;
+    id: string;
     tileId: TileId;
-    version: number;
     data: ArrayBuffer;
 }
+
+export interface RenderTileCompositingErrorResult {
+    success: false;
+    error: unknown;
+}
+
+export type RenderTileCompositingResult = RenderTileCompositingSuccessResult | RenderTileCompositingErrorResult;

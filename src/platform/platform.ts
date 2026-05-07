@@ -91,8 +91,8 @@ export const Platform = {
     },
 
     async initPlatform(): Promise<void> {
-        await PlatformSettings.init();
         debug('Initializing platform');
+        await PlatformSettings.init();
 
         NetworkInterceptor.init();
         addStyles(

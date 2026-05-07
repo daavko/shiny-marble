@@ -1,8 +1,8 @@
 import { type DBSchema, type IDBPDatabase, openDB } from 'idb';
 import { showErrorAlert } from '../ui/components/alerts-container';
 import { sameValueZero } from '../util/equality';
-import { type Signal, SignalImpl, type Subscriber } from './reactivity/signals';
 import { debug, debugDetailed } from './debug';
+import { type Signal, SignalImpl, type Subscriber } from './reactivity/signals';
 
 const ChangesBroadcaster = new BroadcastChannel('sm-settings-changes');
 
@@ -50,6 +50,7 @@ type SettingsProps<TSettings extends Record<string, SettingInitializerLike>> = {
 };
 
 export interface SettingsImpl {
+    readonly initialized: boolean;
     init(): Promise<void>;
     reset(): void;
 }
@@ -201,6 +202,8 @@ export function createSettings<const TSettings extends Record<string, SettingIni
         );
     }
 
+    let initialized = false;
+
     async function init(): Promise<void> {
         const db = await getStorageLayer();
 
@@ -213,18 +216,15 @@ export function createSettings<const TSettings extends Record<string, SettingIni
         const missingKeys = settingsKeys.difference(allStoredSettings);
         const existingKeys = settingsKeys.intersection(allStoredSettings);
 
-        debugDetailed(`Deleting extra keys from settings storage "${name}":`, extraKeys);
         for (const extraKey of extraKeys) {
             await store.delete(extraKey);
         }
 
-        debugDetailed(`Adding missing keys to settings storage "${name}":`, missingKeys);
         for (const missingKey of missingKeys) {
             const setting = settingsImpl[missingKey];
             await store.put({ key: missingKey, value: setting.value });
         }
 
-        debugDetailed(`Loading existing keys from settings storage "${name}":`, existingKeys);
         for (const existingKey of existingKeys) {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- safe because we know the key exists
             const savedSetting = (await store.get(existingKey))!;
@@ -258,11 +258,17 @@ export function createSettings<const TSettings extends Record<string, SettingIni
                     }
             }
         });
+
+        debug(`Settings "${name}" initialized`);
+        initialized = true;
     }
 
     return {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- safe, impossible to type
         ...(settingsImpl as SettingsProps<TSettings>),
+        get initialized() {
+            return initialized;
+        },
         init,
         reset: (): void => {
             for (const setting of Object.values(settingsImpl)) {

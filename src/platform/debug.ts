@@ -4,7 +4,7 @@ import { PlatformSettings } from './platform';
 const DEBUG_LOG: string[] = [];
 
 export function debugEnabled(): boolean {
-    return PlatformSettings.debug.value;
+    return PlatformSettings.debug.value || !PlatformSettings.initialized;
 }
 
 export function debug(message: string, ...data: unknown[]): void {

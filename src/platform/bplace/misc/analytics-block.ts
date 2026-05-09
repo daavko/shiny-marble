@@ -7,7 +7,7 @@ function enableBplaceAnalyticsBlocker(): void {
         return;
     }
 
-    NetworkInterceptor.addXMLHttpRequestInterceptor({
+    blockerInterceptorSymbol = NetworkInterceptor.addXMLHttpRequestInterceptor({
         pathMatch: [
             {
                 hostname: 'bplace.art',

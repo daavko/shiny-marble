@@ -1,3 +1,4 @@
+import { NetworkInterceptor } from './core/network-interceptor';
 import { debug } from './platform/debug';
 import { Platform } from './platform/platform';
 import { renderAlertsContainer, showErrorAlert } from './ui/components/alerts-container';
@@ -14,7 +15,10 @@ async function init(): Promise<void> {
 
     renderAlertsContainer();
 
-    // this must always be first, as it `import()`s the relevant web app module and patches it to detect the map instance
+    NetworkInterceptor.init();
+
+    // this must always be first async thing, as it `import()`s the relevant web app module and patches it to detect
+    // the map instance
     // if this is not first, it runs late and misses the instance
     try {
         await Platform.addMapInstanceHook();

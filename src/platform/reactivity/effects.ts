@@ -118,3 +118,13 @@ export function createEffectContext(): EffectContext {
     };
     return ctx;
 }
+
+const globalEffectContext = createEffectContext();
+
+export function globalWatch<const TInputs extends ReadonlySignal<unknown>[]>(
+    inputSignals: readonly [...TInputs],
+    effectFn: (inputValues: MappedSignalValues<TInputs>) => void | (() => void),
+    immediate?: boolean,
+): UnsubscribeFn {
+    return globalEffectContext.watch(inputSignals, effectFn, immediate);
+}

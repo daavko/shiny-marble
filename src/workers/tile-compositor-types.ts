@@ -17,12 +17,6 @@ export interface RenderTileCompositingRequest {
     transparentColorIndex: number;
 }
 
-// export interface RenderTileCompositingResponse {
-//     id: string;
-//     tileId: TileId;
-//     data: ArrayBuffer;
-// }
-
 export interface RenderTileCompositingSuccessResult {
     success: true;
     id: string;

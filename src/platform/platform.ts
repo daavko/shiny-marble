@@ -1,7 +1,6 @@
 import type { LngLat, LngLatLike, Map as MapLibreInstance } from 'maplibre-gl';
 import type { HTMLElementChild } from '../core/dom/html';
 import { addStyles } from '../core/dom/styles';
-import { NetworkInterceptor } from '../core/network-interceptor';
 import type { PixelColor } from '../core/types';
 import { buttonStyle } from '../ui/builtin/button';
 import { dialogStyle } from '../ui/builtin/dialog';
@@ -94,7 +93,6 @@ export const Platform = {
         debug('Initializing platform');
         await PlatformSettings.init();
 
-        NetworkInterceptor.init();
         addStyles(
             platformStyle,
             utilStyle,

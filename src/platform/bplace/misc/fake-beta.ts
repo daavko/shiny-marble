@@ -7,7 +7,7 @@ function enableBplaceFakeBeta(): void {
         return;
     }
 
-    NetworkInterceptor.addFetchInterceptor({
+    fakeBetaInterceptorSymbol = NetworkInterceptor.addFetchInterceptor({
         pathMatch: [
             {
                 hostname: 'bocmfycjqgujxkhcnfck.supabase.co',

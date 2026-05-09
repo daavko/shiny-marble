@@ -5,14 +5,16 @@ import { createBooleanSetting, createNumberRangeSetting } from '../../ui/builtin
 import { rgbBackgroundStyleToRgbaRaw } from '../../util/color';
 import { pixelDimensions, renderTileDimensions } from '../../util/geometry';
 import { coveredTilesExtentToTiles } from '../geometry';
-import { createSetting, createSettings } from '../settings';
+import { globalWatch } from '../reactivity/effects';
 import type { CanvasPlatform } from '../types';
 import { bplaceColorStatsDialogStyle, showColorStatsDialog } from './color-stats-dialog';
 import { BPLACE_COLORS } from './colors';
 import { addBplaceMapInstanceHook } from './hooks';
 import { toggleBplaceAnalyticsBlocker } from './misc/analytics-block';
 import { toggleBplaceFakeBeta } from './misc/fake-beta';
+import { toggleBplaceNotificationFilter } from './misc/notification-filter';
 import bplacePlatformStyle from './platform.css';
+import { BplaceSettings } from './settings';
 import { fetchTileInfo, fetchTilesInfo } from './supabase';
 import { fetchSingleTileImage } from './tiles/tile-fetch';
 import hideAchievementConfettiStyle from './toggleable-styles/hide-achievement-confetti.css';
@@ -27,22 +29,6 @@ function toggleStylesheet(style: string, enabled: boolean): void {
     }
 }
 
-const bplaceSettings = createSettings('bplace-platform', 1, {
-    enableDailyLocationHighlight: createSetting(true),
-    dailyLocationHighlightOpacity: createSetting(0.25),
-    hideAchievementConfetti: createSetting(false, [
-        (newValue): void => toggleStylesheet(hideAchievementConfettiStyle, newValue),
-    ]),
-    hideBuyChromasButton: createSetting(false, [
-        (newValue): void => toggleStylesheet(hideBuyChromasButtonStyle, newValue),
-    ]),
-    hideGuildNotificationBadge: createSetting(false, [
-        (newValue): void => toggleStylesheet(hideGuildNotificationBadgeStyle, newValue),
-    ]),
-    blockAnalytics: createSetting(true, [(newValue): void => toggleBplaceAnalyticsBlocker(newValue)]),
-    fakeBetaTester: createSetting(false, [(newValue): void => toggleBplaceFakeBeta(newValue)]),
-});
-
 export const BplacePlatform: CanvasPlatform = {
     id: 'bplace',
     colors: BPLACE_COLORS,
@@ -52,15 +38,49 @@ export const BplacePlatform: CanvasPlatform = {
     mapTilePixelDimensions: pixelDimensions({ width: 512, height: 512 }),
     renderTilePixelDimensions: pixelDimensions({ width: 846, height: 846 }),
     async initialize() {
-        await bplaceSettings.init();
+        await BplaceSettings.init();
 
         addStyles(bplacePlatformStyle, bplaceColorStatsDialogStyle);
-        toggleStylesheet(hideAchievementConfettiStyle, bplaceSettings.hideAchievementConfetti.value);
-        toggleStylesheet(hideBuyChromasButtonStyle, bplaceSettings.hideBuyChromasButton.value);
-        toggleStylesheet(hideGuildNotificationBadgeStyle, bplaceSettings.hideGuildNotificationBadge.value);
+        globalWatch(
+            [BplaceSettings.hideAchievementConfetti],
+            ([value]) => toggleStylesheet(hideAchievementConfettiStyle, value),
+            true,
+        );
+        globalWatch(
+            [BplaceSettings.hideBuyChromasButton],
+            ([value]) => toggleStylesheet(hideBuyChromasButtonStyle, value),
+            true,
+        );
+        globalWatch(
+            [BplaceSettings.hideGuildNotificationBadge],
+            ([value]) => toggleStylesheet(hideGuildNotificationBadgeStyle, value),
+            true,
+        );
 
-        toggleBplaceAnalyticsBlocker(bplaceSettings.blockAnalytics.value);
-        toggleBplaceFakeBeta(bplaceSettings.fakeBetaTester.value);
+        globalWatch([BplaceSettings.blockAnalytics], ([value]) => toggleBplaceAnalyticsBlocker(value), true);
+        globalWatch([BplaceSettings.fakeBetaTester], ([value]) => toggleBplaceFakeBeta(value), true);
+
+        globalWatch(
+            [
+                BplaceSettings.showGuildPinContributorNotification,
+                BplaceSettings.showPinPublishedNotification,
+                BplaceSettings.showPinCollabAcceptedNotification,
+            ],
+            ([
+                showGuildPinContributorNotification,
+                showPinPublishedNotification,
+                showPinCollabAcceptedNotification,
+            ]) => {
+                toggleBplaceNotificationFilter(
+                    !(
+                        showGuildPinContributorNotification &&
+                        showPinPublishedNotification &&
+                        showPinCollabAcceptedNotification
+                    ),
+                );
+            },
+            true,
+        );
     },
     async addMapInstanceHook(resolveMapInstance) {
         await addBplaceMapInstanceHook(resolveMapInstance);
@@ -112,30 +132,48 @@ export const BplacePlatform: CanvasPlatform = {
             el('section', { class: 'sm-settings__section' }, [
                 el('h2', ['Bplace-specific settings']),
                 createBooleanSetting(
-                    bplaceSettings.enableDailyLocationHighlight,
+                    BplaceSettings.enableDailyLocationHighlight,
                     'Enable daily location highlight',
                     context,
                 ),
                 createNumberRangeSetting(
-                    bplaceSettings.dailyLocationHighlightOpacity,
+                    BplaceSettings.dailyLocationHighlightOpacity,
                     'Daily location highlight opacity',
                     context,
                     { min: 0, max: 1, step: 0.05 },
                 ),
-                createBooleanSetting(bplaceSettings.blockAnalytics, 'Block analytics requests', context),
+                createBooleanSetting(BplaceSettings.blockAnalytics, 'Block analytics requests', context),
                 createBooleanSetting(
-                    bplaceSettings.fakeBetaTester,
+                    BplaceSettings.fakeBetaTester,
                     'Fake being a beta tester (requires reload)',
                     context,
                 ),
             ]),
             el('section', { class: 'sm-settings__section' }, [
                 el('h2', ['Bplace toggleable styles']),
-                createBooleanSetting(bplaceSettings.hideAchievementConfetti, 'Hide achievement confetti', context),
-                createBooleanSetting(bplaceSettings.hideBuyChromasButton, 'Hide "buy chromas" button', context),
+                createBooleanSetting(BplaceSettings.hideAchievementConfetti, 'Hide achievement confetti', context),
+                createBooleanSetting(BplaceSettings.hideBuyChromasButton, 'Hide "buy chromas" button', context),
                 createBooleanSetting(
-                    bplaceSettings.hideGuildNotificationBadge,
+                    BplaceSettings.hideGuildNotificationBadge,
                     'Hide guild notification badge',
+                    context,
+                ),
+            ]),
+            el('section', { class: 'sm-settings__section' }, [
+                el('h2', ['Bplace notification filters']),
+                createBooleanSetting(
+                    BplaceSettings.showGuildPinContributorNotification,
+                    'Show "guild pin contributor" notifications',
+                    context,
+                ),
+                createBooleanSetting(
+                    BplaceSettings.showPinPublishedNotification,
+                    'Show "pin published" notifications',
+                    context,
+                ),
+                createBooleanSetting(
+                    BplaceSettings.showPinCollabAcceptedNotification,
+                    'Show "pin collab accepted" notifications',
                     context,
                 ),
             ]),

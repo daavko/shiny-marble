@@ -18,13 +18,15 @@ export interface RenderTileCompositingRequest {
 }
 
 export interface RenderTileCompositingSuccessResult {
-    success: true;
     id: string;
     tileId: TileId;
+    success: true;
     data: ArrayBuffer;
 }
 
 export interface RenderTileCompositingErrorResult {
+    id: string;
+    tileId: TileId;
     success: false;
     error: unknown;
 }

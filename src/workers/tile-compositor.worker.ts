@@ -44,7 +44,7 @@ globalThis.addEventListener('message', ({ data: request }: MessageEvent<RenderTi
             },
         );
     } catch (error) {
-        globalThis.postMessage({ success: false, error } satisfies RenderTileCompositingResult);
+        globalThis.postMessage({ id, tileId, success: false, error } satisfies RenderTileCompositingResult);
     }
 });
 
